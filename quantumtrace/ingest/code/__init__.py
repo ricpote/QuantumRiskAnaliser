@@ -5,7 +5,8 @@ import os
 import re
 
 from ...schema import Finding
-from . import config, python_ast
+from . import config, fixes, python_ast
+from .common import is_test_path
 
 try:
     from . import treesitter
@@ -25,6 +26,7 @@ def scan(root: str, base: str | None = None) -> list[Finding]:
     for path in sorted(files):
         rel = os.path.relpath(path, base)
         ext = os.path.splitext(path)[1]
+        start = len(out)
         try:
             if ext == ".py":
                 out += python_ast.scan(path, rel)
@@ -38,6 +40,11 @@ def scan(root: str, base: str | None = None) -> list[Finding]:
                 out += _deps(path, rel)
             elif config.kind(path):
                 out += config.scan(path, rel)
+            fixes.annotate(out[start:], path)
+            if is_test_path(rel):  # tests / specs: inventoried, but not production risk
+                for f in out[start:]:
+                    f.flags += [x for x in ("test-code", "demo-code") if x not in f.flags]
+                    f.confidence = min(f.confidence, 0.5)
         except Exception as e:  # never let one file kill the scan
             out.append(Finding(source="code", category="protocol", algorithm="SCAN-ERROR", asset=dict(kind="source-file", path=rel),
                                location=dict(file=rel, line=1), evidence=f"scanner error: {e}", confidence=0.0))

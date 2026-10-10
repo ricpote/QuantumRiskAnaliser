@@ -3,6 +3,7 @@ const crypto = require('node:crypto');
 const { createHash } = require('crypto');
 const jwt = require('jsonwebtoken');
 
+const CACHE_KEY = 'user_profile_cache';
 const CARD_KEY = Buffer.from('00112233445566778899aabbccddeeff', 'hex');
 
 function encryptCard(pan) {

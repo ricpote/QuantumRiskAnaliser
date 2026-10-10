@@ -17,6 +17,7 @@ in classical_status / flags / CWE so we never mislabel a classical issue as a qu
 CATALOG = {
     # ---------------- asymmetric, Shor-vulnerable ----------------
     "RSA":      dict(family="RSA", primitive=None, threat="shor", standard="RFC 8017 / FIPS 186-5", oid="1.2.840.113549.1.1.1"),
+    "ElGamal":  dict(family="FFDH", primitive=None, threat="shor", standard="-", oid="1.3.14.7.2.1.1"),
     "DSA":      dict(family="DSA", primitive="signature", threat="shor", standard="FIPS 186-4 (withdrawn in 186-5)", oid="1.2.840.10040.4.1"),
     "ECDSA":    dict(family="ECDSA", primitive="signature", threat="shor", standard="FIPS 186-5", oid="1.2.840.10045.2.1"),
     "Ed25519":  dict(family="EdDSA", primitive="signature", threat="shor", standard="RFC 8032 / FIPS 186-5", oid="1.3.101.112"),
@@ -50,6 +51,7 @@ CATALOG = {
     "AES":      dict(family="AES", primitive="block-cipher", threat="grover", standard="FIPS 197", oid=None),
     "3DES":     dict(family="TDEA", primitive="block-cipher", threat="grover", standard="NIST SP 800-67 (withdrawn)", oid="1.2.840.113549.3.7"),
     "DES":      dict(family="DES", primitive="block-cipher", threat="grover", standard="FIPS 46-3 (withdrawn)", oid="1.3.14.3.2.7"),
+    "XOR":      dict(family="XOR", primitive="stream-cipher", threat="grover", standard="- (not a cipher)", oid=None),
     "RC4":      dict(family="RC4", primitive="stream-cipher", threat="grover", standard="RFC 7465 (prohibited in TLS)", oid="1.2.840.113549.3.4"),
     "Blowfish": dict(family="Blowfish", primitive="block-cipher", threat="grover", standard="-", oid=None),
     "Camellia": dict(family="Camellia", primitive="block-cipher", threat="grover", standard="RFC 3713", oid=None),
@@ -62,12 +64,16 @@ CATALOG = {
     "MD5":      dict(family="MD5", primitive="hash", threat="grover", standard="RFC 1321 / RFC 6151", oid="1.2.840.113549.2.5", out=128),
     "MD4":      dict(family="MD4", primitive="hash", threat="grover", standard="RFC 6150 (historic)", oid="1.2.840.113549.2.4", out=128),
     "SHA-1":    dict(family="SHA-1", primitive="hash", threat="grover", standard="FIPS 180-4", oid="1.3.14.3.2.26", out=160),
+    "SHA-0":    dict(family="SHA-0", primitive="hash", threat="grover", standard="FIPS 180 (withdrawn 1995)", oid=None, out=160),
+    "RIPEMD-128": dict(family="RIPEMD", primitive="hash", threat="grover", standard="ISO/IEC 10118-3", oid="1.3.36.3.2.2", out=128),
+    "HAVAL-128": dict(family="HAVAL", primitive="hash", threat="grover", standard="-", oid=None, out=128),
     "RIPEMD-160": dict(family="RIPEMD", primitive="hash", threat="grover", standard="ISO/IEC 10118-3", oid="1.3.36.3.2.1", out=160),
     "SHA-224":  dict(family="SHA-2", primitive="hash", threat="grover", standard="FIPS 180-4", oid="2.16.840.1.101.3.4.2.4", out=224),
     "SHA-256":  dict(family="SHA-2", primitive="hash", threat="grover", standard="FIPS 180-4", oid="2.16.840.1.101.3.4.2.1", out=256),
     "SHA-384":  dict(family="SHA-2", primitive="hash", threat="grover", standard="FIPS 180-4", oid="2.16.840.1.101.3.4.2.2", out=384),
     "SHA-512":  dict(family="SHA-2", primitive="hash", threat="grover", standard="FIPS 180-4", oid="2.16.840.1.101.3.4.2.3", out=512),
     "SHA-512/256": dict(family="SHA-2", primitive="hash", threat="grover", standard="FIPS 180-4", oid="2.16.840.1.101.3.4.2.6", out=256),
+    "SHA3-224": dict(family="SHA-3", primitive="hash", threat="grover", standard="FIPS 202", oid="2.16.840.1.101.3.4.2.7", out=224),
     "SHA3-256": dict(family="SHA-3", primitive="hash", threat="grover", standard="FIPS 202", oid="2.16.840.1.101.3.4.2.8", out=256),
     "SHA3-384": dict(family="SHA-3", primitive="hash", threat="grover", standard="FIPS 202", oid="2.16.840.1.101.3.4.2.9", out=384),
     "SHA3-512": dict(family="SHA-3", primitive="hash", threat="grover", standard="FIPS 202", oid="2.16.840.1.101.3.4.2.10", out=512),
@@ -115,7 +121,7 @@ MLDSA = {"ML-DSA-44": ("2.16.840.1.101.3.4.3.17", 2), "ML-DSA-65": ("2.16.840.1.
 CURVE_OIDS = {"P-256": "1.2.840.10045.3.1.7", "P-384": "1.3.132.0.34", "P-521": "1.3.132.0.35", "secp256k1": "1.3.132.0.10",
               "P-224": "1.3.132.0.33", "brainpoolP256r1": "1.3.36.3.3.2.8.1.1.7", "brainpoolP384r1": "1.3.36.3.3.2.8.1.1.11",
               "brainpoolP512r1": "1.3.36.3.3.2.8.1.1.13"}
-CURVE_BITS = {"P-224": 112, "P-256": 128, "P-384": 192, "P-521": 256, "secp256k1": 128, "Curve25519": 128, "Curve448": 224,
+CURVE_BITS = {"secp112r1": 56, "secp128r1": 64, "secp160r1": 80, "P-192": 96, "sect163k1": 80, "sect163r2": 80, "sect233k1": 112, "sect233r1": 112, "P-224": 112, "P-256": 128, "P-384": 192, "P-521": 256, "secp256k1": 128, "Curve25519": 128, "Curve448": 224,
               "brainpoolP256r1": 128, "brainpoolP384r1": 192, "brainpoolP512r1": 256}
 SIG_OIDS = {  # (alg, padding, hash) -> signature algorithm OID
     ("RSA", "PKCS1v15", "SHA-1"): "1.2.840.113549.1.1.5", ("RSA", "PKCS1v15", "SHA-256"): "1.2.840.113549.1.1.11",
