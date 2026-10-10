@@ -201,7 +201,9 @@ def _print_summary(s, findings, dt, errs, out):
         from rich.table import Table
         con = Console()
         con.print(f"\n[bold]QuantumTrace {__version__}[/] scanned {s['assets']} assets, {s['findings']} findings in {dt:.1f}s")
-        con.print(f"[bold]Quantum Readiness Score: {s['quantum_readiness_score']} / 100  (grade {s['grade']})[/]")
+        qrs = s["quantum_readiness_score"]
+        con.print(f"[bold]Quantum Readiness Score: {qrs} / 100  (grade {s['grade']})[/]" if qrs is not None
+                  else "[bold]Quantum Readiness Score: n/a (nothing was analysed)[/]")
         t = Table("source", "assets", "score", "critical", "medium", "safe", "unencrypted")
         for src, d in s["sources"].items():
             tr = d["tiers"]

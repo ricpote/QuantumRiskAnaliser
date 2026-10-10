@@ -103,7 +103,7 @@ def migration_plan(findings: list[Finding]) -> list[dict]:
     plan = []
     for (src, cat, alg, how), fs in groups.items():
         assets = sorted({asset_label(f) for f in fs})
-        plan.append(dict(source=src, category=cat, action=f"Migrate {cat} to {alg}", replacement=alg,
+        plan.append(dict(source=src, category=cat, action=fs[0].replacement.get("action") or f"Migrate {cat} to {alg}", replacement=alg,
                          standard=fs[0].replacement.get("standard"), how=how,
                          from_algorithms=sorted({f.display_name for f in fs}), assets=assets, asset_count=len(assets),
                          risk_removed=round(sum(f.risk_points for f in fs), 1), hndl=any(f.hndl for f in fs),

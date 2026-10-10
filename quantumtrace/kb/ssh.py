@@ -95,3 +95,58 @@ def negotiate(client: list[str], server: list[str]) -> str | None:
 
 def clean(algs: list[str]) -> list[str]:
     return [a for a in algs if a and a not in PSEUDO]
+
+
+# Built-in defaults, dumped from `sshd -T` on OpenSSH 9.6 (Ubuntu 24.04).
+# Needed to resolve the "+", "-" and "^" prefixes in sshd_config / ssh_config: those MODIFY
+# this list instead of replacing it, so a scanner that ignores them misreads the file.
+# OpenSSH >= 9.9 also offers mlkem768x25519-sha256 (first since 10.0); 9.0-9.8 lead with sntrup761x25519.
+DEFAULTS = {
+    "kexalgorithms": ["sntrup761x25519-sha512@openssh.com", "curve25519-sha256", "curve25519-sha256@libssh.org",
+                      "ecdh-sha2-nistp256", "ecdh-sha2-nistp384", "ecdh-sha2-nistp521",
+                      "diffie-hellman-group-exchange-sha256", "diffie-hellman-group16-sha512",
+                      "diffie-hellman-group18-sha512", "diffie-hellman-group14-sha256"],
+    "ciphers": ["chacha20-poly1305@openssh.com", "aes128-ctr", "aes192-ctr", "aes256-ctr",
+                "aes128-gcm@openssh.com", "aes256-gcm@openssh.com"],
+    "macs": ["umac-64-etm@openssh.com", "umac-128-etm@openssh.com", "hmac-sha2-256-etm@openssh.com",
+             "hmac-sha2-512-etm@openssh.com", "hmac-sha1-etm@openssh.com", "umac-64@openssh.com",
+             "umac-128@openssh.com", "hmac-sha2-256", "hmac-sha2-512", "hmac-sha1"],
+    "hostkeyalgorithms": ["ssh-ed25519-cert-v01@openssh.com", "ecdsa-sha2-nistp256-cert-v01@openssh.com",
+                          "ecdsa-sha2-nistp384-cert-v01@openssh.com", "ecdsa-sha2-nistp521-cert-v01@openssh.com",
+                          "sk-ssh-ed25519-cert-v01@openssh.com", "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com",
+                          "rsa-sha2-512-cert-v01@openssh.com", "rsa-sha2-256-cert-v01@openssh.com",
+                          "ssh-ed25519", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521",
+                          "sk-ssh-ed25519@openssh.com", "sk-ecdsa-sha2-nistp256@openssh.com",
+                          "rsa-sha2-512", "rsa-sha2-256"],
+}
+DEFAULTS["pubkeyacceptedalgorithms"] = DEFAULTS["hostkeyalgorithms"]
+DEFAULTS["pubkeyacceptedkeytypes"] = DEFAULTS["hostkeyalgorithms"]
+DEFAULTS["casignaturealgorithms"] = DEFAULTS["hostkeyalgorithms"]
+
+PQ_KEX = {"sntrup761x25519", "mlkem768x25519", "SecP256r1MLKEM768", "SecP384r1MLKEM1024"}
+
+
+def resolve_list(value: str, keyword: str) -> tuple[list[str], str]:
+    """Resolve an sshd_config / ssh_config algorithm list against the built-in defaults.
+
+    OpenSSH semantics (sshd_config(5)):
+      "alg,alg"  replace the default list entirely
+      "+alg"     APPEND to the end of the default list
+      "-alg"     REMOVE from the default list (wildcards allowed, e.g. -*-sha1)
+      "^alg"     PREPEND to the head of the default list
+    Returns (resolved list, mode) with mode in replace / append / remove / prepend / default.
+    """
+    import fnmatch
+    value = (value or "").strip()
+    base = list(DEFAULTS.get(keyword.lower(), []))
+    if not value:
+        return base, "default"
+    op, rest = (value[0], value[1:]) if value[0] in "+-^" else ("", value)
+    items = [x.strip() for x in rest.split(",") if x.strip()]
+    if op == "+":
+        return base + [i for i in items if i not in base], "append"
+    if op == "^":
+        return items + [b for b in base if b not in items], "prepend"
+    if op == "-":
+        return [b for b in base if not any(fnmatch.fnmatch(b, pat) for pat in items)], "remove"
+    return items, "replace"
