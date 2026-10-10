@@ -827,6 +827,225 @@
    "params": {
     "hash": "SHA-1"
    }
+  },
+  {
+   "file": "extra/code/jwt/python/auth_tokens.py",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "jose": "HS256",
+    "key_bits": 88
+   },
+   "flags": [
+    "jwt",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/python/auth_tokens.py",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "RS256",
+    "padding": "PKCS1v15"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/python/auth_tokens.py",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "ES256",
+    "curve": "P-256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/python/auth_tokens.py",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "jose": "HS512"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/python/auth_tokens.py",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "flags": [
+    "jwt",
+    "signature-not-verified"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/python/auth_tokens.py",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "JWT_SECRET"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/java/TokenIssuer.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "RS256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/java/TokenIssuer.java",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "jose": "HS256",
+    "key_bits": 80
+   },
+   "flags": [
+    "jwt",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/java/TokenIssuer.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "LEGACY_SECRET"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/java/WebhookVerifier.java",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "ES256",
+    "curve": "P-256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/java/WebhookVerifier.java",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "params": {
+    "jose": "none"
+   },
+   "flags": [
+    "jwt",
+    "unsigned-token"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/go/session/main.go",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "jose": "HS256",
+    "key_bits": 112
+   },
+   "flags": [
+    "jwt",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/go/session/main.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "RS256",
+    "padding": "PKCS1v15"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/go/session/main.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "PS256",
+    "padding": "PSS"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/go/session/main.go",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "params": {
+    "jose": "none"
+   },
+   "flags": [
+    "jwt",
+    "unsigned-token"
+   ]
+  },
+  {
+   "file": "extra/code/jwt/go/session/main.go",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "signingKey"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
   }
  ],
  "code_absent": [

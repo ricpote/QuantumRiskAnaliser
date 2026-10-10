@@ -8,7 +8,10 @@ the sample code hides behind constants (KEY_LEN = 32, exportKey = []byte("..."))
 """
 from __future__ import annotations
 
+import re
+
 from ...schema import Finding
+from . import jwt_algorithms
 from .common import SEC_WORDS, is_keyish, parse_int, snippet, unquote
 
 try:
@@ -146,6 +149,18 @@ class TSFile:
             return False
         return not any(scope == "main" for scope, _ in self._trace)
 
+    def add_jwt(self, node, jn, func, api, key=None):
+        """One JWT algorithm use; for HMAC (HS256...) also the secret's size and whether it is a literal.
+
+        key = (node, enclosing function) of the secret expression, which may live in another function."""
+        category, alg, params, flags = jwt_algorithms.finding_args(jn)
+        if alg == "HMAC" and key is not None:
+            kb = self.nbytes(self.value(*key))
+            params["key_bits"] = kb * 8 if kb else None
+            if self.is_literal(*key):
+                flags.append("hardcoded-key")
+        self.add(node, category, alg, params, f"{api} ({jn})", flags, api=api, func=func)
+
     def hardcoded_keys(self):
         for (fn, name), vnode in self.consts.items():
             if not is_keyish(name):
@@ -188,7 +203,9 @@ class GoFile(TSFile):
             if ty == "import_spec":
                 path = unquote(self.t(n.child_by_field_name("path")))
                 alias = n.child_by_field_name("name")
-                self.imports[self.t(alias) if alias is not None else path.split("/")[-1].replace("/v2", "")] = path
+                segs = path.split("/")
+                default = segs[-2] if len(segs) > 1 and re.fullmatch(r"v\d+", segs[-1]) else segs[-1]  # .../jwt/v5 -> jwt
+                self.imports[self.t(alias) if alias is not None else default] = path
             elif ty in ("function_declaration", "method_declaration"):
                 name = self.t(n.child_by_field_name("name"))
                 params = []
@@ -362,8 +379,31 @@ class GoFile(TSFile):
             self.add(node, "kdf", "PBKDF2", dict(hash=h, iterations=it),
                      f"hand-rolled PBKDF2 in {fn}(): HMAC-{h} iterated {it} times with XOR accumulation (RFC 8018 F function)",
                      ["custom-implementation"], confidence=0.85, api="custom", func=fn)
+        self.jwt()
         self.hardcoded_keys()
         return self.findings
+
+    def jwt(self):
+        """golang-jwt / jwt-go (jwt.SigningMethodRS256, jwt.UnsafeAllowNoneSignatureType) and go-jose (jose.RS256)."""
+        libs = {alias for alias, path in self.imports.items() if "jwt" in path or "go-jose" in path}
+        if not libs:
+            return
+        # HMAC secret: token.SignedString([]byte("secret"))
+        secret = next(((c["args"][0], c["func"]) for c in self.calls if c["name"] == "SignedString" and c["args"]), None)
+        for n in self.walk(self.root):
+            if n.type != "selector_expression" or self.t(n.child_by_field_name("operand")) not in libs:
+                continue
+            field = self.t(n.child_by_field_name("field"))
+            jn = "none" if field == "UnsafeAllowNoneSignatureType" else jwt_algorithms.normalize(field)
+            if jn:
+                self.add_jwt(n, jn, self.enclosing(n), self.t(n), secret)
+        # jwt.WithValidMethods([]string{"RS256", "PS256"}): the algorithms a parser accepts
+        for c in self.calls:
+            if c["obj"] in libs and c["name"] == "WithValidMethods":
+                for s in (x for a in c["args"] for x in self.walk(a) if x.type in ("interpreted_string_literal", "raw_string_literal")):
+                    jn = jwt_algorithms.normalize(unquote(self.t(s)))
+                    if jn:
+                        self.add_jwt(s, jn, c["func"], f"jwt.WithValidMethods({jn!r})", secret)
 
     def block_mode(self, call_node, fn):
         """Which mode wraps the block returned by aes.NewCipher? (GCM/CBC/CTR... or hand-rolled ECB)."""
@@ -638,8 +678,34 @@ class JavaFile(TSFile):
                 self.add(node, "rng", "NON-CSPRNG", dict(api="Math.random"), f"Math.random() in security-sensitive method {fn}()", ["weak-prng"], api="Math.random", func=fn)
             elif (c["new"] and name == "SecureRandom") or (obj == "SecureRandom" and name in ("getInstanceStrong", "getInstance")):
                 self.add(node, "rng", "CSPRNG", dict(api="SecureRandom"), "java.security.SecureRandom", api="SecureRandom", func=fn)
+        self.jwt()
         self.hardcoded_keys()
         return self.findings
+
+    J_JWT_LIBS = ("io.jsonwebtoken", "com.auth0.jwt", "com.nimbusds.jose")
+
+    def jwt(self):
+        """jjwt (SignatureAlgorithm.RS256, Jwts.SIG.ES256), Nimbus (JWSAlgorithm.PS256), auth0 (Algorithm.RSA256(...))."""
+        if not any(v.startswith(self.J_JWT_LIBS) for v in self.imports.values()):
+            return
+        # HMAC secret: jjwt Keys.hmacShaKeyFor("...".getBytes())
+        secret = next(((c["args"][0], c["func"]) for c in self.calls if c["name"] == "hmacShaKeyFor" and c["args"]), None)
+        for n in self.walk(self.root):
+            if n.type != "field_access":
+                continue
+            if self.t(n.child_by_field_name("object")).split(".")[-1] not in ("SignatureAlgorithm", "SIG", "JWSAlgorithm", "JWEAlgorithm"):
+                continue
+            jn = jwt_algorithms.normalize(self.t(n.child_by_field_name("field")))
+            if jn:
+                # legacy jjwt: signWith(SignatureAlgorithm.HS256, "secret") -> the sibling argument is the key
+                sib = [a for a in (n.parent.named_children if n.parent is not None and n.parent.type == "argument_list" else []) if a != n]
+                fn = self.enclosing(n)
+                self.add_jwt(n, jn, fn, self.t(n), (sib[0], fn) if sib else secret)
+        for c in self.calls:
+            if c["obj"] == "Algorithm" and not c["new"]:
+                jn = jwt_algorithms.normalize(c["name"])
+                if jn:
+                    self.add_jwt(c["node"], jn, c["func"], f"Algorithm.{c['name']}()", (c["args"][0], c["func"]) if c["args"] else None)
 
 
 def scan_go(path, rel):
