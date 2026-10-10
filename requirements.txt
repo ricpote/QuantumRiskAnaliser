@@ -1,7 +1,7 @@
 # core
 cryptography>=42
 tree-sitter-language-pack>=0.7
-cyclonedx-python-lib>=8
+cyclonedx-python-lib[json-validation]>=8
 rich>=13
 # dashboard
 streamlit>=1.38
