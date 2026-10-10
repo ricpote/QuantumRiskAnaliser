@@ -5,7 +5,8 @@ string of a reverse proxy, the KexAlgorithms line copied from a 2019 hardening g
 silently turns off OpenSSH's default PQ hybrid), the ELB SslPolicy pinned in Terraform.
 
 Only EXPLICIT settings are reported: a missing directive means "product default", which
-depends on a version we cannot see.
+depends on a version we cannot see. The exception is OpenSSH's '+', '-' and '^' prefixes, which
+modify the default list instead of replacing it and are resolved against kb.ssh.DEFAULTS.
 """
 from __future__ import annotations
 
@@ -22,27 +23,73 @@ from .common import snippet, unquote
 
 # ============================================================== file detection
 SSH_NAMES = ("sshd_config", "ssh_config")
-_NGINX_RX = re.compile(r"^\s*(ssl_protocols|ssl_ciphers|ssl_ecdh_curve|ssl_conf_command)\b", re.M)
+_NGINX_RX = re.compile(r"(^|[{;])\s*(ssl_protocols|ssl_ciphers|ssl_ecdh_curve|ssl_conf_command|ssl_dhparam|ssl_certificate)\b", re.M)
+_NGINX_SERVER_RX = re.compile(r"(^|[{;\s])server\s*\{[^}]*?[{;\s](listen|server_name)\s+[^;{}]+;", re.S)
 _APACHE_RX = re.compile(r"^\s*(SSLProtocol|SSLCipherSuite|SSLOpenSSLConfCmd)\b", re.M | re.I)
+
+
+_SSH_CRYPTO_RX = re.compile(r"^[ \t]*(KexAlgorithms|HostKeyAlgorithms|PubkeyAcceptedAlgorithms|PubkeyAcceptedKeyTypes|"
+                            r"CASignatureAlgorithms|Ciphers|MACs|HostKey)(?:[ \t]*=[ \t]*|[ \t]+)\S", re.M | re.I)
+_SSH_WORD_RX = re.compile(r"^[ \t]*(\w+)(?:[ \t]*=|[ \t]+)\S", re.M)
+_SSH_SERVER_KW = {"hostkey", "permitrootlogin", "subsystem", "usepam", "authorizedkeysfile", "listenaddress", "passwordauthentication",
+                  "challengeresponseauthentication", "kbdinteractiveauthentication", "x11forwarding", "allowusers", "allowgroups",
+                  "clientaliveinterval", "maxauthtries", "permitemptypasswords", "pubkeyauthentication", "logingracetime", "port"}
+_SSH_CLIENT_KW = {"host", "identityfile", "stricthostkeychecking", "userknownhostsfile", "proxyjump", "proxycommand", "hostname",
+                  "forwardagent", "identitiesonly", "user"}
+_SSH_CRYPTO_KW = {"kexalgorithms", "hostkeyalgorithms", "pubkeyacceptedalgorithms", "pubkeyacceptedkeytypes", "casignaturealgorithms",
+                  "ciphers", "macs", "hostkey"}
+_PLAIN_EXT = ("", ".conf", ".cfg", ".config", ".txt", ".j2", ".tpl", ".tmpl", ".bak", ".orig", ".old", ".dist", ".example", ".sample")
+_CODE_EXT = (".py", ".go", ".java", ".md", ".json", ".yml", ".yaml", ".sh", ".ps1", ".rb", ".js", ".ts", ".html", ".xml")
+
+
+def ssh_flavour(src: str) -> str | None:
+    """'sshd_config' / 'ssh_config' if the text reads like an OpenSSH config, whatever the file is called.
+
+    Needs an algorithm directive plus at least one more OpenSSH keyword, so a stray 'Ciphers'
+    line in some other format is not enough."""
+    if not _SSH_CRYPTO_RX.search(src):
+        return None
+    words = [w.lower() for w in _SSH_WORD_RX.findall(src)]
+    known = set(words) & (_SSH_SERVER_KW | _SSH_CLIENT_KW | _SSH_CRYPTO_KW)
+    if len(known) < 2:
+        return None
+    server, client = len(set(words) & _SSH_SERVER_KW), len(set(words) & _SSH_CLIENT_KW)
+    return "ssh_config" if client > server else "sshd_config"
+
+
+def _head(path: str, n: int = 200_000) -> str | None:
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            return fh.read(n)
+    except OSError:
+        return None
 
 
 def kind(path: str) -> str | None:
     """Which config scanner handles this file (None = not a config we understand)."""
     name = os.path.basename(path)
+    low = name.lower()
     parent = os.path.basename(os.path.dirname(path))
+    ext = os.path.splitext(low)[1]
     if name.endswith(".tf"):
         return "terraform"
     if name in SSH_NAMES or (parent in ("sshd_config.d", "ssh_config.d") and name.endswith(".conf")):
         return "ssh"
+    if ("sshd_config" in low or "ssh_config" in low) and not low.endswith(_CODE_EXT):
+        return "ssh"  # sshd_config_hardened, sshd_config.bak, ssh_config.j2 ...
+    head = None
     if name.endswith(".conf") or parent in ("sites-available", "sites-enabled", "conf.d"):
-        try:
-            head = open(path, encoding="utf-8", errors="replace").read(200_000)
-        except OSError:
+        head = _head(path)
+        if head is None:
             return None
-        if _NGINX_RX.search(head):
+        if _NGINX_RX.search(head) or _NGINX_SERVER_RX.search(head):
             return "nginx"
         if _APACHE_RX.search(head):
             return "apache"
+    if ext in _PLAIN_EXT:
+        head = head if head is not None else _head(path, 64_000)
+        if head and ssh_flavour(head):
+            return "ssh"
     return None
 
 
@@ -287,10 +334,22 @@ def _nginx(path, rel, src) -> list[Finding]:
     # scope = the enclosing server{} block (None = http/main level, inherited by every server)
     scopes: dict = {None: {}}
     names: dict = {}
+    meta: dict = {}  # server{} -> listens, redirects, ssl on (for the cleartext-HTTP check)
+    dhparam = {}     # scope -> (file, line)
     for name, args, line, bpath in ds:
         sv = next((i for i, b in enumerate(bpath) if b[0] == "server"), None)
         key = bpath[:sv + 1] if sv is not None else None
         scopes.setdefault(key, {})
+        if key is not None and not any(b[0].split()[0] in ("stream", "mail") for b in bpath[:sv]):
+            mt = meta.setdefault(key, dict(listens=[], redirect=False, ssl_on=False, line=src.count("\n", 0, key[-1][1]) + 1))
+            if name == "listen" and len(bpath) == sv + 1:
+                mt["listens"].append((args, line))
+            elif name == "return" and len(bpath) == sv + 1:
+                mt["redirect"] = True  # 301/302 to https, or 444/403: either way nothing is served in clear
+            elif name == "rewrite" and len(bpath) == sv + 1 and len(args) >= 2 and args[1].startswith("https://"):
+                mt["redirect"] = True
+            elif name == "ssl" and args and args[0] == "on":
+                mt["ssl_on"] = True
         if name == "server_name" and key is not None:
             names[key] = " ".join(args)
         elif name == "ssl_protocols":
@@ -301,13 +360,67 @@ def _nginx(path, rel, src) -> list[Finding]:
             scopes[key]["groups"] = (args[0], line)
         elif name == "ssl_conf_command" and len(args) >= 2 and args[0].lower() in ("groups", "curves"):
             scopes[key]["groups"] = (args[1], line)
+        elif name == "ssl_dhparam" and args:
+            dhparam[key] = (args[0], line)
     out = []
     for key, own in scopes.items():
         if not own:  # nothing written here: inherited settings are reported where they are written
             continue
         label = f"server {names.get(key, '?')}" if key is not None else "http"
         out += _tls_scope(rel, src, "nginx", label, *_effective(own, scopes[None], key), dict(server_name=names.get(key)) if key is not None else None)
+    for key, mt in meta.items():
+        out += _nginx_cleartext(rel, src, key, mt, names.get(key))
+    for key, (file, line) in dhparam.items():
+        label = f"server {names.get(key, '?')}" if key is not None else "http"
+        out += _dhparam(path, rel, src, "nginx", line, file, label, dict(server_name=names.get(key)) if key is not None else None)
     return out
+
+
+def _nginx_cleartext(rel, src, key, mt, server_name) -> list[Finding]:
+    """A server{} that answers plain HTTP and does not redirect: content and cookies travel in clear."""
+    if mt["redirect"] or mt["ssl_on"]:
+        return []
+    plain = [(a, ln) for a, ln in mt["listens"] if a and "ssl" not in a[1:] and "quic" not in a[1:]]
+    implicit = not mt["listens"]
+    if not plain and not implicit:
+        return []
+    port = None
+    if plain:
+        m = re.search(r"(\d+)$", plain[0][0][0])
+        port = int(m.group(1)) if m else 80
+        line, how = plain[0][1], f"listen {' '.join(plain[0][0])}"
+    else:
+        line, how, port = mt["line"], "no listen directive (nginx defaults to *:80)", 80
+    ev = (f"server {server_name or '?'} serves plain HTTP ({how}) with no redirect to HTTPS: "
+          "pages, cookies and credentials cross the network unencrypted")
+    return [_mk(rel, src, "nginx", line, "transport", "PLAINTEXT", dict(port=port), ev, flags=["cleartext-http"],
+                confidence=0.7 if implicit else 0.9, symbol=f"server {server_name or '?'}", asset_extra=dict(server_name=server_name),
+                ctx=dict(protocol="http"))]
+
+
+_DH_BITS_IN_NAME = re.compile(r"(?<!\d)(512|768|1024|1536|2048|3072|4096|8192)(?!\d)")
+
+
+def _dhparam(path, rel, src, lang, line, file, scope, asset_extra) -> list[Finding]:
+    """ssl_dhparam / DHParameters: the finite-field group used by DHE suites. The size is read from the
+    PEM when it sits next to the config, otherwise from the file name (dhparam-1024.pem), otherwise unknown."""
+    bits, how = None, None
+    cand = file if os.path.isabs(file) else os.path.join(os.path.dirname(path), file)
+    try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # cryptography deprecates FFDH: that is the point of the finding
+            from cryptography.hazmat.primitives.serialization import load_pem_parameters
+            with open(cand, "rb") as fh:
+                bits, how = load_pem_parameters(fh.read()).parameter_numbers().p.bit_length(), "read from the PEM"
+    except Exception:
+        m = _DH_BITS_IN_NAME.search(os.path.basename(file))
+        if m:
+            bits, how = int(m.group(1)), "inferred from the file name"
+    ev = f"DHE suites use the finite-field group in {file}" + (f": {bits}-bit prime ({how})" if bits else " (size not visible: check it is >= 2048 bits)")
+    return [_mk(rel, src, lang, line, "key-exchange", "DH", dict(key_bits=bits, group="ssl_dhparam"), ev,
+                confidence=1.0 if how == "read from the PEM" else (0.7 if bits else 0.5), symbol=scope, asset_extra=asset_extra,
+                ctx=dict(dhparam_file=file))]
 
 
 def _effective(own: dict, top: dict, key) -> list:
@@ -318,6 +431,7 @@ def _effective(own: dict, top: dict, key) -> list:
 
 def _apache(path, rel, src) -> list[Finding]:
     scopes: dict = {None: {}}
+    dhparam: dict = {}
     key = None
     for line, raw in enumerate(src.splitlines(), 1):
         s = raw.strip()
@@ -350,11 +464,15 @@ def _apache(path, rel, src) -> list[Finding]:
             scopes[key]["ciphers"] = (args[1] if len(args) > 1 and args[0].upper() == "SSL" else args[0], line)
         elif d == "sslopensslconfcmd" and len(args) >= 2 and args[0].lower() in ("curves", "groups"):
             scopes[key]["groups"] = (args[1], line)
+        elif d == "sslopensslconfcmd" and len(args) >= 2 and args[0].lower() == "dhparameters":
+            dhparam[key] = (args[1].strip("\"'"), line)
     out = []
     for key, own in scopes.items():
         if not own:
             continue
         out += _tls_scope(rel, src, "apache", key or "global", *_effective(own, scopes[None], key), dict(vhost=key) if key else None)
+    for key, (file, line) in dhparam.items():
+        out += _dhparam(path, rel, src, "apache", line, file, key or "global", dict(vhost=key) if key else None)
     return out
 
 
@@ -366,8 +484,21 @@ _HOSTKEY_FILE = [(re.compile(r"ed25519"), "Ed25519", {}), (re.compile(r"ecdsa"),
                  (re.compile(r"dsa"), "DSA", {"key_bits": 1024}), (re.compile(r"rsa"), "RSA", {})]
 
 
+def _ssh_lang(path: str, src: str) -> str:
+    low = os.path.basename(path).lower()
+    if low.startswith("ssh_config") or "ssh_config.d" in path.replace("\\", "/"):
+        return "ssh_config"
+    if "sshd" in low or "sshd_config.d" in path:
+        return "sshd_config"
+    return ssh_flavour(src) or "sshd_config"
+
+
 def _ssh(path, rel, src) -> list[Finding]:
-    lang = "ssh_config" if os.path.basename(path).startswith("ssh_config") or "ssh_config.d" in path else "sshd_config"
+    """sshd_config / ssh_config. The '+', '-' and '^' prefixes MODIFY OpenSSH's built-in list
+    (kb.ssh.DEFAULTS, from `sshd -T`), so they are resolved against it: '+diffie-hellman-group1-sha1'
+    keeps the default PQ hybrid in front, '-sntrup761x25519-sha512@openssh.com' removes it."""
+    lang = _ssh_lang(path, src)
+    client = lang == "ssh_config"
     out, match = [], None
     for line, raw in enumerate(src.splitlines(), 1):
         s = raw.split("#", 1)[0].strip()
@@ -384,12 +515,29 @@ def _ssh(path, rel, src) -> list[Finding]:
             if alg:
                 out.append(mk("authentication", alg, dict(params), f"host key {val} (type inferred from file name)", confidence=0.8))
             continue
-        if d not in _SSH_DIRECTIVES:
+        if d not in _SSH_DIRECTIVES or not val:
             continue
         category, table = _SSH_DIRECTIVES[d]
         mode = val[0] if val[0] in "+-^" else "="
+        kex = category == "key-exchange"
+        resolved, _ = SSH.resolve_list(val, d)
+        default_pq = [n for n in SSH.DEFAULTS.get(d, []) if kex and table.get(n, ("",))[0] in SSH.PQ_KEX]
+        ctx = dict(directive=m.group(1), mode=mode, block=match, resolved=resolved if mode != "=" else None)
         if mode == "-":
-            continue  # removing algorithms from the default list only makes it stronger
+            # removing algorithms only makes a list stronger... unless what goes is the PQ hybrid
+            if kex and default_pq and not any(table.get(n, ("",))[0] in SSH.PQ_KEX for n in resolved):
+                pats = [x.strip() for x in val[1:].split(",") if x.strip()]
+                import fnmatch
+                mlkem_too = any(fnmatch.fnmatch("mlkem768x25519-sha256", p) for p in pats)
+                first = next((n for n in resolved if n in table), None)
+                if first:
+                    alg, params = table[first]
+                    ev = (f"{m.group(1)} {val} removes OpenSSH's default PQ hybrid ({', '.join(default_pq)}): "
+                          f"PQ-capable peers now negotiate {first}")
+                    if not mlkem_too:
+                        ev += " (on OpenSSH >= 9.9 mlkem768x25519-sha256 is still offered: check the version)"
+                    out.append(mk(category, alg, dict(params), ev, flags=["pq-removed"], confidence=0.8 if mlkem_too else 0.6, ctx=ctx))
+            continue
         names = [x.strip() for x in val.lstrip("+-^").split(",") if x.strip()]
         algs = []
         for n in names:
@@ -397,16 +545,31 @@ def _ssh(path, rel, src) -> list[Finding]:
             if n in SSH.PSEUDO or "*" in n or base not in table:
                 continue
             algs.append((n, *table[base]))
-        pq = [a for n, a, p in algs if category == "key-exchange" and a in ("sntrup761x25519", "mlkem768x25519", "SecP256r1MLKEM768", "SecP384r1MLKEM1024")]
+        pq = [a for n, a, p in algs if kex and a in SSH.PQ_KEX]
+        # '+' (and '^' on a server, whose order does not pick the KEX: RFC 4253 7.1) keep the default PQ hybrid
+        keeps_pq = kex and mode in "+^" and default_pq and not (client and mode == "^")
         for n, alg, params in algs:
             flags, ev = [], f"{m.group(1)} {'adds' if mode in '+^' else 'allows'} {n}"
-            if category == "key-exchange" and alg not in pq:
+            if kex and alg not in pq:
                 if pq:
                     flags, ev = ["fallback-for-legacy-clients"], ev + f" (fallback; PQ-capable clients negotiate {pq[0]})"
+                elif keeps_pq:
+                    flags = ["fallback-for-legacy-clients"]
+                    ev += (f" on top of OpenSSH's defaults ('{mode}' does not replace them): PQ-capable peers still negotiate "
+                           f"{default_pq[0].split('-sha')[0]} (OpenSSH >= 9.0)")
+                elif client and mode == "^":
+                    flags = ["preferred-over-pq"]
+                    ev += "; '^' puts it BEFORE the default PQ hybrid, so this client negotiates it with every server that offers it"
                 elif mode == "=":
                     flags = ["pq-capable-not-enabled"]
                     ev += "; explicit KexAlgorithms replaces OpenSSH's default PQ hybrid (sntrup761x25519 since 9.0, mlkem768x25519 default since 10.0)"
-            out.append(mk(category, alg, dict(params), ev, flags=flags, ctx=dict(directive=m.group(1), mode=mode, block=match)))
+            out.append(mk(category, alg, dict(params), ev, flags=flags, ctx=ctx))
+        if keeps_pq and not pq and algs:
+            n = default_pq[0]
+            alg, params = table[n]
+            out.append(mk(category, alg, dict(params), f"{m.group(1)} {val} keeps OpenSSH's default PQ hybrid {n} first "
+                          "(default since OpenSSH 9.0; version not visible in the file)", flags=["openssh-default"],
+                          confidence=0.8, ctx=ctx))
     return out
 
 
