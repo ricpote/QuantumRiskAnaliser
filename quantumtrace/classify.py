@@ -5,18 +5,10 @@ OID, display name, replacement (FIPS 203/204/205), CWE, deadlines, HNDL, risk po
 """
 from __future__ import annotations
 
+from .kb import deadlines as DL
 from .kb.algorithms import (AES_OIDS, CATALOG, CURVE_BITS, CURVE_OIDS, HMAC_OIDS, MLDSA, MLKEM,
                             SIG_OIDS, rsa_bits)
 from .schema import Finding
-
-# ----------------------------------------------------------------- deadlines
-D_NIST_8547 = "NIST IR 8547 (ipd): quantum-vulnerable public-key crypto deprecated after 2030 (112-bit), disallowed after 2035"
-D_EU = "EU PQC Roadmap (NIS CG, 2025): inventory by end-2026, high-risk use cases quantum-safe by end-2030, rest by 2035"
-D_CNSA = "NSA CNSA 2.0: ML-KEM-1024 / ML-DSA-87 / AES-256 / SHA-384; quantum-resistant NSS by 2035"
-D_SHA1 = "NIST: SHA-1 retired by 31 Dec 2030 (FIPS 180-5 / SP 800-131A r3)"
-D_3DES = "NIST SP 800-131A r2: TDEA encryption disallowed after 2023"
-D_TLS_OLD = "RFC 8996: TLS 1.0 and TLS 1.1 deprecated"
-D_ECB = "NIST SP 800-131A r3 (ipd): ECB retired for confidentiality"
 
 # ----------------------------------------------------------------- replacements
 REP_KEM = dict(algorithm="ML-KEM-768", standard="FIPS 203",
@@ -106,6 +98,8 @@ def classify(f: Finding) -> Finding:
             cwe.add("CWE-328")
             why.append(f"signature uses {h} (collision attacks)")
             name += f" with {h}"
+            if h == "SHA-1":
+                deadlines.append(DL.SHA1)
         if f.category == "key-exchange" and p.get("hash") == "SHA-1":
             classical = "deprecated"
             flags.add("sha1-kex")
@@ -114,18 +108,18 @@ def classify(f: Finding) -> Finding:
             classical = "deprecated"
             why.append("RSA PKCS#1 v1.5 encryption is vulnerable to padding-oracle attacks (Bleichenbacher)")
         level = 0
+        long_lived = "long-lived" in flags  # set by ingestors (root CA, code/firmware signing, attestation...)
         # replacement depends on the ROLE
         if f.category == "key-exchange":
             rep = REP_KEM
         elif f.category == "encryption":
             rep = REP_PKE
         else:
-            long_lived = "long-lived" in flags  # set by ingestors (root CA, code/firmware signing, attestation...)
             rep = REP_SIG_LONG if long_lived else REP_SIG
             if long_lived:
-                flags.add("long-lived")
                 why.append("long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)")
-        deadlines += [D_NIST_8547, D_EU]
+        deadlines += DL.for_shor(cbits, high_risk=f.category in ("key-exchange", "encryption") or long_lived,
+                                 long_lived=long_lived, web_or_cloud=f.source in ("network", "probe", "cloud"))
         cwe.add("CWE-327")
 
     # ---------------- post-quantum ----------------
@@ -201,7 +195,8 @@ def classify(f: Finding) -> Finding:
     f.display_name = name
     f.replacement = rep
     f.cwe = sorted(cwe)
-    f.deadlines = deadlines
+    f.deadlines = [d["text"] for d in deadlines]
+    f.deadline_year = DL.earliest_year(deadlines)
     f.hndl = hndl
     f.flags = sorted(flags)
     # urgency model: HNDL first, then long-lived signatures, then other Shor uses, then Grover
@@ -238,7 +233,7 @@ def _grover(f, alg, p, cat, flags, cwe, why):
             level = {128: 1, 192: 3, 256: 5}.get(kb_eff, 0)
         elif alg == "3DES":
             name, cbits, level, classical = "3DES-EDE" + (f"-{mode}" if mode else ""), 112, 0, "deprecated"
-            deadlines.append(D_3DES)
+            deadlines.append(DL.TDEA)
             cwe.add("CWE-327")
             why.append("3DES: 64-bit block (Sweet32) and only 112-bit classical strength")
         elif alg in ("DES", "RC4"):
@@ -259,7 +254,7 @@ def _grover(f, alg, p, cat, flags, cwe, why):
             flags.add("ecb-mode")
             classical = "broken"
             cwe.add("CWE-327")
-            deadlines.append(D_ECB)
+            deadlines.append(DL.ECB)
             why.append("ECB mode leaks plaintext patterns (identical blocks -> identical ciphertext)")
         elif mode == "CBC" and classical == "recommended":
             classical = "acceptable"
@@ -284,7 +279,7 @@ def _grover(f, alg, p, cat, flags, cwe, why):
         elif alg == "SHA-1":
             classical, level = "broken", 0
             cwe.update({"CWE-327", "CWE-328"})
-            deadlines.append(D_SHA1)
+            deadlines.append(DL.SHA1)
             why.append("SHA-1 collisions are practical (SHAttered 2017, chosen-prefix 2020)")
             rep = REP_HASH
         elif alg == "SHA-224":
@@ -380,7 +375,7 @@ def _misc(f, alg, p, flags, cwe, why):
             cwe.add("CWE-327")
             return "safe", "broken", name, REP_TLS, deadlines
         if v in ("TLS 1.0", "TLS 1.1"):
-            deadlines.append(D_TLS_OLD)
+            deadlines.append(DL.TLS_OLD)
             cwe.add("CWE-327")
             why.append(f"{v} is deprecated (RFC 8996)")
             return "safe", "deprecated", name, REP_TLS, deadlines
