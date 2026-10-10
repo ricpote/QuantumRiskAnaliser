@@ -9,11 +9,15 @@ Model (explainable, shown in the UI):
   asset risk   = max(risk_points of its findings)
   source score = 100 - mean(asset risk)          (network endpoints, code files, cloud resources)
   QRS          = mean(source scores)             (each ingested source weighs the same)
+  mosca        = per Shor-vulnerable asset: at risk when shelf-life X + migration Y > years to Q-Day (kb/mosca.py)
 """
 from __future__ import annotations
 
+import os
 from collections import Counter, defaultdict
+from datetime import datetime, timezone
 
+from .kb import mosca as M
 from .schema import Finding
 
 INVENTORY_ONLY = {"LIBRARY", "SCAN-ERROR", "CSPRNG", "UNIDENTIFIED"}
@@ -83,6 +87,7 @@ def summarize(findings: list[Finding]) -> dict:
         top_assets=sorted(({"source": s, "key": k, **v} for s, d in src_assets.items() for k, v in d.items()),
                           key=lambda a: (-a["risk"], -a["classical_broken"], a["label"]))[:15],
         plan=migration_plan(real),
+        mosca=mosca(real),
     )
 
 
@@ -90,6 +95,70 @@ def _grade(q):
     if q is None:
         return "-"
     return "A" if q >= 85 else "B" if q >= 70 else "C" if q >= 55 else "D" if q >= 40 else "E" if q >= 25 else "F"
+
+
+def _now_year() -> int:
+    env = os.environ.get("QT_NOW")
+    return datetime.fromisoformat(env.replace("Z", "+00:00")).year if env else datetime.now(timezone.utc).year
+
+
+def _long_lived_sig(shor: list[Finding]) -> bool:
+    # "long-lived" is about signatures (roots, code/firmware signing); on an encryption key it only means "important"
+    return any("long-lived" in f.flags and f.category not in ("key-exchange", "encryption") for f in shor)
+
+
+def _shelf_life(a: dict, shor: list[Finding]):
+    """X: the longest time any Shor-vulnerable use on this asset must stay secure."""
+    cands = []
+    if any(f.hndl for f in shor):
+        svc = str(a.get("service") or "").split("+")[0]
+        cands.append(M.SHELF_LIFE_SERVICE.get(svc) or M.SHELF_LIFE_KIND.get(a.get("kind")) or M.SHELF_LIFE_CONFIDENTIALITY_DEFAULT)
+    if _long_lived_sig(shor):
+        cands.append(M.SHELF_LIFE_LONG_LIVED_SIG)
+    return max(cands or [M.SHELF_LIFE_SHORT_SIG], key=lambda c: c[0])
+
+
+def _migration(a: dict, shor: list[Finding]):
+    if _long_lived_sig(shor):
+        return M.MIGRATION_LONG_LIVED
+    if all("fallback-for-legacy-clients" in f.flags for f in shor):
+        return M.MIGRATION_PQ_FALLBACK
+    return M.MIGRATION_KIND.get(a.get("kind")) or M.MIGRATION_DEFAULT
+
+
+def mosca(findings: list[Finding], qday_year: int | None = None, now_year: int | None = None) -> dict:
+    """Mosca's inequality per Shor-vulnerable asset: at risk when shelf-life X + migration Y > Z years to Q-Day.
+
+    start_by = Q-Day - X - Y is the last year to START migrating; years_late > 0 means it is already too late
+    for data recorded today. Assumptions (X, Y, Q-Day scenarios) live in kb/mosca.py.
+    """
+    qday = qday_year or M.QDAY_DEFAULT
+    now = now_year or _now_year()
+    by_asset = defaultdict(list)
+    for f in findings:
+        if f.algorithm not in INVENTORY_ONLY:
+            by_asset[(f.source, asset_key(f))].append(f)
+    rows = []
+    for (src, key), fs in by_asset.items():
+        shor = [f for f in fs if f.quantum_threat == "shor"]
+        if not shor:
+            continue
+        a = fs[0].asset or {}
+        (x, xwhy), (y, ywhy) = _shelf_life(a, shor), _migration(a, shor)
+        start_by = qday - x - y
+        rows.append(dict(source=src, key=key, label=asset_label(fs[0]), shelf_life=x, migration_years=y,
+                         qday_year=qday, start_by=start_by, finish_by=qday - x, years_late=max(0, now - start_by),
+                         at_risk=start_by < now, status="late" if start_by < now else ("start-now" if start_by == now else "ok"),
+                         hndl=any(f.hndl for f in shor),
+                         deadline_year=min((f.deadline_year for f in fs if f.deadline_year), default=None),
+                         why=[f"X = {x}y: {xwhy}", f"Y = {y}y: {ywhy}", f"Z = {qday - now}y: Q-Day {qday} - {now}"]))
+    rows.sort(key=lambda r: (-r["years_late"], r["start_by"], r["label"]))
+    return dict(qday_year=qday, now=now, evaluated=len(rows), at_risk=sum(r["at_risk"] for r in rows),
+                status=dict(Counter(r["status"] for r in rows)),
+                scenarios={name: dict(qday_year=yr, at_risk=sum(r["shelf_life"] + r["migration_years"] > yr - now for r in rows))
+                           for name, yr in M.QDAY_SCENARIOS.items()},
+                cleartext_assets=len({k for k, fs in by_asset.items() if any(f.algorithm == "PLAINTEXT" for f in fs)}),
+                assets=rows)
 
 
 def migration_plan(findings: list[Finding]) -> list[dict]:

@@ -261,7 +261,10 @@ def build(findings: list[Finding], summary: dict, target: str = "scan") -> dict:
             "properties": _props(dict(quantumReadinessScore=summary.get("quantum_readiness_score"), grade=summary.get("grade"),
                                       findings=summary.get("findings"), assets=summary.get("assets"),
                                       hndlExposedEndpoints=summary.get("network", {}).get("hndl_exposed"),
-                                      pqProtectedEndpoints=summary.get("network", {}).get("pq_protected"))),
+                                      pqProtectedEndpoints=summary.get("network", {}).get("pq_protected"),
+                                      moscaQDayYear=summary.get("mosca", {}).get("qday_year"),
+                                      moscaAssetsAtRisk=summary.get("mosca", {}).get("at_risk"),
+                                      moscaAssetsEvaluated=summary.get("mosca", {}).get("evaluated"))),
         },
         "components": list(comps.values()),
         "dependencies": [{"ref": "scan-target", "dependsOn": [r for r in comps]}] +
