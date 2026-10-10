@@ -310,12 +310,26 @@ def _vuln(vulns, f: Finding, ref: str):
             p.append({"name": "quantumtrace:occurrences", "value": "1"})
 
 
+NOT_VALIDATED = 'not validated: schema checker missing, run  pip install "cyclonedx-python-lib[json-validation]"'
+
+
 def validate(bom: dict) -> list[str]:
-    """Validate against the official CycloneDX 1.6 JSON schema. Returns a list of errors (empty = valid)."""
+    """Validate against the official CycloneDX 1.6 JSON schema. Returns a list of errors (empty = valid).
+    If the optional schema checker is not installed, returns [NOT_VALIDATED] instead of crashing the scan:
+    the CBOM is still written, it just was not checked (see `unvalidated`)."""
     try:
         from cyclonedx.schema import SchemaVersion
         from cyclonedx.validation.json import JsonStrictValidator
+        err = JsonStrictValidator(SchemaVersion.V1_6).validate_str(json.dumps(bom))
     except ImportError:
-        return ["cyclonedx-python-lib not installed: pip install cyclonedx-python-lib"]
-    err = JsonStrictValidator(SchemaVersion.V1_6).validate_str(json.dumps(bom))
+        return [NOT_VALIDATED]
+    except Exception as e:  # MissingOptionalDependencyException (no jsonschema) and similar
+        if type(e).__name__ == "MissingOptionalDependencyException":
+            return [NOT_VALIDATED]
+        raise
     return [] if err is None else [str(err)]
+
+
+def unvalidated(errs: list[str]) -> bool:
+    """True when validate() could not run (missing dependency), as opposed to the CBOM being invalid."""
+    return errs == [NOT_VALIDATED]

@@ -50,6 +50,44 @@ for _base, _pq in [("ELBSecurityPolicy-TLS13-1-3-2021-06", "ELBSecurityPolicy-TL
 for _p in SSL_POLICIES.values():
     _p.setdefault("pq", False)
 
+def derive_policy(name: str | None) -> dict | None:
+    """Best-effort reading of an SslPolicy that is NOT in SSL_POLICIES, from AWS's naming scheme.
+
+    Used for policies we have no verified cipher table for (the *-FIPS-2023-04, *-FIPS-PQ-2025-09
+    and *-RFC9151-* families, legacy ELBSecurityPolicy-TLS-1-0-2015-04, future ones). The name
+    reliably gives the minimum TLS version, whether TLS 1.3 is on and whether ML-KEM hybrids are
+    offered ("-PQ-"). Cipher lists are a LOWER BOUND (what every policy of that kind allows); the
+    real policy may allow more, so findings built from this carry the flag "policy-derived-from-name".
+    Returns None when the name says nothing usable.
+    """
+    import re
+    if not isinstance(name, str):
+        return None
+    m13 = re.search(r"TLS13-1-([0-3])", name)
+    m12 = re.search(r"(?:TLS|FS)-1-([0-2])", name)
+    if m13:
+        lo, hi = int(m13.group(1)), 3
+    elif m12:
+        lo, hi = int(m12.group(1)), 2
+    elif re.search(r"ELBSecurityPolicy-20\d\d-\d\d", name):
+        lo, hi = 0, 2   # dated legacy policies (2015-05, 2016-08 style) start at TLS 1.0
+    else:
+        return None
+    protocols = [f"TLS 1.{v}" for v in range(hi, lo - 1, -1)]
+    fips, cnsa = "FIPS" in name, "RFC9151" in name
+    restricted = "-Res-" in name or cnsa
+    ciphers = []
+    if "TLS 1.3" in protocols:
+        ciphers += ["TLS_AES_256_GCM_SHA384"] if cnsa else (["TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384"] if fips else _T13)
+    if "TLS 1.2" in protocols:
+        ciphers += ["ECDHE-ECDSA-AES256-GCM-SHA384"] if cnsa else _GCM_ECDHE
+        if not restricted:
+            ciphers += _ECDHE_SHA2
+    if lo < 2 and not restricted:
+        ciphers += _ECDHE_SHA1   # TLS 1.0/1.1 cannot negotiate GCM: CBC-SHA1 suites must be on
+    return dict(protocols=protocols, ciphers=ciphers, pq="-PQ-" in name, derived=True)
+
+
 RECOMMENDED_POLICY = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09"   # AWS console default / recommendation
 RECOMMENDED_POLICY_FIPS = "ELBSecurityPolicy-TLS13-1-2-Res-FIPS-PQ-2025-09"
 

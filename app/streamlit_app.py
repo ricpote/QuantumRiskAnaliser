@@ -326,7 +326,7 @@ with T["CBOM & exports"]:
     c1, c2, c3 = st.columns(3)
     c1.metric("CBOM components", len(bom["components"]))
     c2.metric("Vulnerabilities", len(bom["vulnerabilities"]))
-    c3.metric("CycloneDX 1.6 schema", "valid ✅" if not errs else "invalid ❌")
+    c3.metric("CycloneDX 1.6 schema", "valid ✅" if not errs else "not checked ⚠️" if cyclonedx.unvalidated(errs) else "invalid ❌")
     types = pd.Series([c.get("cryptoProperties", {}).get("assetType", c["type"]) for c in bom["components"]]).value_counts().reset_index()
     types.columns = ["assetType", "components"]
     st.dataframe(types, hide_index=True)
@@ -340,12 +340,18 @@ with T["CBOM & exports"]:
 # ------------------------------------------------------------------ accuracy
 with T["Accuracy"]:
     if paths == ("samples/official",):
-        from quantumtrace.evaluate import evaluate
-        r = evaluate(findings)
+        from quantumtrace.evaluate import run as run_eval
+        r = st.cache_data(show_spinner="Scoring against tests/ground_truth.json ...")(lambda: run_eval())()
+        off, own = r["code_by_origin"]["official"], r["code_by_origin"]["own_fixtures"]
+        st.markdown("**Official challenge data**")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Code recall / precision", f"{r['code']['recall']:.0%} / {r['code']['precision']:.0%}", f"{r['code']['traps_checked']} traps checked")
+        c1.metric("Code findings correct", f"{off['correctly_classified']}/{off['expected']}", f"{off['traps_checked']} traps checked", delta_color="off")
         c2.metric("Network sessions correct", f"{r['network']['sessions_correct']}/{r['network']['expected_sessions']}")
-        c3.metric("Cloud resources correct", f"{r['cloud']['correct']}/{r['cloud']['expected']}", f"{r['cloud']['traps_checked']} traps checked")
+        c3.metric("Cloud resources correct", f"{r['cloud']['correct']}/{r['cloud']['expected']}", f"{r['cloud']['traps_checked']} traps checked", delta_color="off")
+        st.markdown("**Our own fixtures** (configs, JWT: `samples/extra/code`)")
+        c4, c5, _ = st.columns(3)
+        c4.metric("Expectations correct", f"{own['correctly_classified']}/{own['expected']}", f"{own['traps_checked']} traps checked", delta_color="off")
+        c5.metric("Code precision (all)", f"{r['code']['precision']:.0%}", f"{r['code']['false_positives']} false positives", delta_color="off")
         if r["failures"]:
             st.error("\n".join(r["failures"][:30]))
         else:

@@ -379,6 +379,9 @@ def _misc(f, alg, p, flags, cwe, why):
             cwe.add("CWE-327")
             why.append(f"{v} is deprecated (RFC 8996)")
             return "safe", "deprecated", name, REP_TLS, deadlines
+        if v == "unknown":
+            why.append("the TLS configuration could not be identified, so nothing about it is assumed safe: verify it")
+            return "safe", "unknown", "TLS (unidentified policy)", REP_TLS, deadlines
         if v == "TLS 1.2":
             why.append("TLS 1.2 cannot negotiate the standardized ML-KEM hybrid groups: TLS 1.3 required for PQ key exchange")
             return "safe", "acceptable", name, dict(algorithm="TLS 1.3", standard="RFC 8446", how="Enable TLS 1.3 (prerequisite for PQ hybrid key exchange)"), deadlines
