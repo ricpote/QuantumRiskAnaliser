@@ -21,12 +21,18 @@ from .score import summarize
 PCAP_EXT = (".pcap", ".pcapng", ".cap")
 
 
-def collect(paths: list[str]) -> list[Finding]:
+def collect(paths: list[str], problems: list | None = None, quiet: bool = False) -> list[Finding]:
+    """Scan every path. A file that cannot be read never aborts the scan: it is added to
+    `problems` as dict(path, reason) and, unless quiet, printed as a warning on stderr."""
     from .ingest import cloud, code, pcap
+    problems = problems if problems is not None else []
+    start = len(problems)
     findings: list[Finding] = []
     pcaps, jsons, code_roots = [], [], []
     for p in paths:
-        if os.path.isdir(p):
+        if not os.path.exists(p):
+            problems.append(dict(path=p, reason="path not found"))
+        elif os.path.isdir(p):
             code_roots.append(p)
             for d, ds, fs in os.walk(p):
                 ds[:] = [x for x in ds if x not in code.SKIP_DIRS]
@@ -46,11 +52,24 @@ def collect(paths: list[str]) -> list[Finding]:
         try:
             findings += pcap.ingest(p)
         except pcap.TsharkMissing as e:
-            print(f"[!] {e}", file=sys.stderr)
+            problems.append(dict(path=p, reason=str(e)))
+        except Exception as e:  # unreadable or corrupt capture: report it, keep scanning the rest
+            problems.append(dict(path=p, reason=f"unreadable capture ({e})"))
     if jsons:
-        findings += cloud.ingest(jsons)
+        findings += cloud.ingest(jsons, problems)
     for r in code_roots:
-        findings += code.scan(r)
+        try:
+            found = code.scan(r)
+        except Exception as e:
+            problems.append(dict(path=r, reason=f"code scan failed ({type(e).__name__}: {e})"))
+            continue
+        for f in found:
+            if f.algorithm == "SCAN-ERROR":
+                problems.append(dict(path=f.location.get("file", r), reason=f.evidence or "scanner error"))
+        findings += found
+    if not quiet:
+        for x in problems[start:]:
+            print(f"[!] skipped {x['path']}: {x['reason']}", file=sys.stderr)
     return classify_all(findings)
 
 
@@ -126,6 +145,7 @@ def cmd_probe(a):
     findings, reports = P.ingest(a.targets, starttls=a.starttls, timeout=a.timeout, deep=a.deep)
     findings = classify_all(findings)
     _print_probe(reports)
+    failed = [r["target"] for r in reports if r.get("errors") and not r.get("modern")]
     if a.out:
         os.makedirs(a.out, exist_ok=True)
         summary = summarize(findings)
@@ -136,19 +156,23 @@ def cmd_probe(a):
         with open(os.path.join(a.out, "probe_cbom.cdx.json"), "w") as fh:
             json.dump(bom, fh, indent=2)
         errs = cyclonedx.validate(bom)
-        print(f"Outputs: {a.out}/probe_reports.json, probe_findings.json, probe_cbom.cdx.json (CycloneDX 1.6 {'valid' if not errs else 'INVALID'})")
-    return 0
+        print(f"Outputs: {a.out}/probe_reports.json, probe_findings.json, probe_cbom.cdx.json (CycloneDX 1.6 {'valid' if not errs else 'NOT VALIDATED' if cyclonedx.unvalidated(errs) else 'INVALID'})")
+    if failed:
+        print(f"[!] no TLS handshake with: {', '.join(failed)}", file=sys.stderr)
+    return 1 if reports and len(failed) == len(reports) else 0
 
 
 def cmd_scan(a):
     t0 = time.time()
-    findings = collect(a.paths)
+    problems: list = []
+    findings = collect(a.paths, problems)
     if a.probe:
         from .ingest import probe as P
         pf, reports = P.ingest(a.probe, timeout=4.0, deep=False)
         findings += classify_all(pf)
         _print_probe(reports)
     summary = summarize(findings)
+    summary["warnings"] = problems
     os.makedirs(a.out, exist_ok=True)
     dump(findings, os.path.join(a.out, "findings.json"))
     with open(os.path.join(a.out, "summary.json"), "w") as fh:
@@ -160,6 +184,14 @@ def cmd_scan(a):
         json.dump(sarif.build(findings), fh, indent=2)
     errs = cyclonedx.validate(bom)
     _print_summary(summary, findings, time.time() - t0, errs, a.out)
+    if problems:
+        print(f"[!] {len(problems)} input(s) could not be analysed (listed above and in {a.out}/summary.json \"warnings\")", file=sys.stderr)
+    if not findings and problems:
+        print("[!] nothing was analysed: check the paths and the files", file=sys.stderr)
+        return 3
+    if cyclonedx.unvalidated(errs):
+        print(f"[!] CBOM written but {errs[0]}", file=sys.stderr)
+        return 0
     return 0 if not errs else 2
 
 
@@ -185,13 +217,16 @@ def _print_summary(s, findings, dt, errs, out):
         con.print(p)
     except ImportError:
         print(json.dumps({k: s[k] for k in ("quantum_readiness_score", "grade", "tiers", "network")}, indent=2))
-    print(f"CBOM schema validation (CycloneDX 1.6): {'OK' if not errs else 'FAILED: ' + errs[0][:300]}")
+    print(f"CBOM schema validation (CycloneDX 1.6): {'OK' if not errs else 'SKIPPED (' + errs[0] + ')' if cyclonedx.unvalidated(errs) else 'FAILED: ' + errs[0][:300]}")
     print(f"Outputs: {out}/findings.json, summary.json, cbom.cdx.json, results.sarif")
 
 
 def cmd_validate(a):
     with open(a.file) as fh:
         errs = cyclonedx.validate(json.load(fh))
+    if cyclonedx.unvalidated(errs):
+        print(errs[0], file=sys.stderr)
+        return 1
     print("valid CycloneDX 1.6" if not errs else f"INVALID: {errs[0]}")
     return 0 if not errs else 1
 

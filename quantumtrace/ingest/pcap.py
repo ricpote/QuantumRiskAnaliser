@@ -46,6 +46,10 @@ class TsharkMissing(RuntimeError):
     pass
 
 
+class PcapUnreadable(RuntimeError):
+    """tshark could not read the file at all (not a capture, empty, corrupt)."""
+
+
 def _tshark() -> str:
     exe = shutil.which("tshark")
     if not exe:
@@ -67,6 +71,11 @@ def _fields(pcap: str, display_filter: str, fields: list[str], extra: list[str] 
     for f in fields:
         cmd += ["-e", f]
     res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0 and not res.stdout.strip():
+        noise = ("Running as user", "This could be dangerous")  # tshark's root warning is not the reason
+        msg = next((ln.strip() for ln in res.stderr.splitlines() if ln.strip() and not ln.strip().startswith(noise)),
+                   f"tshark exit code {res.returncode}")
+        raise PcapUnreadable(msg)
     rows = []
     for line in res.stdout.splitlines():
         vals = line.split("\t")
