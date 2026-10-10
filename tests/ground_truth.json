@@ -1046,6 +1046,180 @@
    "flags": [
     "hardcoded-key"
    ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 128,
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "api": "Math.random"
+   },
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024,
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "weak-signature-hash"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "hash": "SHA-1",
+    "iterations": 1000
+   }
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "RS256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "CARD_KEY",
+    "key_bits": 128
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 128,
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 2048,
+    "padding": "OAEP"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-256"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "ES256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
   }
  ],
  "code_absent": [
@@ -1141,6 +1315,12 @@
     "key_bits": 2048
    },
    "why": "aws_kms_key.old (RSA_2048) is commented out"
+  },
+  {
+   "file": "extra/code/js/web-client/src/cache.ts",
+   "category": "hash",
+   "algorithm": "MD5",
+   "why": "createHash comes from ./hash-utils (own helper), not node:crypto"
   }
  ],
  "network": [

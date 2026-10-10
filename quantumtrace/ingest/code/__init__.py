@@ -14,6 +14,7 @@ except Exception:  # tree-sitter not installed
 
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", "vendor", "build", "dist", "target"}
 EXT = {".py": "python", ".java": "java", ".go": "go"}
+JS_EXT = (".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx")
 
 
 def scan(root: str, base: str | None = None) -> list[Finding]:
@@ -31,6 +32,8 @@ def scan(root: str, base: str | None = None) -> list[Finding]:
                 out += treesitter.scan_go(path, rel)
             elif ext == ".java" and treesitter:
                 out += treesitter.scan_java(path, rel)
+            elif ext in JS_EXT and treesitter and not path.endswith((".d.ts", ".min.js")):  # skip type stubs / minified bundles
+                out += treesitter.scan_js(path, rel)
             elif os.path.basename(path) in ("requirements.txt", "go.mod", "pom.xml", "build.gradle", "package.json"):
                 out += _deps(path, rel)
             elif config.kind(path):
