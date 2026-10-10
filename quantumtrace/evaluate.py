@@ -15,6 +15,7 @@ from .schema import Finding
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GT = os.path.join(ROOT, "tests", "ground_truth.json")
 SAMPLES = os.path.join(ROOT, "samples", "official")
+EXTRA_CODE = os.path.join(ROOT, "samples", "extra", "code")  # our own code/config fixtures (expectations in ground_truth.json)
 
 RELEVANT_TIERS = ("critical", "medium", "unencrypted")
 
@@ -136,7 +137,7 @@ def run() -> dict:
     cwd = os.getcwd()
     os.chdir(ROOT)
     try:
-        findings = collect([os.path.relpath(SAMPLES, ROOT)])
+        findings = collect([os.path.relpath(SAMPLES, ROOT), os.path.relpath(EXTRA_CODE, ROOT)])
     finally:
         os.chdir(cwd)
     return evaluate(findings, gt)

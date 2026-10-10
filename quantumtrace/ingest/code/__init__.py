@@ -5,7 +5,7 @@ import os
 import re
 
 from ...schema import Finding
-from . import python_ast
+from . import config, python_ast
 
 try:
     from . import treesitter
@@ -33,6 +33,8 @@ def scan(root: str, base: str | None = None) -> list[Finding]:
                 out += treesitter.scan_java(path, rel)
             elif os.path.basename(path) in ("requirements.txt", "go.mod", "pom.xml", "build.gradle", "package.json"):
                 out += _deps(path, rel)
+            elif config.kind(path):
+                out += config.scan(path, rel)
         except Exception as e:  # never let one file kill the scan
             out.append(Finding(source="code", category="protocol", algorithm="SCAN-ERROR", asset=dict(kind="source-file", path=rel),
                                location=dict(file=rel, line=1), evidence=f"scanner error: {e}", confidence=0.0))

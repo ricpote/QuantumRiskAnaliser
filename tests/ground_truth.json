@@ -355,6 +355,478 @@
    "params": {
     "hash": "SHA-256"
    }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.0"
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.1"
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "transport": true
+   },
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "key-exchange",
+   "algorithm": "ECDHE",
+   "tier": "critical",
+   "classical": "acceptable"
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 128,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 128,
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "encryption",
+   "algorithm": "3DES",
+   "tier": "medium",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 168
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "hash": "SHA-1"
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "key-exchange",
+   "algorithm": "X25519MLKEM768",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "parameter_set": "ML-KEM-768"
+   }
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "key-exchange",
+   "algorithm": "X25519",
+   "tier": "critical",
+   "classical": "recommended",
+   "flags": [
+    "fallback-for-legacy-clients"
+   ]
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "key-exchange",
+   "algorithm": "ECDH",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-256"
+   },
+   "flags": [
+    "fallback-for-legacy-clients"
+   ]
+  },
+  {
+   "file": "extra/code/nginx/pq-tls12-only.conf",
+   "category": "key-exchange",
+   "algorithm": "ECDH",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-384"
+   },
+   "flags": [
+    "pq-unreachable"
+   ]
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.0"
+   }
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.1"
+   }
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "key-exchange",
+   "algorithm": "X25519",
+   "tier": "critical",
+   "classical": "recommended",
+   "flags": [
+    "pq-not-configured"
+   ]
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "key-exchange",
+   "algorithm": "ECDH",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-384"
+   },
+   "flags": [
+    "pq-not-configured"
+   ]
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "key-exchange",
+   "algorithm": "X25519",
+   "tier": "critical",
+   "classical": "recommended",
+   "flags": [
+    "pq-capable-not-enabled"
+   ]
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "key-exchange",
+   "algorithm": "DH",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 2048,
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "pq-capable-not-enabled",
+    "sha1-kex"
+   ]
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 128,
+    "mode": "CTR"
+   }
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "encryption",
+   "algorithm": "3DES",
+   "tier": "medium",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 168,
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "hash": "SHA-1"
+   }
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "authentication",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable"
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "authentication",
+   "algorithm": "Ed25519",
+   "tier": "critical",
+   "classical": "recommended"
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "authentication",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "weak-signature-hash"
+   ]
+  },
+  {
+   "file": "extra/code/ssh/sshd_config.d/10-pq.conf",
+   "category": "key-exchange",
+   "algorithm": "mlkem768x25519",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "parameter_set": "ML-KEM-768"
+   }
+  },
+  {
+   "file": "extra/code/ssh/sshd_config.d/10-pq.conf",
+   "category": "key-exchange",
+   "algorithm": "X25519",
+   "tier": "critical",
+   "classical": "recommended",
+   "flags": [
+    "fallback-for-legacy-clients"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.0"
+   },
+   "flags": [
+    "internet-facing"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "transport": true
+   },
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "key-exchange",
+   "algorithm": "ECDHE",
+   "tier": "critical",
+   "classical": "acceptable"
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 128,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 128,
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "hash": "SHA-1"
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "authentication",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 2048
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "transport",
+   "algorithm": "PLAINTEXT",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "flags": [
+    "plaintext"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "key-exchange",
+   "algorithm": "X25519MLKEM768",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "parameter_set": "ML-KEM-768"
+   },
+   "flags": [
+    "pq-hybrid"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "certificate",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 2048,
+    "key_algorithm": "RSA_2048"
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 3072,
+    "key_spec": "RSA_3072"
+   },
+   "flags": [
+    "long-lived"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "signature",
+   "algorithm": "ML-DSA",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "parameter_set": "ML-DSA-65"
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "key",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "curve": "P-224"
+   }
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.0"
+   }
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "transport": true
+   },
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 128,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "encryption",
+   "algorithm": "3DES",
+   "tier": "medium",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 168
+   }
+  },
+  {
+   "file": "extra/code/apache/ssl.conf",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "hash": "SHA-1"
+   }
   }
  ],
  "code_absent": [
@@ -414,6 +886,42 @@
     "key_bits": 128
    },
    "why": "keyLen=32 -> AES-256"
+  },
+  {
+   "file": "extra/code/nginx/legacy-shop.conf",
+   "category": "encryption",
+   "algorithm": "RC4",
+   "why": "RC4 only appears in a commented-out ssl_ciphers line"
+  },
+  {
+   "file": "extra/code/nginx/pq-tls12-only.conf",
+   "category": "key-exchange",
+   "algorithm": "X25519MLKEM768",
+   "why": "hybrid group needs TLS 1.3, which ssl_protocols disables: never negotiated"
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "authentication",
+   "algorithm": "DSA",
+   "why": "HostKeyAlgorithms -ssh-dss REMOVES DSA"
+  },
+  {
+   "file": "extra/code/ssh/sshd_config",
+   "category": "key-exchange",
+   "algorithm": "DH",
+   "params": {
+    "key_bits": 1024
+   },
+   "why": "diffie-hellman-group1-sha1 is commented out"
+  },
+  {
+   "file": "extra/code/terraform/main.tf",
+   "category": "signature",
+   "algorithm": "RSA",
+   "params": {
+    "key_bits": 2048
+   },
+   "why": "aws_kms_key.old (RSA_2048) is commented out"
   }
  ],
  "network": [
