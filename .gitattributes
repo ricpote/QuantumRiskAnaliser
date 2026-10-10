@@ -1,0 +1,20 @@
+﻿# Normalizar finais de linha: LF no repositorio, CRLF no disco em Windows.
+# Sem isto, com 4 pessoas em sistemas diferentes, um PR aparece com TODAS as linhas alteradas.
+* text=auto eol=lf
+
+# Binarios: o Git NUNCA lhes pode tocar (converter = corromper a captura)
+*.pcap   binary
+*.pcapng binary
+*.png    binary
+*.jpg    binary
+*.pdf    binary
+*.zip    binary
+
+# Estes partem-se se alguma vez levarem CRLF
+Makefile    text eol=lf
+Dockerfile  text eol=lf
+*.sh        text eol=lf
+
+# Reduzir ruido nos diffs e nos conflitos
+tests/ground_truth.json  -diff
+quantumtrace/kb/tls_ciphersuites.json  -diff linguist-generated
