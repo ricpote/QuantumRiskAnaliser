@@ -6,11 +6,27 @@ source code (Python, Java, Go) and AWS cloud exports. It classifies every primit
 validates against the official schema. Each finding maps to its NIST replacement:
 FIPS 203 (ML-KEM), FIPS 204 (ML-DSA) or FIPS 205 (SLH-DSA).
 
+## Quick start (Docker only, nothing else to install)
+
+```bash
+git clone https://github.com/ricpote/QuantumRiskAnaliser.git && cd QuantumRiskAnaliser
+docker build -t quantumtrace .
+
+# 1. Dashboard -> open http://localhost:8501
+docker run --rm -p 8501:8501 quantumtrace
+
+# 2. CLI scan of the official samples -> CBOM, findings, SARIF, summary in ./out
+docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
+
+# 3. Live TLS probe against the bundled offline lab (PQ vs legacy endpoint)
+docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8445"
 ```
-python -m quantumtrace scan samples/official --out out     # CLI: findings, CBOM, SARIF, summary
-streamlit run app/streamlit_app.py                          # dashboard on :8501
-docker build -t quantumtrace . && docker run -p 8501:8501 quantumtrace
-```
+
+> Linux with SELinux (Fedora/RHEL): add `:Z` to the volume, `-v "$PWD:/data:Z"`.
+> Windows PowerShell: use `-v "${PWD}:/data"`.
+
+The image pins every Python dependency (`constraints.txt`) and bundles tshark and the TLS lab.
+CI builds it and runs the three commands above on every pull request.
 
 ## Results on the official challenge data
 
@@ -51,8 +67,8 @@ The synthetic data contains traps on purpose. QuantumTrace handles each of them:
 
 ## Live TLS probe
 
-```
-qtrace probe example.com mail.example.com:587 db.internal:5432 --deep --out out/
+```bash
+docker run --rm -v "$PWD:/data" quantumtrace qtrace probe example.com mail.example.com:587 db.internal:5432 --deep --out /data/out
 ```
 
 The probe builds its ClientHellos by hand, so it does not depend on the local OpenSSL supporting PQ.
@@ -83,8 +99,12 @@ They are real exposure, but client-dependent, so they score 60 instead of 100.
 
 ### Offline TLS lab (demo sandbox, also used by the tests)
 
-`make lab` needs Go ≥ 1.24, which has X25519MLKEM768 in `crypto/tls`. The Docker image already
-contains the lab: `docker run --rm quantumtrace sh -c "tlslab & sleep 1; qtrace probe 127.0.0.1:8443"`.
+The Docker image contains the lab (built with Go 1.24, which has X25519MLKEM768 in `crypto/tls`).
+Start it and probe every endpoint in one container:
+
+```bash
+docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8444 127.0.0.1:8445 127.0.0.1:8446 127.0.0.1:8447 127.0.0.1:2525 127.0.0.1:5433"
+```
 
 | Endpoint | Profile |
 |---|---|
@@ -183,7 +203,16 @@ The knowledge base in `quantumtrace/kb/` is the only place where classification 
 
 ## Tests
 
+The accuracy report also runs inside the image:
+
+```bash
+docker run --rm quantumtrace python -m quantumtrace.evaluate   # accuracy vs tests/ground_truth.json
 ```
+
+For development (needs Python ≥ 3.10, tshark and Go ≥ 1.24 installed locally):
+
+```
+pip install -e ".[ui,dev]"
 make test   # unit tests + ground truth (QT_NOW=2026-10-10)
 make eval   # accuracy report
 ```
