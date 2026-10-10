@@ -24,3 +24,24 @@ jobs:
         run: |
           qtrace scan samples/official --out out
           qtrace validate out/cbom.cdx.json
+
+  docker:                         # the jury only uses Docker: the image must build and work on every PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image from scratch
+        run: docker build -t quantumtrace .
+      - name: Scan + CBOM validation inside the container
+        run: |
+          mkdir -p out
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
+          docker run --rm -v "$PWD:/data" quantumtrace qtrace validate /data/out/cbom.cdx.json
+      - name: Live probe against the bundled TLS lab
+        run: |
+          docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8445" | tee probe.txt
+          grep -q "✓ X25519MLKEM768" probe.txt
+      - name: Dashboard answers on :8501
+        run: |
+          docker run -d --name ui -p 8501:8501 quantumtrace
+          for i in $(seq 1 30); do curl -sf http://localhost:8501/_stcore/health && exit 0; sleep 1; done
+          docker logs ui; exit 1
