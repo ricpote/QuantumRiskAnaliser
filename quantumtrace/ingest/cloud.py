@@ -74,6 +74,10 @@ def _rel(p):
 
 
 # ------------------------------------------------------------------------- KMS
+# key name/description words that mark a long-lived key (roots, code/firmware signing...): migrate first
+LONG_LIVED_WORDS = ("root", "certificate authority", "codesign", "release", "firmware", "attestation", "iot", "settlement")
+
+
 def _kms(path, i, k, doc):
     spec = k.get("KeySpec") or k.get("CustomerMasterKeySpec") or "SYMMETRIC_DEFAULT"
     alg, params = AWS.KMS_KEYSPEC.get(spec, ("UNKNOWN-KEY", {}))
@@ -103,8 +107,7 @@ def _kms(path, i, k, doc):
         flags.append("hsm-backed")
     if k.get("MultiRegion"):
         flags.append("multi-region")
-    if any(w in (alias + " " + desc).lower() for w in ("root", "certificate authority", "codesign", "release", "firmware",
-                                                       "attestation", "iot", "settlement")):
+    if any(w in (alias + " " + desc).lower() for w in LONG_LIVED_WORDS):
         flags.append("long-lived")
     if "no longer staffed" in desc.lower() or "unowned" in desc.lower():
         flags.append("orphaned-owner")
@@ -181,12 +184,32 @@ def _listener(path, pointer, lb, lst, certs, doc):
                            flags=["plaintext"] + (["internet-facing"] if lb.get("Scheme") == "internet-facing" else [])))
         return out
     policy = lst.get("SslPolicy")
-    pol = AWS.SSL_POLICIES.get(policy)
     ctx = dict(service="AWS ELB", ssl_policy=policy, load_balancer=name, scheme=lb.get("Scheme"),
                recommended_policy=AWS.RECOMMENDED_POLICY,
                migration_hint=f"aws elbv2 modify-listener --listener-arn <arn> --ssl-policy {AWS.RECOMMENDED_POLICY}")
     base = dict(source="cloud", asset=asset, location=loc)
     exposure = ["internet-facing"] if lb.get("Scheme") == "internet-facing" else []
+    out += elb_policy_findings(policy, f"{name}:{port}", base, ctx, exposure)
+    pol = AWS.SSL_POLICIES.get(policy)
+    if not pol:
+        return out
+    ctx = dict(ctx, protocols=pol["protocols"], ciphers=pol["ciphers"], pq=pol["pq"])
+    # authentication: certificate key used by this listener
+    for c in lst.get("Certificates", []):
+        cert = certs.get(c.get("CertificateArn"))
+        if cert:
+            alg, params = AWS.ACM_KEY.get(cert.get("KeyAlgorithm"), ("UNKNOWN-KEY", {}))
+            out.append(Finding(category="authentication", algorithm=alg, params=dict(params), context=dict(ctx, certificate_arn=c.get("CertificateArn")),
+                               flags=list(exposure), evidence=f"{name}:{port} authenticates with {cert.get('KeyAlgorithm')} certificate {cert.get('DomainName')}", **base))
+    return out
+
+
+def elb_policy_findings(policy, label, base, ctx, exposure) -> list[Finding]:
+    """ELB SslPolicy -> protocol / key-exchange / cipher / MAC Findings. Shared by the AWS JSON and Terraform ingestors.
+
+    base = dict(source, asset, location); label names the listener in evidence (e.g. "web-alb:443")."""
+    out = []
+    pol = AWS.SSL_POLICIES.get(policy)
     if not pol:
         out.append(Finding(category="protocol", algorithm="TLS", params=dict(version="unknown"), context=ctx, confidence=0.3,
                            evidence=f"Unknown SslPolicy {policy}: check `aws elbv2 describe-ssl-policies`", flags=["unknown-policy"], **base))
@@ -195,7 +218,7 @@ def _listener(path, pointer, lb, lst, certs, doc):
     ctx = dict(ctx, protocols=pol["protocols"], ciphers=pol["ciphers"], pq=pol["pq"])
     lowest = min(pol["protocols"], key=lambda v: v)  # "TLS 1.0" < "TLS 1.2"
     out.append(Finding(category="protocol", algorithm="TLS", params=dict(version=lowest), context=ctx, flags=exposure,
-                       evidence=f"{name}:{port} SslPolicy {policy} allows {', '.join(sorted(pol['protocols']))}", **base))
+                       evidence=f"{label} SslPolicy {policy} allows {', '.join(sorted(pol['protocols']))}", **base))
     # key exchange families supported by the policy
     kex = sorted({s["kex"] or "TLS13" for s in suites})
     if pol["pq"]:
@@ -221,11 +244,4 @@ def _listener(path, pointer, lb, lst, certs, doc):
     if any(s["mac"] == "SHA-1" for s in suites):
         out.append(Finding(category="mac", algorithm="HMAC", params=dict(hash="SHA-1"), context=ctx, flags=list(exposure),
                            evidence=f"{policy} allows HMAC-SHA1 CBC suites", **base))
-    # authentication: certificate key used by this listener
-    for c in lst.get("Certificates", []):
-        cert = certs.get(c.get("CertificateArn"))
-        if cert:
-            alg, params = AWS.ACM_KEY.get(cert.get("KeyAlgorithm"), ("UNKNOWN-KEY", {}))
-            out.append(Finding(category="authentication", algorithm=alg, params=dict(params), context=dict(ctx, certificate_arn=c.get("CertificateArn")),
-                               flags=list(exposure), evidence=f"{name}:{port} authenticates with {cert.get('KeyAlgorithm')} certificate {cert.get('DomainName')}", **base))
     return out

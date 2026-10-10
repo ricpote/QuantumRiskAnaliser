@@ -10,6 +10,7 @@ import ast
 import os
 
 from ...schema import Finding
+from . import jwt_algorithms
 from .common import SEC_WORDS, is_keyish, snippet
 
 HASHLIB = {"md5": "MD5", "sha1": "SHA-1", "sha224": "SHA-224", "sha256": "SHA-256", "sha384": "SHA-384",
@@ -207,12 +208,42 @@ def scan(path: str, rel: str) -> list[Finding]:
                     return "encryption"
         return "signature"
 
+    def jwt_call(call, name, fqn, func):
+        """PyJWT / python-jose: jwt.encode(payload, key, algorithm=...) / jwt.decode(token, key, algorithms=[...])."""
+        kw = {k.arg: k.value for k in call.keywords}
+        key = call.args[1] if len(call.args) > 1 else kw.get("key")
+        if name == "encode":
+            a = kw.get("algorithm", call.args[2] if len(call.args) > 2 else None)
+            algs = [_value(a, ctx, func) if a is not None else "HS256"]  # HS256 is the PyJWT / python-jose default
+        else:
+            lst = kw.get("algorithms")
+            algs = [_value(e, ctx, func) for e in lst.elts] if isinstance(lst, (ast.List, ast.Tuple)) else []
+            opts = kw.get("options")
+            if isinstance(opts, ast.Dict) and any(_value(k, ctx, func) == "verify_signature" and _value(v, ctx, func) is False
+                                                  for k, v in zip(opts.keys, opts.values)):
+                add(call, "signature", "NULL", dict(jose="none"), f"{fqn}(..., options={{'verify_signature': False}}): token signature is never checked",
+                    ["jwt", "signature-not-verified"], api=fqn, func=func)
+        for a in algs:
+            jn = jwt_algorithms.normalize(a)
+            if not jn:
+                continue
+            category, alg, params, flags = jwt_algorithms.finding_args(jn)
+            if alg == "HMAC" and key is not None:
+                kb = _nbytes(_value(key, ctx, func))
+                params["key_bits"] = kb * 8 if kb else None
+                if _is_literal_key(key, ctx, func):
+                    flags.append("hardcoded-key")
+            add(call, category, alg, params, f"{fqn}(..., {'algorithm' if name == 'encode' else 'algorithms'}={jn!r})", flags, api=fqn, func=func)
+
     for fqn, call, func in ctx.calls:
         name = fqn.split(".")[-1]
         fname = (func.name if func else "").lower()
         sec_ctx = any(w in fname for w in SEC_WORDS)
+        # ---------------- JWT ----------------
+        if fqn.startswith(("jwt.", "jose.jwt.")) and name in ("encode", "decode"):
+            jwt_call(call, name, fqn, func)
         # ---------------- hashlib ----------------
-        if fqn.startswith("hashlib.") and name in HASHLIB:
+        elif fqn.startswith("hashlib.") and name in HASHLIB:
             flags = []
             argnames = " ".join(ast.unparse(a) for a in call.args).lower()
             if "password" in fname or "passwd" in fname or "password" in argnames:

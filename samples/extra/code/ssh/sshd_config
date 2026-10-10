@@ -1,0 +1,14 @@
+# sshd hardening (from a 2019 guide). Pinning KexAlgorithms like this
+# silently removes OpenSSH's default post-quantum hybrid key exchange.
+Port 22
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+KexAlgorithms curve25519-sha256,diffie-hellman-group14-sha1
+Ciphers aes256-gcm@openssh.com,aes128-ctr,3des-cbc
+MACs hmac-sha2-256-etm@openssh.com,hmac-sha1
+HostKeyAlgorithms -ssh-dss
+# KexAlgorithms diffie-hellman-group1-sha1
+
+Match User legacy-backup
+    PubkeyAcceptedAlgorithms +ssh-rsa
