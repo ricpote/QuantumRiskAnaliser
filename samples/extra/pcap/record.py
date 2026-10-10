@@ -30,9 +30,9 @@ flt = " or ".join(f"tcp port {p}" for p in PORTS)
 cap = subprocess.Popen([shutil.which("dumpcap") or shutil.which("tshark"), "-q", "-i", "lo", "-f", flt, "-w", OUT],
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 time.sleep(1.5)
-env = dict(os.environ, GODEBUG="tlsrsakex=1,tls3des=1")
 lab = os.path.join(ROOT, "samples", "extra", "tls-lab")
-print(subprocess.run([shutil.which("go"), "run", "./cmd/handshakes"], cwd=lab, env=env, capture_output=True, text=True).stdout)
+handshakes = os.path.join(lab, "cmd", "handshakes")
+print(subprocess.run([shutil.which("go"), "run", "."], cwd=handshakes, capture_output=True, text=True).stdout)
 
 # HelloRetryRequest: offer X25519MLKEM768 + x25519 but send a key share ONLY for x25519 to the PQ-only server
 from quantumtrace.ingest import probe as P
