@@ -298,7 +298,7 @@ def _vuln(vulns, f: Finding, ref: str):
                  "description": "; ".join(why) or f.evidence,
                  "recommendation": f"{rec.get('algorithm')} ({rec.get('standard')}): {rec.get('how')}" if rec else "Review",
                  "affects": [{"ref": ref}],
-                 "properties": _props(dict(deadlines=" | ".join(f.deadlines), occurrences=0))}
+                 "properties": _props(dict(deadlines=" | ".join(f.deadlines), deadline_year=f.deadline_year, occurrences=0))}
             if not cwes:
                 v.pop("cwes")
             vulns[key] = v

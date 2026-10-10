@@ -1,4 +1,4 @@
-﻿# Normalizar finais de linha: LF no repositorio, CRLF no disco em Windows.
+# Normalizar finais de linha: LF no repositorio, CRLF no disco em Windows.
 # Sem isto, com 4 pessoas em sistemas diferentes, um PR aparece com TODAS as linhas alteradas.
 * text=auto eol=lf
 

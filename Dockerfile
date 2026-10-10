@@ -13,8 +13,8 @@ RUN echo "wireshark-common wireshark-common/install-setuid boolean false" | debc
  && apt-get update && apt-get install -y --no-install-recommends tshark \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt constraints.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -c constraints.txt
 COPY . .
 RUN pip install --no-cache-dir --no-deps -e .
 COPY --from=lab /tlslab /usr/local/bin/tlslab
