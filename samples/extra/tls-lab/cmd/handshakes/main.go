@@ -1,6 +1,7 @@
 // handshakes: real Go TLS clients against the lab, used to record reference pcaps.
+// Start both halves of the lab first (../modern and ../legacy), then:
 //
-//	GODEBUG=tlsrsakex=1,tls3des=1 go run ./cmd/handshakes
+//	go run .
 package main
 
 import (

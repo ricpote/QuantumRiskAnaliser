@@ -11,7 +11,8 @@ ui:             ## dashboard on :8501
 	python -m streamlit run app/streamlit_app.py
 docker:         ## build + run the dashboard container
 	docker build -t quantumtrace . && docker run --rm -p 8501:8501 quantumtrace
-lab:            ## local TLS lab (needs Go >= 1.24): PQ, classical, legacy, STARTTLS, Postgres endpoints
-	cd samples/extra/tls-lab && GODEBUG=tlsrsakex=1,tls3des=1,tls10server=1 go run .
+lab:            ## local TLS lab (needs Go >= 1.24, and fetches a pinned old Go automatically for the legacy profile)
+	cd samples/extra/tls-lab/legacy && go run . & \
+	cd samples/extra/tls-lab/modern && go run .
 probe:          ## live-probe the lab (run `make lab` in another terminal first)
 	qtrace probe 127.0.0.1:8443 127.0.0.1:8444 127.0.0.1:8445 127.0.0.1:8446 127.0.0.1:8447 127.0.0.1:2525 127.0.0.1:5433
