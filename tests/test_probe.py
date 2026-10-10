@@ -26,23 +26,39 @@ def _up(port):
 
 @pytest.fixture(scope="module")
 def lab():
-    proc = None
-    if not _up(8443):
+    # Two binaries, two Go toolchains: `modern` needs real Go >= 1.24 for
+    # X25519MLKEM768; `legacy` is pinned (via its own go.mod) to an old Go
+    # because newer Go hard-disables RSA key-transport, 3DES and TLS 1.0
+    # with no opt-in left. `go build` fetches the pinned toolchain for
+    # `legacy` automatically on first run (needs network access once).
+    procs = []
+    if not _up(8443) or not _up(8445):
         go = shutil.which("go")
         if not go:
             pytest.skip("Go not installed: cannot start the TLS lab")
-        env = dict(os.environ, GODEBUG="tlsrsakex=1,tls3des=1,tls10server=1")
-        binary = os.path.join(LAB, "tlslab-test")
-        subprocess.run([go, "build", "-o", binary, "."], cwd=LAB, check=True, env=env)
-        proc = subprocess.Popen([binary], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for name, ports in (("modern", (8443, 8444, 8446, 8447, 2525, 5433)), ("legacy", (8445,))):
+            if all(_up(p) for p in ports):
+                continue
+            src = os.path.join(LAB, name)
+            binary = os.path.join(src, f"tlslab-{name}-test")
+            subprocess.run([go, "build", "-o", binary, "."], cwd=src, check=True)
+            procs.append((binary, subprocess.Popen([binary], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)))
         for _ in range(50):
-            if _up(8443) and _up(5433):
+            if _up(8443) and _up(8445) and _up(5433):
                 break
             time.sleep(0.1)
     yield
-    if proc:
+    for binary, proc in procs:
         proc.terminate()
-        os.remove(os.path.join(LAB, "tlslab-test"))
+        proc.wait(timeout=5)  # Windows keeps the .exe locked for a moment after the process exits
+        for attempt in range(10):
+            try:
+                os.remove(binary)
+                break
+            except PermissionError:
+                if attempt == 9:
+                    break  # leftover binary is harmless (rebuilt next run); never fail the suite over cleanup
+                time.sleep(0.2)
 
 
 def run(target, **kw):
@@ -92,9 +108,16 @@ def test_legacy(lab):
 
 
 def test_pq_with_tls12_fallback(lab):
+    """Modern clients get PQ; legacy clients fall back to TLS 1.2 ECDHE (still forward-secret
+    within the session, RSA only for authentication). Go >= 1.22 disabled plain RSA
+    key-transport by default and Go >= 1.27 removed the opt-in for it entirely, so this
+    profile no longer offers that cipher (see tls-lab/modern/main.go) — ECDHE+RSA-auth is
+    the realistic classical fallback now. It's still HNDL-exposed: forward secrecy defeats a
+    passive eavesdropper today, but not "harvest now, break the classical ECDH with Shor's
+    algorithm later" — only the PQ group above is actually safe from that."""
     rep, fs = run("127.0.0.1:8446")
     assert rep["modern"]["group_name"] == "X25519MLKEM768" and rep["modern"]["cert_verify_name"] == "rsa_pss_rsae_sha256"
-    assert any(f.algorithm == "RSA" and f.hndl for f in kex(fs))   # TLS 1.2 RSA key transport still accepted
+    assert any(f.algorithm.startswith("ECDH") and f.hndl for f in kex(fs))   # TLS 1.2 ECDHE fallback, still HNDL-exposed
 
 
 def test_starttls_smtp_and_postgres(lab):

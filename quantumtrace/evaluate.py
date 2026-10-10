@@ -68,7 +68,7 @@ def evaluate(findings: list[Finding], gt: dict | None = None) -> dict:
     allowed = [dict(file="go/invoice-service/main.go", algorithm="SHA-1")]
     relevant = [f for f in code if (f.risk_tier in RELEVANT_TIERS or f.classical_status in ("broken", "deprecated")) and "demo-code" not in f.flags]
     expected_all = gt["code"] + allowed
-    tp = [f for f in relevant if any(f.location.get("file", "").endswith(e["file"]) and _match(f, {k: v for k, v in e.items() if k in ("category", "algorithm")}) for e in expected_all)]
+    tp = [f for f in relevant if any(f.location.get("file", "").replace("\\", "/").endswith(e["file"]) and _match(f, {k: v for k, v in e.items() if k in ("category", "algorithm")}) for e in expected_all)]
     fp = [f for f in relevant if f not in tp]
     for f in fp:
         fails.append(f"[code] UNEXPECTED {f.location.get('file')}:{f.location.get('line')} {f.display_name} {f.risk_tier}/{f.classical_status}")
@@ -125,6 +125,34 @@ def evaluate(findings: list[Finding], gt: dict | None = None) -> dict:
         if bad:
             fails.append(f"[cloud] FALSE POSITIVE {e['id']}: {bad[0].display_name} ({e['why']})")
     rep["cloud"] = dict(expected=len(gt["cloud"]), correct=cok, accuracy=round(cok / len(gt["cloud"]), 3), traps_checked=len(gt.get("cloud_absent", [])))
+
+    # ------------------------------------------------------------------ config files
+    cf = [f for f in findings if f.source == "config"]
+
+    def in_file(name):
+        return [f for f in cf if f.location.get("file", "").replace("\\", "/").endswith(name)]
+
+    def same_asset(f, e):
+        if "asset" not in e:
+            return True
+        a = f.asset
+        return e["asset"] in (a.get("server_name"), a.get("address"))
+
+    gok = 0
+    for e in gt.get("config", []):
+        cands = [f for f in in_file(e["file"]) if same_asset(f, e) and _match(f, e)]
+        if cands and any(_match(f, e, True) for f in cands):
+            gok += 1
+        else:
+            got = [(f.category, f.display_name, f.risk_tier, f.classical_status, f.flags) for f in in_file(e["file"]) if same_asset(f, e)]
+            fails.append(f"[config] {e['file']} {e.get('asset', '')}: expected {e} got {got[:4]}")
+    for e in gt.get("config_absent", []):
+        bad = [f for f in in_file(e["file"]) if same_asset(f, e) and _match(f, e)]
+        if bad:
+            fails.append(f"[config] FALSE POSITIVE {e['file']} {e.get('asset', '')}: {bad[0].category}/{bad[0].display_name} ({e['why']})")
+    n = len(gt.get("config", [])) or 1
+    rep["config"] = dict(expected=len(gt.get("config", [])), correct=gok, accuracy=round(gok / n, 3),
+                         traps_checked=len(gt.get("config_absent", [])), findings=len(cf))
     rep["failures"] = fails
     rep["passed"] = not fails
     return rep
@@ -137,7 +165,7 @@ def run() -> dict:
     cwd = os.getcwd()
     os.chdir(ROOT)
     try:
-        findings = collect([os.path.relpath(SAMPLES, ROOT), os.path.relpath(EXTRA_CODE, ROOT)])
+        findings = collect([os.path.relpath(SAMPLES, ROOT), os.path.relpath(EXTRA_CODE, ROOT), os.path.join("samples", "extra", "configs")])
     finally:
         os.chdir(cwd)
     return evaluate(findings, gt)
