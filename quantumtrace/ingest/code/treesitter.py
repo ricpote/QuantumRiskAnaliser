@@ -220,8 +220,6 @@ GO_MODES = {"NewGCM": "GCM", "NewGCMWithNonceSize": "GCM", "NewGCMWithTagSize": 
             "NewCFBDecrypter": "CFB", "NewOFB": "OFB"}
 GO_MATH_RAND = {"math/rand", "math/rand/v2"}
 GO_IV_SINKS = {"NewCBCEncrypter", "NewCFBEncrypter", "NewOFB", "NewCTR"}  # cipher.X(block, iv); the Decrypters are not sinks
-GO_TLS_VERSIONS = {"VersionSSL30": 0x0300, "VersionTLS10": 0x0301, "VersionTLS11": 0x0302, "VersionTLS12": 0x0303, "VersionTLS13": 0x0304}
-GO_TLS_NAMES = {0x0300: "SSL 3.0", 0x0301: "TLS 1.0", 0x0302: "TLS 1.1"}
 # crypto/tls.InsecureCipherSuites() (besides the RC4 / 3DES / RSA-kex ones the generic suite check already reports)
 GO_INSECURE_SUITES = {"TLS_RSA_WITH_RC4_128_SHA", "TLS_RSA_WITH_3DES_EDE_CBC_SHA", "TLS_RSA_WITH_AES_128_CBC_SHA256",
                       "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA", "TLS_ECDHE_RSA_WITH_RC4_128_SHA", "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
@@ -336,8 +334,6 @@ class GoFile(TSFile):
         return None
 
     def value_special(self, n, func, depth):
-        if n.type == "selector_expression" and self.imports.get(self.t(n.child_by_field_name("operand"))) == "crypto/tls":
-            return GO_TLS_VERSIONS.get(self.t(n.child_by_field_name("field")))  # tls.VersionTLS12 -> 0x0303
         if n.type == "type_conversion_expression":  # []byte("...")
             inner = [c for c in n.named_children if c.type not in ("slice_type", "type_identifier", "array_type")]
             v = self.value(inner[0], func, depth + 1) if inner else None
@@ -471,7 +467,7 @@ class GoFile(TSFile):
                      f"hand-rolled PBKDF2 in {fn}(): HMAC-{h} iterated {it} times with XOR accumulation (RFC 8018 F function)",
                      ["custom-implementation"], confidence=0.85, api="custom", func=fn)
         self.static_iv()
-        self.tls_config()
+        self.tls_configs()
         self.weak_seeds()
         self.ssh_config()
         self.jwt()
@@ -583,60 +579,6 @@ class GoFile(TSFile):
             src = next((self.consts[k] for k in ((fn, self.t(args[1])), (None, self.t(args[1]))) if k in self.consts), None)
             if args[1].type == "identifier" and src is not None:  # also where the fixed value is written
                 self.findings[-1].location["related_lines"] = [self.line(src)]
-
-    # ------------------------------------------------------------ crypto/tls.Config
-    def tls_config(self):
-        """tls.Config{MinVersion, MaxVersion, CipherSuites} (or cfg.MinVersion = ...): legacy protocol versions and the
-        cipher suites a Go client / server offers. MinVersion 0 = Go's default (TLS 1.2 since Go 1.22): nothing to report."""
-        from .python_ast import _cipher_string_findings
-        if "crypto/tls" not in self.imports.values():
-            return
-        for n in self.walk(self.root):
-            fields = {}
-            if n.type == "composite_literal" and re.search(r"\.Config$", self.t(n.child_by_field_name("type"))) \
-                    and self.imports.get(self.t(n.child_by_field_name("type")).split(".")[0]) == "crypto/tls":
-                body = n.child_by_field_name("body")
-                for kv in (body.named_children if body is not None else []):
-                    if kv.type == "keyed_element" and len(kv.named_children) == 2:
-                        k, v = (c.named_children[0] if c.type == "literal_element" and c.named_children else c for c in kv.named_children)
-                        fields[self.t(k)] = (v, kv)
-            elif n.type == "assignment_statement":
-                lhs, rhs = n.child_by_field_name("left"), n.child_by_field_name("right")
-                if lhs is not None and rhs is not None and len(lhs.named_children) == 1 and lhs.named_children[0].type == "selector_expression":
-                    fld = self.t(lhs.named_children[0].child_by_field_name("field"))
-                    if fld in ("MinVersion", "MaxVersion", "CipherSuites") and rhs.named_children:
-                        fields[fld] = (rhs.named_children[0], n)
-            if not fields:
-                continue
-            fn = self.enclosing(n)
-            lo = self.value(fields["MinVersion"][0], fn) if "MinVersion" in fields else None
-            hi = self.value(fields["MaxVersion"][0], fn) if "MaxVersion" in fields else None
-            lo = lo if isinstance(lo, int) and lo else None
-            hi = hi if isinstance(hi, int) and hi else None
-            if lo is not None or hi is not None:
-                at = fields["MinVersion" if lo is not None and lo in GO_TLS_NAMES else "MaxVersion" if hi is not None else "MinVersion"][1]
-                for ver in sorted(GO_TLS_NAMES):
-                    if (lo or min(0x0303, hi or 0x0303)) <= ver <= (hi or 0x0304):  # no MinVersion: TLS 1.2 (Go >= 1.22)
-                        name = GO_TLS_NAMES[ver]
-                        self.add(at, "protocol", "SSL" if name.startswith("SSL") else "TLS", dict(version=name),
-                                 f"tls.Config allows {name} (MinVersion {self.t(fields['MinVersion'][0]) if 'MinVersion' in fields else 'default'}, "
-                                 f"MaxVersion {self.t(fields['MaxVersion'][0]) if 'MaxVersion' in fields else 'default'})", api="crypto/tls.Config", func=fn)
-            if "CipherSuites" in fields:
-                v, at = fields["CipherSuites"]
-                # the suites: written here, appended (append(cs, tls.X)), or built in a variable assigned in this function
-                texts = [self.t(v)] + ([self.t(x) for x in self.assigns.get((fn, self.t(v)), []) if x is not None] if v.type == "identifier" else [])
-                names = list(dict.fromkeys(re.findall(r"\bTLS_\w+_WITH_\w+", " ".join(texts))))
-                for category, alg, params, ev, flags, conf in (_cipher_string_findings(":".join(names)) if names else []):
-                    self.add(at, category, alg, params, f"tls.Config CipherSuites: {ev}", flags, confidence=conf, api="crypto/tls.Config", func=fn)
-                insecure = [x for x in names if x in GO_INSECURE_SUITES and not re.search(r"RC4|3DES|^TLS_RSA_WITH_", x)]
-                body = self.t(self.funcs[fn][0]) if fn in self.funcs else ""
-                if re.search(r"\.ID\b", " ".join(texts)) and "InsecureCipherSuites()" in body:
-                    insecure.append("tls.InsecureCipherSuites()")
-                if insecure:
-                    self.add(at, "encryption", "AES", dict(key_bits=128, mode="CBC"),
-                             f"tls.Config CipherSuites: {', '.join(insecure[:3])} - in Go's tls.InsecureCipherSuites() "
-                             "(CBC-SHA256 has no Lucky13 countermeasures in crypto/tls)", ["insecure-cipher-suite"],
-                             api="crypto/tls.Config", func=fn)
 
     def _arr_len(self, typ):
         if typ is not None and typ.type == "array_type" and typ.named_children:
@@ -775,6 +717,178 @@ class GoFile(TSFile):
         if isinstance(v, (str, bytes)) or isinstance(v, tuple) and v and v[0] == "bytes":
             return _Buf(self.nbytes(v)), 0, None
         return None
+
+    # ---------------------------------------------------------------- crypto/tls
+    def tls_configs(self):
+        """tls.Config{...} literals and cfg.Field = ... assignments: protocol range, cipher suites,
+        curve preferences (an explicit list without X25519MLKEM768 turns off Go's default PQ hybrid)
+        and InsecureSkipVerify."""
+        tls_alias = {a for a, path in self.imports.items() if path == "crypto/tls"}
+        if not tls_alias:
+            return
+        types = {f"{a}.Config" for a in tls_alias}
+        configs = {}  # (func, var or node id) -> {field: (value node, anchor node)}
+        for n in self.walk(self.root):
+            if n.type == "composite_literal":
+                ty = n.child_by_field_name("type")
+                if ty is None or ty.type != "qualified_type" or self.t(ty) not in types:
+                    continue
+                fields = {}
+                body = n.child_by_field_name("body")
+                for ke in (body.named_children if body is not None else []):
+                    if ke.type != "keyed_element" or len(ke.named_children) < 2:
+                        continue
+                    k, v = ke.named_children[0], ke.named_children[1]
+                    v = v.named_children[0] if v.type == "literal_element" and v.named_children else v
+                    fields[self.t(k)] = (v, ke)
+                var = self._assigned_var(n)
+                configs.setdefault((self.enclosing(n), var or id(n), self._decl_block(n, var)), {}).update(fields)
+            elif n.type == "assignment_statement":
+                left, right = n.child_by_field_name("left"), n.child_by_field_name("right")
+                if left is None or right is None or len(left.named_children) != 1 or len(right.named_children) != 1:
+                    continue
+                lhs = left.named_children[0]
+                if lhs.type != "selector_expression":
+                    continue
+                field = self.t(lhs.child_by_field_name("field"))
+                if field in ("MinVersion", "MaxVersion", "CipherSuites", "CurvePreferences", "InsecureSkipVerify"):
+                    var = self.t(lhs.child_by_field_name("operand"))
+                    configs.setdefault((self.enclosing(n), var, self._decl_block(n, var)), {})[field] = (right.named_children[0], n)
+        for (fn, _var, _block), fields in configs.items():
+            if fields:
+                self._tls_config(fn, fields)
+
+    def _decl_block(self, node, var):
+        """The block that declares the `var` node refers to: `config := &tls.Config{}` in two { } blocks are two configs."""
+        if not var:
+            return None
+        for a in self.ancestors(node):
+            if a.type not in ("block", "source_file", "expression_case", "default_case", "type_case", "communication_case"):
+                continue  # each { } block and each switch case is its own scope
+            for x in self.walk(a):
+                if x.start_byte > node.start_byte:
+                    break
+                if x.type in ("short_var_declaration", "var_spec") and next(
+                        (b for b in self.ancestors(x) if b.type in ("block", "source_file", "expression_case", "default_case", "type_case",
+                                                                     "communication_case")), None) == a:
+                    names = x.child_by_field_name("left").named_children if x.type == "short_var_declaration" else x.children_by_field_name("name")
+                    if any(self.t(nm) == var for nm in names):
+                        return a.start_byte
+        return None
+
+    def _assigned_var(self, lit):
+        """cfg := &tls.Config{...} -> 'cfg' (None when the literal is passed straight to a call)."""
+        for a in self.ancestors(lit):
+            if a.type == "var_spec":
+                names = a.children_by_field_name("name")
+                return self.t(names[0]) if names else None
+            if a.type in ("short_var_declaration", "assignment_statement"):
+                left = a.child_by_field_name("left")
+                return self.t(left.named_children[0]) if left is not None and left.named_children else None
+            if a.type in ("call_expression", "block", "return_statement", "keyed_element", "argument_list"):
+                return None
+        return None
+
+    _GO_TLS_VERSIONS = {"VersionSSL30": "SSL 3.0", "VersionTLS10": "TLS 1.0", "VersionTLS11": "TLS 1.1",
+                        "VersionTLS12": "TLS 1.2", "VersionTLS13": "TLS 1.3"}
+    _GO_CURVES = {"X25519MLKEM768": "x25519mlkem768", "SecP256r1MLKEM768": "secp256r1mlkem768", "SecP384r1MLKEM1024": "secp384r1mlkem1024",
+                  "X25519": "x25519", "CurveP256": "secp256r1", "CurveP384": "secp384r1", "CurveP521": "secp521r1"}
+
+    def _sel_field(self, n, fn=None):
+        """tls.VersionTLS10 -> 'VersionTLS10', also through a variable or constant holding it (MaxVersion: lowMax)."""
+        for _ in range(4):
+            if n is None or n.type != "identifier":
+                break
+            n = self.consts.get((fn, self.t(n))) or self.consts.get((None, self.t(n)))
+        return self.t(n.child_by_field_name("field")) if n is not None and n.type == "selector_expression" else None
+
+    def _tls_version(self, n, fn):
+        """tls.VersionTLS10, a variable holding it, or the raw number (MinVersion: 0x0300) -> 'SSL 3.0' / 'TLS 1.x'."""
+        name = self._GO_TLS_VERSIONS.get(self._sel_field(n, fn))
+        if name is None:
+            v = self.value(n, fn)
+            name = {0x0300: "SSL 3.0", 0x0301: "TLS 1.0", 0x0302: "TLS 1.1", 0x0303: "TLS 1.2", 0x0304: "TLS 1.3"}.get(v) if isinstance(v, int) else None
+        return name
+
+    def _list_fields(self, v):
+        """[]uint16{tls.A, tls.B} -> ['A', 'B']"""
+        body = v.child_by_field_name("body") if v is not None and v.type == "composite_literal" else None
+        return [self._sel_field(e.named_children[0] if e.type == "literal_element" and e.named_children else e)
+                for e in (body.named_children if body is not None else [])]
+
+    def _tls_config(self, fn, fields):
+        from ...kb import tls as TLS
+        groups_by_name = {g["name"].lower(): g for g in TLS.GROUPS.values()}
+        order = ["SSL 3.0", "TLS 1.0", "TLS 1.1", "TLS 1.2", "TLS 1.3"]
+        api = "crypto/tls.Config"
+        vmin = self._tls_version(fields["MinVersion"][0], fn) if "MinVersion" in fields else None
+        vmax = self._tls_version(fields["MaxVersion"][0], fn) if "MaxVersion" in fields else None
+        if vmin and order.index(vmin) < order.index("TLS 1.2"):
+            hi = vmax if vmax and order.index(vmax) < order.index("TLS 1.2") else "TLS 1.1"
+            for v in order[order.index(vmin):order.index(hi) + 1]:
+                self.add(fields["MinVersion"][1], "protocol", "SSL" if v.startswith("SSL") else "TLS", dict(version=v),
+                         f"tls.Config MinVersion {vmin} accepts {v}", api=api, func=fn)
+        # MaxVersion below 1.3: no TLS 1.3, so no ML-KEM hybrid (versions < 1.2 are already reported via MinVersion)
+        if vmax and (vmax == "TLS 1.2" or (order.index(vmax) < order.index("TLS 1.2") and not vmin)):
+            self.add(fields["MaxVersion"][1], "protocol", "SSL" if vmax.startswith("SSL") else "TLS", dict(version=vmax),
+                     f"tls.Config MaxVersion {vmax}: TLS 1.3 is off, so the X25519MLKEM768 hybrid can never be negotiated",
+                     ["pq-unreachable"], api=api, func=fn)
+        if "CipherSuites" in fields:
+            v = fields["CipherSuites"][0]
+            # written here, appended (append(cs, tls.X)), or built in a variable assigned in this function
+            texts = [self.t(v)] + ([self.t(x) for x in self.assigns.get((fn, self.t(v)), []) if x is not None] if v.type == "identifier" else [])
+            names = list(dict.fromkeys(self._list_fields(v) + re.findall(r"\bTLS_\w+_WITH_\w+", " ".join(texts))))
+            suites = [(nm, TLS.decompose(nm)) for nm in names if nm and nm.startswith("TLS_") and "_WITH_" in nm]
+            anchor = fields["CipherSuites"][1]
+            rsa = [nm for nm, s in suites if s["kex"] == "RSA"]
+            if rsa:
+                self.add(anchor, "key-exchange", "RSA", dict(transport=True),
+                         f"tls.Config CipherSuites allows RSA key transport (no forward secrecy): {', '.join(rsa[:4])}",
+                         ["no-forward-secrecy"], api=api, func=fn)
+            seen = set()
+            for nm, s in suites:
+                key = (s["cipher"], s["cipher_bits"], s["mode"])
+                if s["cipher"] and key not in seen:
+                    seen.add(key)
+                    self.add(anchor, "encryption", s["cipher"], dict(key_bits=s["cipher_bits"], mode=s["mode"]),
+                             f"tls.Config CipherSuites allows {nm} (TLS 1.2 and below; Go ignores the list for TLS 1.3)",
+                             api=api, func=fn)
+            insecure = [nm for nm in names if nm in GO_INSECURE_SUITES and not re.search(r"RC4|3DES|^TLS_RSA_WITH_", nm)]
+            body = self.t(self.funcs[fn][0]) if fn in self.funcs else ""
+            if re.search(r"\.ID\b", " ".join(texts)) and "InsecureCipherSuites()" in body:
+                insecure.append("tls.InsecureCipherSuites()")
+            if insecure:
+                self.add(anchor, "encryption", "AES", dict(key_bits=128, mode="CBC"),
+                         f"tls.Config CipherSuites: {', '.join(insecure[:3])} - in Go's tls.InsecureCipherSuites() "
+                         "(CBC-SHA256 has no Lucky13 countermeasures in crypto/tls)", ["insecure-cipher-suite"], api=api, func=fn)
+            sha1 = [nm for nm, s in suites if s["mac"] == "SHA-1"]
+            if sha1:
+                self.add(anchor, "mac", "HMAC", dict(hash="SHA-1"), f"tls.Config CipherSuites allows HMAC-SHA1 suites: {', '.join(sha1[:3])}",
+                         api=api, func=fn)
+        if "CurvePreferences" in fields:
+            names = self._list_fields(fields["CurvePreferences"][0])
+            gs = [groups_by_name[self._GO_CURVES[nm]] for nm in names if nm in self._GO_CURVES and self._GO_CURVES[nm] in groups_by_name]
+            pq = [g for g in gs if g["pq"]]
+            tls13 = not vmax or vmax == "TLS 1.3"
+            anchor = fields["CurvePreferences"][1]
+            for g in gs:
+                if g["pq"] and not tls13:
+                    continue  # never negotiated: the MaxVersion finding and the classical groups carry it
+                if g["pq"]:
+                    flags, ev = (["pq-hybrid"] if g.get("hybrid") else []), f"tls.Config CurvePreferences offers {g['name']}"
+                elif pq and tls13:
+                    flags, ev = ["fallback-for-legacy-clients"], f"tls.Config CurvePreferences offers {g['name']} (fallback; PQ-capable peers get {pq[0]['name']})"
+                elif pq:
+                    flags, ev = ["pq-unreachable"], f"tls.Config CurvePreferences offers {g['name']}; the PQ groups listed need TLS 1.3, which MaxVersion disables"
+                else:
+                    flags = ["pq-not-configured"]
+                    ev = (f"tls.Config CurvePreferences offers {g['name']}; an explicit list without X25519MLKEM768 "
+                          "turns off the PQ hybrid Go enables by default (>= 1.24)")
+                self.add(anchor, "key-exchange", g["algorithm"], dict(g["params"], group=g["name"]), ev, flags, api=api, func=fn)
+        if "InsecureSkipVerify" in fields and self.t(fields["InsecureSkipVerify"][0]) == "true":
+            self.add(fields["InsecureSkipVerify"][1], "authentication", "NO-CERT-VERIFY", dict(api="tls.Config.InsecureSkipVerify"),
+                     "tls.Config InsecureSkipVerify: true disables certificate and hostname verification",
+                     ["no-cert-verify"], api=api, func=fn)
 
     def jwt(self):
         """golang-jwt / jwt-go (jwt.SigningMethodRS256, jwt.UnsafeAllowNoneSignatureType) and go-jose (jose.RS256)."""
@@ -1223,6 +1337,7 @@ class JavaFile(TSFile):
         kpg_bits = {}
         kpg_at = {}  # KeyPairGenerator.getInstance call -> size given to ITS initialize()
         kpg_lines = {}  # KeyGenerator / KeyPairGenerator getInstance (line, col) -> lines of its init/initialize calls
+        keygens = []  # KeyGenerator.getInstance("AES") + init(128): the key size of every AES key the code makes
         for c in self.calls:
             if c["new"] and c["name"] == "SecretKeySpec" and len(c["args"]) >= 2:
                 alg = str(self.str_arg(c, len(c["args"]) - 1) or "").upper()
@@ -1243,10 +1358,16 @@ class JavaFile(TSFile):
                             v = self.value(inner[0], d["func"]) if inner else None
                         if c["obj"] == "KeyGenerator" and alg.startswith("AES") and isinstance(v, int):
                             aes_bits = v
+                            keygens.append((d["node"], "AES", v, d["func"]))
+                        elif c["obj"] == "KeyGenerator" and alg in ("DES", "DESEDE", "TRIPLEDES", "BLOWFISH", "RC4", "ARCFOUR"):
+                            keygens.append((d["node"], J_CIPHER.get(alg, alg), v if isinstance(v, int) else None, d["func"]))
                         else:
                             kpg_bits[alg] = v
                             kpg_at[c["node"].start_byte] = v
                         kpg_lines.setdefault((self.line(c["node"]), c["node"].start_point[1] + 1), []).append(self.line(d["node"]))
+        for node, alg, bits, fn in keygens:
+            self.add(node, "key", alg, dict(key_bits=bits), f'KeyGenerator.getInstance("{alg}").init({bits}): generates {alg}-{bits} keys'
+                     if bits else f'KeyGenerator.getInstance("{alg}") generates {alg} keys', api="KeyGenerator", func=fn)
         sig_algs = [str(self.str_arg(c) or "") for c in self.calls if c["obj"] == "Signature" and c["name"] == "getInstance"]
         dead = set()  # (line, column) of instances replaced before any use
         for c in self.calls:
@@ -1296,11 +1417,6 @@ class JavaFile(TSFile):
                 same = [d for d in self.calls if d["func"] == fn and d["obj"] in ("Cipher", "Mac") and d["name"] == "getInstance"]
                 if base and base not in ("AES", "RSA") and not any(J_CIPHER.get(str(self.str_arg(d) or "").upper().split("/")[0]) == base for d in same):
                     self.add(node, "encryption", base, {}, f'KeyGenerator.getInstance("{a}")', api="KeyGenerator", func=fn)
-                elif base == "AES":  # KeyGenerator.getInstance("AES").init(64): the key size is chosen here
-                    for init, v, _ in self.initializers(c, "init"):
-                        if isinstance(v, int):
-                            self.add(init, "encryption", "AES", dict(key_bits=v), f'KeyGenerator.getInstance("{a}") init({v})', api="KeyGenerator", func=fn)
-                            self.findings[-1].location["related_lines"] = [self.line(node)]
                 elif a.startswith("HMAC") and not same:
                     h = a.replace("HMAC", "")
                     self.add(node, "mac", "HMAC", dict(hash=J_HASH.get(h, J_HASH.get(h.replace("SHA", "SHA-"), h))), f'KeyGenerator.getInstance("{a}")', api="KeyGenerator", func=fn)

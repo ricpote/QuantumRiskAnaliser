@@ -162,7 +162,7 @@ func main() {
 		CipherSuites:     []uint16{tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384},
 	})
 	// Forward-secret only (ECDHE for key exchange, RSA only for auth) so this doesn't need
-	// the tlsrsakex GODEBUG opt-in that newer Go hard-removed; still a real classical fallback.
+	// the tlsrsakex GODEBUG opt-in (RSA key transport lives in legacy/, port 8445); still a real classical fallback.
 	go serve("pq-with-fallback", addr("8446"), &tls.Config{
 		Certificates: []tls.Certificate{mail}, MinVersion: tls.VersionTLS12,
 		CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},

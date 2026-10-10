@@ -61,7 +61,8 @@ def _hash(f):
 PRED = {
     "short-key": lambda f: (f.params.get("key_bits") or 4096) < 2048 and f.algorithm in ("RSA", "DSA", "DH", "ElGamal")
                            or f.algorithm in ("ECDSA", "ECDH") and (f.classical_bits or 128) < 112
-                           or f.category in ("encryption", "mac", "kdf") and (f.params.get("key_bits") or 256) < 128,
+                           or f.category in ("encryption", "mac", "kdf", "key") and f.algorithm != "HARDCODED-KEY"
+                           and (f.params.get("key_bits") or 256) < 128,
     "broken-algo": lambda f: f.category == "encryption" and f.classical_status in WEAK and f.algorithm in CATALOG and f.algorithm != "AES"
                              or "ecb-mode" in f.flags
                              or f.category in ("hash", "mac", "signature") and _hash(f) in WEAK_HASH and "not-for-security" not in f.flags,

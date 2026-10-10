@@ -1,7 +1,7 @@
 # QuantumTrace
 
 **Cryptographic inventory (CBOM) and post-quantum readiness scanner.** It reads network captures,
-source code (Python, Java, Go) and AWS cloud exports. It classifies every primitive as
+source code (Python, Java, Go), config files (nginx, Apache, OpenSSH, Terraform) and AWS cloud exports. It classifies every primitive as
 **Shor-vulnerable / Grover-weakened / quantum-safe** and exports a **CycloneDX 1.6 CBOM** that
 validates against the official schema. Each finding maps to its NIST replacement:
 FIPS 203 (ML-KEM), FIPS 204 (ML-DSA) or FIPS 205 (SLH-DSA).
@@ -38,6 +38,13 @@ against `tests/ground_truth.json`.
 | Network | `network.pcap`: 2000 packets, 135 TCP sessions | 135/135 sessions classified correctly. Only **7/135 (5%)** use hybrid X25519MLKEM768. **114** are exposed to Harvest-Now-Decrypt-Later and **14** are cleartext HTTP |
 | Code | 24 files: 8 patterns × Python/Java/Go | 36/36 expected findings, **100% precision and recall**, 10 false-positive traps checked |
 | Cloud | KMS (10 keys), ELB (6 load balancers), ACM (5 certs) | 23/23 expectations, 3 traps checked |
+
+These are the only numbers measured on data we did not write. Our own fixtures are scored
+separately (`code_by_origin` in the report) so they never inflate the official result:
+
+| Our fixtures (`samples/extra/code/`) | Result |
+|---|---|
+| nginx, Apache, sshd_config, Terraform, JWT in Python/Java/Go | 60/60 expectations, 5 traps checked |
 
 The synthetic data contains traps on purpose. QuantumTrace handles each of them:
 
@@ -99,8 +106,10 @@ They are real exposure, but client-dependent, so they score 60 instead of 100.
 
 ### Offline TLS lab (demo sandbox, also used by the tests)
 
-The Docker image contains the lab (built with Go 1.24, which has X25519MLKEM768 in `crypto/tls`).
-Start it and probe every endpoint in one container:
+The lab has two halves in `samples/extra/tls-lab/`: `modern/` (Go ≥ 1.24, which has X25519MLKEM768
+in `crypto/tls`) and `legacy/` (port 8445, built with Go 1.21 defaults so TLS 1.0, 3DES and RSA key
+transport still work). The Docker image builds both with Go 1.24 and `tlslab` starts them together.
+`make lab` and the tests run the same code. Probe every endpoint in one container:
 
 ```bash
 docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8444 127.0.0.1:8445 127.0.0.1:8446 127.0.0.1:8447 127.0.0.1:2525 127.0.0.1:5433"
@@ -111,7 +120,7 @@ docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace pro
 | 127.0.0.1:8443 | TLS 1.3 only, X25519MLKEM768 preferred, ECDSA P-256 |
 | 127.0.0.1:8444 | Classical TLS 1.2/1.3 (X25519, P-256 only) |
 | 127.0.0.1:8445 | Legacy: TLS 1.0–1.2, RSA key transport, CBC, 3DES, **RSA-2048 SHA-1 expired** certificate |
-| 127.0.0.1:8446 | PQ for modern clients + TLS 1.2 fallback incl. RSA key transport (typical migration state) |
+| 127.0.0.1:8446 | PQ for modern clients + classical TLS 1.2 ECDHE fallback, RSA certificate (typical migration state) |
 | 127.0.0.1:8447 | **PQ-only**: classical clients are rejected |
 | 127.0.0.1:2525 | SMTP + STARTTLS |
 | 127.0.0.1:5433 | Postgres SSLRequest + hybrid PQ |
@@ -140,6 +149,33 @@ Two lessons came from these real captures:
   banner, and Postgres from its SSLRequest.
 - **Unidentified streams are never called "cleartext".** QuantumTrace only reports cleartext when it
   has positive evidence.
+
+## Config files, JWT and TLS settings in code
+
+Most production crypto is chosen in config, not in code. The code scanner also reads:
+
+| Format | What is checked |
+|---|---|
+| nginx / Apache | `ssl_protocols`, cipher strings (expanded like OpenSSL, `!`/`-` exclusions applied), `ssl_ecdh_curve` / `Groups`, `ssl_dhparam` size, and `server{}` blocks that answer plain HTTP without a redirect |
+| sshd_config / ssh_config | `KexAlgorithms`, `Ciphers`, `MACs`, host-key and pubkey algorithms, `HostKey`. The `+` `-` `^` prefixes modify OpenSSH's default list, so they are resolved against it (`sshd -T`, OpenSSH 9.6): `+diffie-hellman-group1-sha1` keeps the default PQ hybrid in front, `-sntrup761x25519-sha512@openssh.com` removes it. Files are recognised by content too (`sshd_config_hardened`, `server.conf`) |
+| Terraform | `aws_lb_listener` SslPolicy, `aws_kms_key` KeySpec, `tls_private_key`, ACM resources |
+| JWT | PyJWT / python-jose, jjwt / auth0, golang-jwt: `alg`, `none`, disabled verification, HMAC key size |
+| TLS settings in code | Go `tls.Config`: `MinVersion`/`MaxVersion`, `CipherSuites`, `CurvePreferences` (a list without X25519MLKEM768 turns off Go's default PQ hybrid), `InsecureSkipVerify`. Python: `ssl._create_unverified_context()`, `verify_mode = CERT_NONE`, `requests`/`httpx` with `verify=False` |
+
+A setting that is not written is not reported: the product default depends on a version the
+scanner cannot see. OpenSSH's `+`/`-`/`^` are the exception, because they only make sense
+against the default list.
+
+## Deadlines
+
+Every finding carries the regulatory dates that apply to it and the earliest binding year:
+
+- **NIST IR 8547** (initial public draft, so the dates are proposed): 112-bit quantum-vulnerable
+  public-key crypto deprecated after 2030, all of it disallowed after 2035.
+- **EU PQC Roadmap** (NIS Cooperation Group, June 2025): inventory by end-2026, high-risk uses
+  (HNDL-exposed data, long-lived signatures) by end-2030, the rest by end-2035.
+- **NSA CNSA 2.0**: cited for context only, since it binds US National Security Systems.
+- Classical retirements: SHA-1 by 2030, 3DES since 2023, TLS 1.0/1.1 (RFC 8996).
 
 ## Classification model
 
@@ -200,6 +236,21 @@ The knowledge base in `quantumtrace/kb/` is the only place where classification 
 | `tls.py` | IANA cipher suites, groups (incl. ML-KEM hybrids, GREASE, HRR), signature schemes |
 | `ssh.py` | SSH algorithm registry |
 | `aws.py` | SslPolicy tables, incl. the 2025-09 PQ policies |
+
+## Bad input
+
+One file that cannot be read never stops the scan. It is skipped, reported on stderr as
+`[!] skipped <path>: <reason>` and listed under `warnings` in `summary.json`: corrupt captures,
+truncated or non-AWS JSON, `kms list-keys` output without key specs, missing paths. An ELB
+policy outside the AWS table is derived from its name and marked `policy-derived-from-name`;
+a name that cannot be parsed is assumed to be classical ECDHE, never safe.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Scan done (warnings, if any, are in `summary.json`) |
+| 1 | `probe`: no target answered a TLS handshake |
+| 2 | The CBOM failed CycloneDX 1.6 validation |
+| 3 | Nothing could be analysed |
 
 ## Tests
 

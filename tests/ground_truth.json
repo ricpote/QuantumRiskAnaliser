@@ -1952,7 +1952,7 @@
   },
   {
    "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
-   "category": "encryption",
+   "category": "key",
    "algorithm": "AES",
    "tier": "medium",
    "classical": "broken",

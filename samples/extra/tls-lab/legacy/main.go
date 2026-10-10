@@ -1,7 +1,6 @@
-// tlslab-legacy: the obsolete-crypto half of the lab. Built with an old Go
-// toolchain (pinned in go.mod) because Go >= 1.22 disables RSA key-transport,
-// 3DES and TLS 1.0 by default, and Go >= 1.27 removed the GODEBUG opt-ins
-// that used to bring them back.
+// tlslab-legacy: the obsolete-crypto half of the lab. Go >= 1.22 disables RSA key-transport,
+// 3DES and TLS 1.0 by default; the `go 1.21.13` line in go.mod makes the installed Go build
+// this module with Go 1.21's default GODEBUG, which still enables them (see go.mod).
 //
 //	go run .
 //

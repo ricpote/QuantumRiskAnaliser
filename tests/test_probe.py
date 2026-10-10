@@ -26,11 +26,9 @@ def _up(port):
 
 @pytest.fixture(scope="module")
 def lab():
-    # Two binaries, two Go toolchains: `modern` needs real Go >= 1.24 for
-    # X25519MLKEM768; `legacy` is pinned (via its own go.mod) to an old Go
-    # because newer Go hard-disables RSA key-transport, 3DES and TLS 1.0
-    # with no opt-in left. `go build` fetches the pinned toolchain for
-    # `legacy` automatically on first run (needs network access once).
+    # Two binaries, same installed Go (>= 1.24): `modern` for X25519MLKEM768;
+    # `legacy` declares `go 1.21.13` in its go.mod, so it gets Go 1.21's default
+    # GODEBUG (RSA key-transport, 3DES and TLS 1.0 enabled). No download needed.
     procs = []
     if not _up(8443) or not _up(8445):
         go = shutil.which("go")
@@ -110,7 +108,7 @@ def test_legacy(lab):
 def test_pq_with_tls12_fallback(lab):
     """Modern clients get PQ; legacy clients fall back to TLS 1.2 ECDHE (still forward-secret
     within the session, RSA only for authentication). Go >= 1.22 disabled plain RSA
-    key-transport by default and Go >= 1.27 removed the opt-in for it entirely, so this
+    key-transport by default (only the legacy/ half, port 8445, still serves it), so this
     profile no longer offers that cipher (see tls-lab/modern/main.go) — ECDHE+RSA-auth is
     the realistic classical fallback now. It's still HNDL-exposed: forward secrecy defeats a
     passive eavesdropper today, but not "harvest now, break the classical ECDH with Shor's

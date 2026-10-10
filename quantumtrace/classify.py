@@ -404,6 +404,13 @@ def _misc(f, alg, p, flags, cwe, why):
         rep = (dict(algorithm="Random per use", standard="NIST SP 800-38A / SP 800-132", how="Generate a fresh random IV/salt/seed (SecureRandom) every time; store it with the ciphertext")
                if what in ("IV", "salt", "seed") else dict(algorithm="KMS / secret manager", standard="-", how="Load keys from AWS KMS / a secret manager; rotate the exposed key"))
         return "safe", ("deprecated" if "demo-code" in flags else "broken"), f"Hard-coded {what} ({p.get('name', '?')})", rep, deadlines
+    if alg == "NO-CERT-VERIFY":
+        cwe.add("CWE-295")
+        why.append(f"{p.get('api', 'TLS client')} skips certificate and hostname checks: anyone on the path can impersonate the server "
+                   "and read everything, today, with no quantum computer needed")
+        return "safe", "broken", "TLS without certificate verification", dict(
+            algorithm="Certificate verification", standard="RFC 5280 / RFC 6125", action="Re-enable TLS certificate verification",
+            how="Remove the bypass; for a private CA load it explicitly (Go: tls.Config.RootCAs, Python: ssl.create_default_context(cafile=...))"), deadlines
     if alg == "LIBRARY":
         why.append(f.evidence)
         return "safe", "acceptable", f"{p.get('library')} {p.get('version') or ''}".strip(), None, deadlines
@@ -429,6 +436,9 @@ def _misc(f, alg, p, flags, cwe, why):
             cwe.add("CWE-327")
             why.append(f"{v} is deprecated (RFC 8996)")
             return "safe", "deprecated", name, REP_TLS, deadlines
+        if v == "unknown":
+            why.append("the TLS configuration could not be identified, so nothing about it is assumed safe: verify it")
+            return "safe", "unknown", "TLS (unidentified policy)", REP_TLS, deadlines
         if v == "TLS 1.2":
             why.append("TLS 1.2 cannot negotiate the standardized ML-KEM hybrid groups: TLS 1.3 required for PQ key exchange")
             return "safe", "acceptable", name, dict(algorithm="TLS 1.3", standard="RFC 8446", how="Enable TLS 1.3 (prerequisite for PQ hybrid key exchange)"), deadlines

@@ -24,29 +24,53 @@ def _dt(s):
     return datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
 
 
-def ingest(paths: list[str]) -> list[Finding]:
+_AWS_KEYS = ("Keys", "KeyMetadata", "LoadBalancers", "Listeners", "Certificates", "Certificate")
+
+
+def ingest(paths: list[str], problems: list | None = None) -> list[Finding]:
+    """problems (optional): receives dict(path, reason) for every file or record that could not be read.
+    One bad file or record never aborts the scan: it is reported and the rest is still analysed."""
+    problems = problems if problems is not None else []
     docs = []
     for p in paths:
         try:
             with open(p) as fh:
                 docs.append((p, json.load(fh)))
-        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
-            continue
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
+            problems.append(dict(path=p, reason=f"unreadable JSON ({type(e).__name__}: {e})"))
+    for p, d in docs:
+        if not (isinstance(d, dict) and any(k in d for k in _AWS_KEYS)):
+            problems.append(dict(path=p, reason="not a recognised AWS export (expected ACM, KMS or ELBv2 describe-* output)"))
+        elif isinstance(d.get("Keys"), list) and d["Keys"] and not _as_list(d, "Keys", "KeyMetadata"):
+            problems.append(dict(path=p, reason="KMS key list has no key specs (list-keys output?): export with `aws kms describe-key`"))
     certs = {}
     findings: list[Finding] = []
+
+    def guarded(p, what, fn, *args):
+        try:
+            return fn(*args)
+        except Exception as e:  # malformed record: report it, keep going
+            problems.append(dict(path=p, reason=f"{what} skipped ({type(e).__name__}: {e})"))
+            return []
+
     for p, d in docs:  # certificates first (listeners reference them)
         for i, c in enumerate(_as_list(d, "Certificates", "Certificate")):
             certs[c.get("CertificateArn")] = c
-            findings += _acm(p, i, c, d)
+            findings += guarded(p, f"certificate #{i}", _acm, p, i, c, d)
     for p, d in docs:
         for i, k in enumerate(_as_list(d, "Keys", "KeyMetadata")):
-            findings += _kms(p, i, k, d)
-        for i, lb in enumerate(d.get("LoadBalancers", []) if isinstance(d, dict) else []):
-            for j, lst in enumerate(lb.get("Listeners", [])):
-                findings += _listener(p, f"/LoadBalancers/{i}/Listeners/{j}", lb, lst, certs, d)
+            findings += guarded(p, f"KMS key #{i}", _kms, p, i, k, d)
+        lbs = d.get("LoadBalancers", []) if isinstance(d, dict) else []
+        for i, lb in enumerate(lbs if isinstance(lbs, list) else []):
+            if not isinstance(lb, dict):
+                problems.append(dict(path=p, reason=f"load balancer #{i} is not an object"))
+                continue
+            for j, lst in enumerate(lb.get("Listeners") or []):
+                findings += guarded(p, f"listener {i}/{j}", _listener, p, f"/LoadBalancers/{i}/Listeners/{j}", lb, lst, certs, d)
         if isinstance(d, dict) and "Listeners" in d and "LoadBalancers" not in d:
-            for j, lst in enumerate(d["Listeners"]):
-                findings += _listener(p, f"/Listeners/{j}", {"LoadBalancerArn": lst.get("LoadBalancerArn")}, lst, certs, d)
+            for j, lst in enumerate(d.get("Listeners") or []):
+                findings += guarded(p, f"listener #{j}", _listener, p, f"/Listeners/{j}",
+                                    {"LoadBalancerArn": lst.get("LoadBalancerArn") if isinstance(lst, dict) else None}, lst, certs, d)
     return findings
 
 
@@ -56,7 +80,7 @@ def is_cloud_json(path: str) -> bool:
             d = json.load(fh)
     except Exception:
         return False
-    return isinstance(d, dict) and any(k in d for k in ("Keys", "KeyMetadata", "LoadBalancers", "Listeners", "Certificates", "Certificate"))
+    return isinstance(d, dict) and any(k in d for k in _AWS_KEYS)
 
 
 def _as_list(d, plural, singular):
@@ -166,10 +190,21 @@ def _acm(path, i, c, doc):
 
 
 # ------------------------------------------------------------------------- ELB
+def _lb_name(lb_arn, listener_arn=None) -> str:
+    """Load balancer name from its ARN (.../loadbalancer/app/NAME/id) or a listener ARN
+    (.../listener/app/NAME/lb-id/listener-id). Never raises: hand-made or partial exports
+    must not abort the scan."""
+    for arn, back in ((lb_arn, 2), (listener_arn, 3)):
+        parts = (arn or "").split("/")
+        if len(parts) > back:
+            return parts[-back]
+    return lb_arn or listener_arn or "unknown-load-balancer"
+
+
 def _listener(path, pointer, lb, lst, certs, doc):
     proto = lst.get("Protocol")
     port = lst.get("Port")
-    name = lb.get("LoadBalancerName") or (lb.get("LoadBalancerArn") or "").split("/")[-2]
+    name = lb.get("LoadBalancerName") or _lb_name(lb.get("LoadBalancerArn"), lst.get("ListenerArn"))
     asset = dict(kind="aws-elb-listener", arn=lst.get("ListenerArn"), load_balancer=name, lb_type=lb.get("Type"),
                  scheme=lb.get("Scheme"), port=port, protocol=proto, account=doc.get("Account"), region=doc.get("Region"))
     loc = dict(json=_rel(path), pointer=pointer)
@@ -190,7 +225,7 @@ def _listener(path, pointer, lb, lst, certs, doc):
     base = dict(source="cloud", asset=asset, location=loc)
     exposure = ["internet-facing"] if lb.get("Scheme") == "internet-facing" else []
     out += elb_policy_findings(policy, f"{name}:{port}", base, ctx, exposure)
-    pol = AWS.SSL_POLICIES.get(policy)
+    pol = AWS.SSL_POLICIES.get(policy) or AWS.derive_policy(policy)
     if not pol:
         return out
     ctx = dict(ctx, protocols=pol["protocols"], ciphers=pol["ciphers"], pq=pol["pq"])
@@ -209,16 +244,26 @@ def elb_policy_findings(policy, label, base, ctx, exposure) -> list[Finding]:
 
     base = dict(source, asset, location); label names the listener in evidence (e.g. "web-alb:443")."""
     out = []
-    pol = AWS.SSL_POLICIES.get(policy)
+    pol = AWS.SSL_POLICIES.get(policy) or AWS.derive_policy(policy)
     if not pol:
+        # Nothing usable in the name. Never report it as safe: every ELB TLS policy offers classical
+        # ECDHE, and without "-PQ-" there is no evidence of ML-KEM, so assume HNDL exposure.
+        check = f"check `aws elbv2 describe-ssl-policies --names {policy}`"
         out.append(Finding(category="protocol", algorithm="TLS", params=dict(version="unknown"), context=ctx, confidence=0.3,
-                           evidence=f"Unknown SslPolicy {policy}: check `aws elbv2 describe-ssl-policies`", flags=["unknown-policy"], **base))
+                           evidence=f"Unknown SslPolicy {policy}: {check}", flags=["unknown-policy"] + exposure, **base))
+        out.append(Finding(category="key-exchange", algorithm="ECDHE", params=dict(curve=None), context=ctx, confidence=0.5,
+                           evidence=f"Unknown SslPolicy {policy}: assumed classical ECDHE (no evidence of ML-KEM); {check}",
+                           flags=["unknown-policy", "assumed"] + exposure, **base))
         return out
+    derived = bool(pol.get("derived"))
+    conf = 0.6 if derived else 1.0
+    note = " (deduced from the policy name; it may allow more suites, verify with `aws elbv2 describe-ssl-policies`)" if derived else ""
+    exposure = exposure + (["policy-derived-from-name"] if derived else [])
     suites = [TLS.decompose(TLS.iana_from_openssl(c)) for c in pol["ciphers"]]
-    ctx = dict(ctx, protocols=pol["protocols"], ciphers=pol["ciphers"], pq=pol["pq"])
+    ctx = dict(ctx, protocols=pol["protocols"], ciphers=pol["ciphers"], pq=pol["pq"], policy_derived_from_name=derived)
     lowest = min(pol["protocols"], key=lambda v: v)  # "TLS 1.0" < "TLS 1.2"
-    out.append(Finding(category="protocol", algorithm="TLS", params=dict(version=lowest), context=ctx, flags=exposure,
-                       evidence=f"{label} SslPolicy {policy} allows {', '.join(sorted(pol['protocols']))}", **base))
+    out.append(Finding(category="protocol", algorithm="TLS", params=dict(version=lowest), context=ctx, flags=list(exposure), confidence=conf,
+                       evidence=f"{label} SslPolicy {policy} allows {', '.join(sorted(pol['protocols']))}{note}", **base))
     # key exchange families supported by the policy
     kex = sorted({s["kex"] or "TLS13" for s in suites})
     if pol["pq"]:
@@ -244,4 +289,7 @@ def elb_policy_findings(policy, label, base, ctx, exposure) -> list[Finding]:
     if any(s["mac"] == "SHA-1" for s in suites):
         out.append(Finding(category="mac", algorithm="HMAC", params=dict(hash="SHA-1"), context=ctx, flags=list(exposure),
                            evidence=f"{policy} allows HMAC-SHA1 CBC suites", **base))
+    if derived:
+        for f in out:
+            f.confidence = min(f.confidence, conf)
     return out
