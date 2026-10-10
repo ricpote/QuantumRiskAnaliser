@@ -99,8 +99,10 @@ They are real exposure, but client-dependent, so they score 60 instead of 100.
 
 ### Offline TLS lab (demo sandbox, also used by the tests)
 
-The Docker image contains the lab (built with Go 1.24, which has X25519MLKEM768 in `crypto/tls`).
-Start it and probe every endpoint in one container:
+The lab has two halves in `samples/extra/tls-lab/`: `modern/` (Go ≥ 1.24, which has X25519MLKEM768
+in `crypto/tls`) and `legacy/` (port 8445, built with Go 1.21 defaults so TLS 1.0, 3DES and RSA key
+transport still work). The Docker image builds both with Go 1.24 and `tlslab` starts them together.
+`make lab` and the tests run the same code. Probe every endpoint in one container:
 
 ```bash
 docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8444 127.0.0.1:8445 127.0.0.1:8446 127.0.0.1:8447 127.0.0.1:2525 127.0.0.1:5433"
@@ -111,7 +113,7 @@ docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace pro
 | 127.0.0.1:8443 | TLS 1.3 only, X25519MLKEM768 preferred, ECDSA P-256 |
 | 127.0.0.1:8444 | Classical TLS 1.2/1.3 (X25519, P-256 only) |
 | 127.0.0.1:8445 | Legacy: TLS 1.0–1.2, RSA key transport, CBC, 3DES, **RSA-2048 SHA-1 expired** certificate |
-| 127.0.0.1:8446 | PQ for modern clients + TLS 1.2 fallback incl. RSA key transport (typical migration state) |
+| 127.0.0.1:8446 | PQ for modern clients + classical TLS 1.2 ECDHE fallback, RSA certificate (typical migration state) |
 | 127.0.0.1:8447 | **PQ-only**: classical clients are rejected |
 | 127.0.0.1:2525 | SMTP + STARTTLS |
 | 127.0.0.1:5433 | Postgres SSLRequest + hybrid PQ |

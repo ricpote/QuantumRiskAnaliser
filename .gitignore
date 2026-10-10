@@ -11,8 +11,6 @@ dist/
 
 # java / go build output
 *.class
-samples/extra/tls-lab/tlslab
-samples/extra/tls-lab/tlslab-test
 samples/extra/tls-lab/modern/tlslab-modern-test
 samples/extra/tls-lab/legacy/tlslab-legacy-test
 

@@ -36,10 +36,13 @@ jobs:
           mkdir -p out
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
           docker run --rm -v "$PWD:/data" quantumtrace qtrace validate /data/out/cbom.cdx.json
-      - name: Live probe against the bundled TLS lab
+      - name: Live probe against the bundled TLS lab (all 7 endpoints, modern + legacy halves)
         run: |
-          docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8445" | tee probe.txt
-          grep -q "✓ X25519MLKEM768" probe.txt
+          docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8444 127.0.0.1:8445 127.0.0.1:8446 127.0.0.1:8447 127.0.0.1:2525 127.0.0.1:5433" | tee probe.txt
+          test "$(grep -c 'handshakes' probe.txt)" -eq 7     # every endpoint answered
+          test "$(grep -c 'PQ-protected' probe.txt)" -eq 4   # 8443 8446 8447 5433
+          test "$(grep -c 'HNDL-exposed' probe.txt)" -eq 3   # 8444 8445 2525
+          grep -q "✓ TLS 1.0" probe.txt && grep -q "3DES" probe.txt   # legacy half really serves obsolete crypto
       - name: Dashboard answers on :8501
         run: |
           docker run -d --name ui -p 8501:8501 quantumtrace
