@@ -1,0 +1,804 @@
+{
+ "_doc": "Expected results for the official JunctionX QuantumTrace samples (commit 39e8f18). Evaluation date QT_NOW=2026-10-10.",
+ "now": "2026-10-10T12:00:00Z",
+ "code": [
+  {
+   "file": "python/license_token.py",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "python/license_token.py",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024,
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "weak-signature-hash"
+   ]
+  },
+  {
+   "file": "java/ReceiptSigner.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "java/ReceiptSigner.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024,
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "weak-signature-hash"
+   ]
+  },
+  {
+   "file": "go/invoice-service/main.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "go/invoice-service/main.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024,
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "weak-signature-hash"
+   ]
+  },
+  {
+   "file": "python/webhook_signature.py",
+   "category": "signature",
+   "algorithm": "Ed25519",
+   "tier": "critical"
+  },
+  {
+   "file": "java/DeviceAttestation.java",
+   "category": "signature",
+   "algorithm": "Ed25519",
+   "tier": "critical"
+  },
+  {
+   "file": "go/agent-enrollment/main.go",
+   "category": "signature",
+   "algorithm": "Ed25519",
+   "tier": "critical"
+  },
+  {
+   "file": "python/report_export.py",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 128,
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "python/report_export.py",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "python/report_export.py",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken"
+  },
+  {
+   "file": "java/BatchExporter.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 128,
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "java/BatchExporter.java",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "java/BatchExporter.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken"
+  },
+  {
+   "file": "go/batch-pipeline/main.go",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 128,
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "go/batch-pipeline/main.go",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "go/batch-pipeline/main.go",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken"
+  },
+  {
+   "file": "python/update_feed.py",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "java/PatchFeed.java",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "go/release-feed/main.go",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "python/legacy_accounts.py",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "java/CustomerDirectory.java",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "go/member-directory/main.go",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "python/secure_transfer.py",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "java/SessionCipher.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "go/telemetry-relay/main.go",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "python/member_credentials.py",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "hash": "SHA-256",
+    "iterations": 600000
+   }
+  },
+  {
+   "file": "java/IdentityVault.java",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "hash": "SHA-256",
+    "iterations": 600000
+   }
+  },
+  {
+   "file": "go/auth-gateway/main.go",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "hash": "SHA-256",
+    "iterations": 600000
+   }
+  },
+  {
+   "file": "python/artifact_manifest.py",
+   "category": "hash",
+   "algorithm": "SHA-384",
+   "tier": "safe",
+   "classical": "recommended"
+  },
+  {
+   "file": "python/artifact_manifest.py",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "hash": "SHA-256"
+   }
+  },
+  {
+   "file": "java/ConfigSync.java",
+   "category": "hash",
+   "algorithm": "SHA-384",
+   "tier": "safe",
+   "classical": "recommended"
+  },
+  {
+   "file": "java/ConfigSync.java",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "hash": "SHA-256"
+   }
+  },
+  {
+   "file": "go/config-sync/main.go",
+   "category": "hash",
+   "algorithm": "SHA-384",
+   "tier": "safe",
+   "classical": "recommended"
+  },
+  {
+   "file": "go/config-sync/main.go",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "hash": "SHA-256"
+   }
+  }
+ ],
+ "code_absent": [
+  {
+   "file": "python/artifact_manifest.py",
+   "category": "signature",
+   "why": "signing_tag() is an HMAC, not a digital signature"
+  },
+  {
+   "file": "java/ConfigSync.java",
+   "category": "signature",
+   "why": "HMAC, not a signature"
+  },
+  {
+   "file": "go/config-sync/main.go",
+   "category": "signature",
+   "why": "HMAC, not a signature"
+  },
+  {
+   "file": "go/config-sync/main.go",
+   "algorithm": "SHA-512",
+   "why": "sha512.Sum384 is SHA-384"
+  },
+  {
+   "file": "go/auth-gateway/main.go",
+   "algorithm": "HMAC",
+   "why": "HMAC is the PRF of a hand-rolled PBKDF2: report PBKDF2"
+  },
+  {
+   "file": "go/telemetry-relay/main.go",
+   "algorithm": "NON-CSPRNG",
+   "why": "rand here is crypto/rand"
+  },
+  {
+   "file": "go/auth-gateway/main.go",
+   "algorithm": "NON-CSPRNG",
+   "why": "rand here is crypto/rand"
+  },
+  {
+   "file": "python/webhook_signature.py",
+   "tier": "safe",
+   "category": "signature",
+   "why": "Ed25519 is Shor-vulnerable"
+  },
+  {
+   "file": "python/secure_transfer.py",
+   "algorithm": "AES",
+   "params": {
+    "key_bits": 128
+   },
+   "why": "KEY_LEN=32 -> AES-256"
+  },
+  {
+   "file": "go/telemetry-relay/main.go",
+   "algorithm": "AES",
+   "params": {
+    "key_bits": 128
+   },
+   "why": "keyLen=32 -> AES-256"
+  }
+ ],
+ "network": [
+  {
+   "name": "Legacy HTTPS (web)",
+   "host_regex": "^web\\d+\\.lab$",
+   "port": 443,
+   "count": 33,
+   "expect": {
+    "protocol": {
+     "display": "TLS 1.2"
+    },
+    "key-exchange": {
+     "algorithm": "RSA",
+     "tier": "critical",
+     "hndl": true,
+     "flags": [
+      "no-forward-secrecy"
+     ]
+    },
+    "authentication": {
+     "algorithm": "RSA",
+     "tier": "critical"
+    },
+    "encryption": {
+     "display": "AES-128-CBC",
+     "tier": "medium",
+     "flags": [
+      "weaker-than-offered"
+     ]
+    },
+    "mac": {
+     "display": "HMAC-SHA-1",
+     "tier": "medium"
+    }
+   }
+  },
+  {
+   "name": "LDAPS (dc)",
+   "host_regex": "^dc\\d+\\.lab$",
+   "port": 636,
+   "count": 10,
+   "same_as": "Legacy HTTPS (web)"
+  },
+  {
+   "name": "SMTP STARTTLS (mail)",
+   "host_regex": "^mail\\d+\\.lab$",
+   "port": 587,
+   "count": 11,
+   "same_as": "Legacy HTTPS (web)"
+  },
+  {
+   "name": "TLS 1.3 classical (app)",
+   "host_regex": "^app\\d+\\.lab$",
+   "port": 443,
+   "count": 18,
+   "expect": {
+    "protocol": {
+     "display": "TLS 1.3"
+    },
+    "key-exchange": {
+     "algorithm": "X25519",
+     "tier": "critical",
+     "hndl": true
+    },
+    "authentication": {
+     "algorithm": "CLASSICAL-SIG",
+     "tier": "critical"
+    },
+    "encryption": {
+     "display": "AES-128-GCM",
+     "tier": "medium"
+    }
+   }
+  },
+  {
+   "name": "IMAPS (mail)",
+   "host_regex": "^mail\\d+\\.lab$",
+   "port": 993,
+   "count": 10,
+   "same_as": "TLS 1.3 classical (app)"
+  },
+  {
+   "name": "PostgreSQL TLS (db)",
+   "host_regex": "^db\\d+\\.lab$",
+   "port": 5432,
+   "count": 8,
+   "same_as": "TLS 1.3 classical (app)"
+  },
+  {
+   "name": "Hybrid PQC (vault)",
+   "host_regex": "^vault\\d+\\.lab$",
+   "port": 443,
+   "count": 7,
+   "expect": {
+    "protocol": {
+     "display": "TLS 1.3"
+    },
+    "key-exchange": {
+     "algorithm": "X25519MLKEM768",
+     "tier": "safe",
+     "hndl": false,
+     "flags": [
+      "pq-hybrid"
+     ]
+    },
+    "authentication": {
+     "algorithm": "CLASSICAL-SIG",
+     "tier": "critical",
+     "hndl": false
+    },
+    "encryption": {
+     "display": "AES-256-GCM",
+     "tier": "safe"
+    }
+   }
+  },
+  {
+   "name": "Legacy SSH",
+   "host_regex": "^legacy-ssh\\d+\\.lab$",
+   "port": 22,
+   "count": 14,
+   "expect": {
+    "protocol": {
+     "flags": [
+      "outdated-software",
+      "weak-algorithms-supported"
+     ]
+    },
+    "key-exchange": {
+     "display": "DH-2048",
+     "tier": "critical",
+     "flags": [
+      "sha1-kex"
+     ]
+    },
+    "authentication": {
+     "display": "RSA with SHA-1",
+     "tier": "critical"
+    },
+    "encryption": {
+     "display": "AES-128-CBC",
+     "tier": "medium"
+    },
+    "mac": {
+     "display": "HMAC-SHA-1",
+     "tier": "medium"
+    }
+   }
+  },
+  {
+   "name": "Modern SSH (bastion)",
+   "host_regex": "^bastion\\d+\\.lab$",
+   "port": 22,
+   "count": 10,
+   "expect": {
+    "key-exchange": {
+     "algorithm": "X25519",
+     "tier": "critical",
+     "flags": [
+      "pq-capable-not-enabled"
+     ]
+    },
+    "authentication": {
+     "algorithm": "RSA",
+     "tier": "critical"
+    },
+    "encryption": {
+     "display": "ChaCha20-Poly1305",
+     "tier": "safe"
+    }
+   }
+  },
+  {
+   "name": "Cleartext HTTP (intranet)",
+   "host_regex": "^intranet\\d+\\.lab$",
+   "port": 80,
+   "count": 14,
+   "expect": {
+    "transport": {
+     "algorithm": "PLAINTEXT",
+     "tier": "unencrypted"
+    }
+   }
+  }
+ ],
+ "cloud": [
+  {
+   "id": "alias/licensing-jwt-signing",
+   "category": "signature",
+   "display": "RSA-2048",
+   "tier": "critical"
+  },
+  {
+   "id": "alias/device-attestation",
+   "category": "signature",
+   "display": "ECDSA-P-256",
+   "tier": "critical",
+   "flags": [
+    "long-lived"
+   ]
+  },
+  {
+   "id": "alias/partner-feed-decrypt",
+   "category": "encryption",
+   "display": "RSA-2048",
+   "tier": "critical",
+   "hndl": true,
+   "flags": [
+    "external-key-material"
+   ]
+  },
+  {
+   "id": "alias/s3-object-encryption",
+   "category": "encryption",
+   "display": "AES-256-GCM",
+   "tier": "safe"
+  },
+  {
+   "id": "alias/ebs-volume-encryption",
+   "category": "encryption",
+   "display": "AES-256-GCM",
+   "tier": "safe",
+   "flags": [
+    "rotation-disabled"
+   ]
+  },
+  {
+   "id": "alias/internal-ca-root",
+   "category": "signature",
+   "display": "ECDSA-P-384",
+   "tier": "critical",
+   "flags": [
+    "long-lived",
+    "multi-region"
+   ]
+  },
+  {
+   "id": "alias/legacy-reports-export",
+   "category": "encryption",
+   "display": "AES-256-GCM",
+   "tier": "safe",
+   "flags": [
+    "pending-deletion",
+    "rotation-disabled",
+    "orphaned-owner"
+   ]
+  },
+  {
+   "id": "alias/hsm-backed-settlement",
+   "category": "signature",
+   "display": "RSA-3072",
+   "tier": "critical",
+   "flags": [
+    "hsm-backed"
+   ]
+  },
+  {
+   "id": "alias/release-codesigning",
+   "category": "signature",
+   "display": "RSA-4096",
+   "tier": "critical",
+   "flags": [
+    "long-lived"
+   ]
+  },
+  {
+   "id": "alias/session-token-encryption",
+   "category": "encryption",
+   "display": "AES-256-GCM",
+   "tier": "safe"
+  },
+  {
+   "id": "www.example.com",
+   "category": "certificate",
+   "display": "RSA-2048",
+   "tier": "critical",
+   "flags": [
+    "expiring-soon"
+   ]
+  },
+  {
+   "id": "admin.internal.example.com",
+   "category": "certificate",
+   "display": "ECDSA-P-256",
+   "tier": "critical"
+  },
+  {
+   "id": "api.example.com",
+   "category": "certificate",
+   "display": "RSA-2048",
+   "tier": "critical"
+  },
+  {
+   "id": "partner-api.example.com",
+   "category": "certificate",
+   "display": "ECDSA-P-384",
+   "tier": "critical"
+  },
+  {
+   "id": "legacy-tcp.internal.example.com",
+   "category": "certificate",
+   "display": "RSA-2048 with SHA-1",
+   "tier": "critical",
+   "classical": "broken",
+   "flags": [
+    "expired",
+    "no-auto-renewal"
+   ]
+  },
+  {
+   "id": "public-web-alb:443",
+   "category": "protocol",
+   "display": "TLS 1.0",
+   "classical": "deprecated"
+  },
+  {
+   "id": "public-web-alb:443",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "id": "internal-admin-alb:443",
+   "category": "protocol",
+   "display": "TLS 1.1",
+   "classical": "deprecated"
+  },
+  {
+   "id": "internal-admin-alb:443",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "id": "legacy-tcp-nlb:8443",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "id": "api-gateway-alb:443",
+   "category": "key-exchange",
+   "algorithm": "ECDHE",
+   "tier": "critical"
+  },
+  {
+   "id": "partner-api-alb:443",
+   "category": "key-exchange",
+   "algorithm": "ECDHE",
+   "tier": "critical"
+  },
+  {
+   "id": "batch-internal-alb:80",
+   "category": "transport",
+   "algorithm": "PLAINTEXT",
+   "tier": "unencrypted"
+  }
+ ],
+ "cloud_absent": [
+  {
+   "id": "api-gateway-alb:443",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "why": "FS-1-2-Res-2020-10 only has ECDHE suites"
+  },
+  {
+   "id": "partner-api-alb:443",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "why": "TLS13-1-2-2021-06 has no RSA key transport"
+  },
+  {
+   "id": "public-web-alb:80",
+   "category": "transport",
+   "why": "HTTP:80 only redirects to HTTPS"
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+
+# java / go build output
+*.class
+samples/extra/tls-lab/tlslab
+samples/extra/tls-lab/tlslab-test
+
+# scan output (regenerate with `make scan`)
+out/
+*.cdx.json
+!tests/**/*.cdx.json
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store

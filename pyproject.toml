@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantumtrace"
+version = "0.1.0"
+description = "Cryptographic inventory (CBOM) and post-quantum readiness scanner"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cryptography>=42",
+    "tree-sitter-language-pack>=0.7",
+    "cyclonedx-python-lib>=8",
+    "rich>=13",
+]
+
+[project.optional-dependencies]
+ui = ["streamlit>=1.38", "plotly>=5.22", "pandas>=2.2"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+qtrace = "quantumtrace.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["quantumtrace*"]
+
+[tool.setuptools.package-data]
+"quantumtrace.kb" = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

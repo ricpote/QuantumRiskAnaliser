@@ -1,0 +1,1529 @@
+{
+ "0x0000": {
+  "iana": "TLS_NULL_WITH_NULL_NULL",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0001": {
+  "iana": "TLS_RSA_WITH_NULL_MD5",
+  "openssl": "NULL-MD5",
+  "min_proto": "SSLv3",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "MD5"
+ },
+ "0x0002": {
+  "iana": "TLS_RSA_WITH_NULL_SHA",
+  "openssl": "NULL-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0x0003": {
+  "iana": "TLS_RSA_EXPORT_WITH_RC4_40_MD5",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0004": {
+  "iana": "TLS_RSA_WITH_RC4_128_MD5",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0005": {
+  "iana": "TLS_RSA_WITH_RC4_128_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0006": {
+  "iana": "TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0007": {
+  "iana": "TLS_RSA_WITH_IDEA_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0008": {
+  "iana": "TLS_RSA_EXPORT_WITH_DES40_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0009": {
+  "iana": "TLS_RSA_WITH_DES_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x000a": {
+  "iana": "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0012": {
+  "iana": "TLS_DHE_DSS_WITH_DES_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0013": {
+  "iana": "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0015": {
+  "iana": "TLS_DHE_RSA_WITH_DES_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0016": {
+  "iana": "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x0018": {
+  "iana": "TLS_DH_anon_WITH_RC4_128_MD5",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x001b": {
+  "iana": "TLS_DH_anon_WITH_3DES_EDE_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x002c": {
+  "iana": "TLS_PSK_WITH_NULL_SHA",
+  "openssl": "PSK-NULL-SHA",
+  "min_proto": "SSLv3",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0x002d": {
+  "iana": "TLS_DHE_PSK_WITH_NULL_SHA",
+  "openssl": "DHE-PSK-NULL-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0x002e": {
+  "iana": "TLS_RSA_PSK_WITH_NULL_SHA",
+  "openssl": "RSA-PSK-NULL-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0x002f": {
+  "iana": "TLS_RSA_WITH_AES_128_CBC_SHA",
+  "openssl": "AES128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x0032": {
+  "iana": "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+  "openssl": "DHE-DSS-AES128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x0033": {
+  "iana": "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+  "openssl": "DHE-RSA-AES128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x0034": {
+  "iana": "TLS_DH_anon_WITH_AES_128_CBC_SHA",
+  "openssl": "ADH-AES128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "None",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x0035": {
+  "iana": "TLS_RSA_WITH_AES_256_CBC_SHA",
+  "openssl": "AES256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x0038": {
+  "iana": "TLS_DHE_DSS_WITH_AES_256_CBC_SHA",
+  "openssl": "DHE-DSS-AES256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x0039": {
+  "iana": "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+  "openssl": "DHE-RSA-AES256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x003a": {
+  "iana": "TLS_DH_anon_WITH_AES_256_CBC_SHA",
+  "openssl": "ADH-AES256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "None",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x003b": {
+  "iana": "TLS_RSA_WITH_NULL_SHA256",
+  "openssl": "NULL-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "SHA256"
+ },
+ "0x003c": {
+  "iana": "TLS_RSA_WITH_AES_128_CBC_SHA256",
+  "openssl": "AES128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x003d": {
+  "iana": "TLS_RSA_WITH_AES_256_CBC_SHA256",
+  "openssl": "AES256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA256"
+ },
+ "0x0040": {
+  "iana": "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256",
+  "openssl": "DHE-DSS-AES128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x0041": {
+  "iana": "TLS_RSA_WITH_CAMELLIA_128_CBC_SHA",
+  "openssl": "CAMELLIA128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA1"
+ },
+ "0x0044": {
+  "iana": "TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA",
+  "openssl": "DHE-DSS-CAMELLIA128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "Camellia(128)",
+  "mac": "SHA1"
+ },
+ "0x0045": {
+  "iana": "TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA",
+  "openssl": "DHE-RSA-CAMELLIA128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA1"
+ },
+ "0x0046": {
+  "iana": "TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA",
+  "openssl": "ADH-CAMELLIA128-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "None",
+  "enc": "Camellia(128)",
+  "mac": "SHA1"
+ },
+ "0x0067": {
+  "iana": "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256",
+  "openssl": "DHE-RSA-AES128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x006a": {
+  "iana": "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256",
+  "openssl": "DHE-DSS-AES256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "AES(256)",
+  "mac": "SHA256"
+ },
+ "0x006b": {
+  "iana": "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256",
+  "openssl": "DHE-RSA-AES256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA256"
+ },
+ "0x006c": {
+  "iana": "TLS_DH_anon_WITH_AES_128_CBC_SHA256",
+  "openssl": "ADH-AES128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "None",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x006d": {
+  "iana": "TLS_DH_anon_WITH_AES_256_CBC_SHA256",
+  "openssl": "ADH-AES256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "None",
+  "enc": "AES(256)",
+  "mac": "SHA256"
+ },
+ "0x0084": {
+  "iana": "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA",
+  "openssl": "CAMELLIA256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA1"
+ },
+ "0x0087": {
+  "iana": "TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA",
+  "openssl": "DHE-DSS-CAMELLIA256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "Camellia(256)",
+  "mac": "SHA1"
+ },
+ "0x0088": {
+  "iana": "TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA",
+  "openssl": "DHE-RSA-CAMELLIA256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA1"
+ },
+ "0x0089": {
+  "iana": "TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA",
+  "openssl": "ADH-CAMELLIA256-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DH",
+  "au": "None",
+  "enc": "Camellia(256)",
+  "mac": "SHA1"
+ },
+ "0x008c": {
+  "iana": "TLS_PSK_WITH_AES_128_CBC_SHA",
+  "openssl": "PSK-AES128-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x008d": {
+  "iana": "TLS_PSK_WITH_AES_256_CBC_SHA",
+  "openssl": "PSK-AES256-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x0090": {
+  "iana": "TLS_DHE_PSK_WITH_AES_128_CBC_SHA",
+  "openssl": "DHE-PSK-AES128-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x0091": {
+  "iana": "TLS_DHE_PSK_WITH_AES_256_CBC_SHA",
+  "openssl": "DHE-PSK-AES256-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x0094": {
+  "iana": "TLS_RSA_PSK_WITH_AES_128_CBC_SHA",
+  "openssl": "RSA-PSK-AES128-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0x0095": {
+  "iana": "TLS_RSA_PSK_WITH_AES_256_CBC_SHA",
+  "openssl": "RSA-PSK-AES256-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0x009c": {
+  "iana": "TLS_RSA_WITH_AES_128_GCM_SHA256",
+  "openssl": "AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x009d": {
+  "iana": "TLS_RSA_WITH_AES_256_GCM_SHA384",
+  "openssl": "AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x009e": {
+  "iana": "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+  "openssl": "DHE-RSA-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x009f": {
+  "iana": "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
+  "openssl": "DHE-RSA-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x00a2": {
+  "iana": "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256",
+  "openssl": "DHE-DSS-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x00a3": {
+  "iana": "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384",
+  "openssl": "DHE-DSS-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x00a6": {
+  "iana": "TLS_DH_anon_WITH_AES_128_GCM_SHA256",
+  "openssl": "ADH-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "None",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x00a7": {
+  "iana": "TLS_DH_anon_WITH_AES_256_GCM_SHA384",
+  "openssl": "ADH-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "None",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x00a8": {
+  "iana": "TLS_PSK_WITH_AES_128_GCM_SHA256",
+  "openssl": "PSK-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x00a9": {
+  "iana": "TLS_PSK_WITH_AES_256_GCM_SHA384",
+  "openssl": "PSK-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x00aa": {
+  "iana": "TLS_DHE_PSK_WITH_AES_128_GCM_SHA256",
+  "openssl": "DHE-PSK-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x00ab": {
+  "iana": "TLS_DHE_PSK_WITH_AES_256_GCM_SHA384",
+  "openssl": "DHE-PSK-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x00ac": {
+  "iana": "TLS_RSA_PSK_WITH_AES_128_GCM_SHA256",
+  "openssl": "RSA-PSK-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x00ad": {
+  "iana": "TLS_RSA_PSK_WITH_AES_256_GCM_SHA384",
+  "openssl": "RSA-PSK-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x00ae": {
+  "iana": "TLS_PSK_WITH_AES_128_CBC_SHA256",
+  "openssl": "PSK-AES128-CBC-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x00af": {
+  "iana": "TLS_PSK_WITH_AES_256_CBC_SHA384",
+  "openssl": "PSK-AES256-CBC-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AES(256)",
+  "mac": "SHA384"
+ },
+ "0x00b0": {
+  "iana": "TLS_PSK_WITH_NULL_SHA256",
+  "openssl": "PSK-NULL-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA256"
+ },
+ "0x00b1": {
+  "iana": "TLS_PSK_WITH_NULL_SHA384",
+  "openssl": "PSK-NULL-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA384"
+ },
+ "0x00b2": {
+  "iana": "TLS_DHE_PSK_WITH_AES_128_CBC_SHA256",
+  "openssl": "DHE-PSK-AES128-CBC-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x00b3": {
+  "iana": "TLS_DHE_PSK_WITH_AES_256_CBC_SHA384",
+  "openssl": "DHE-PSK-AES256-CBC-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AES(256)",
+  "mac": "SHA384"
+ },
+ "0x00b4": {
+  "iana": "TLS_DHE_PSK_WITH_NULL_SHA256",
+  "openssl": "DHE-PSK-NULL-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA256"
+ },
+ "0x00b5": {
+  "iana": "TLS_DHE_PSK_WITH_NULL_SHA384",
+  "openssl": "DHE-PSK-NULL-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA384"
+ },
+ "0x00b6": {
+  "iana": "TLS_RSA_PSK_WITH_AES_128_CBC_SHA256",
+  "openssl": "RSA-PSK-AES128-CBC-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0x00b7": {
+  "iana": "TLS_RSA_PSK_WITH_AES_256_CBC_SHA384",
+  "openssl": "RSA-PSK-AES256-CBC-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA384"
+ },
+ "0x00b8": {
+  "iana": "TLS_RSA_PSK_WITH_NULL_SHA256",
+  "openssl": "RSA-PSK-NULL-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "SHA256"
+ },
+ "0x00b9": {
+  "iana": "TLS_RSA_PSK_WITH_NULL_SHA384",
+  "openssl": "RSA-PSK-NULL-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "SHA384"
+ },
+ "0x00ba": {
+  "iana": "TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "CAMELLIA128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0x00bd": {
+  "iana": "TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "DHE-DSS-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0x00be": {
+  "iana": "TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "DHE-RSA-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0x00bf": {
+  "iana": "TLS_DH_anon_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "ADH-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "None",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0x00c0": {
+  "iana": "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256",
+  "openssl": "CAMELLIA256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA256"
+ },
+ "0x00c3": {
+  "iana": "TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA256",
+  "openssl": "DHE-DSS-CAMELLIA256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "Camellia(256)",
+  "mac": "SHA256"
+ },
+ "0x00c4": {
+  "iana": "TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA256",
+  "openssl": "DHE-RSA-CAMELLIA256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA256"
+ },
+ "0x00c5": {
+  "iana": "TLS_DH_anon_WITH_CAMELLIA_256_CBC_SHA256",
+  "openssl": "ADH-CAMELLIA256-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "None",
+  "enc": "Camellia(256)",
+  "mac": "SHA256"
+ },
+ "0x1301": {
+  "iana": "TLS_AES_128_GCM_SHA256",
+  "openssl": "TLS_AES_128_GCM_SHA256",
+  "min_proto": "TLSv1.3",
+  "kx": "any",
+  "au": "any",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0x1302": {
+  "iana": "TLS_AES_256_GCM_SHA384",
+  "openssl": "TLS_AES_256_GCM_SHA384",
+  "min_proto": "TLSv1.3",
+  "kx": "any",
+  "au": "any",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0x1303": {
+  "iana": "TLS_CHACHA20_POLY1305_SHA256",
+  "openssl": "TLS_CHACHA20_POLY1305_SHA256",
+  "min_proto": "TLSv1.3",
+  "kx": "any",
+  "au": "any",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0x1304": {
+  "iana": "TLS_AES_128_CCM_SHA256",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0x1305": {
+  "iana": "TLS_AES_128_CCM_8_SHA256",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0xc006": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_NULL_SHA",
+  "openssl": "ECDHE-ECDSA-NULL-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0xc007": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0xc008": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0xc009": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+  "openssl": "ECDHE-ECDSA-AES128-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc00a": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+  "openssl": "ECDHE-ECDSA-AES256-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc010": {
+  "iana": "TLS_ECDHE_RSA_WITH_NULL_SHA",
+  "openssl": "ECDHE-RSA-NULL-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0xc011": {
+  "iana": "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0xc012": {
+  "iana": "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
+  "openssl": null,
+  "source": "manual"
+ },
+ "0xc013": {
+  "iana": "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+  "openssl": "ECDHE-RSA-AES128-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc014": {
+  "iana": "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+  "openssl": "ECDHE-RSA-AES256-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc015": {
+  "iana": "TLS_ECDH_anon_WITH_NULL_SHA",
+  "openssl": "AECDH-NULL-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "None",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0xc018": {
+  "iana": "TLS_ECDH_anon_WITH_AES_128_CBC_SHA",
+  "openssl": "AECDH-AES128-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "None",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc019": {
+  "iana": "TLS_ECDH_anon_WITH_AES_256_CBC_SHA",
+  "openssl": "AECDH-AES256-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDH",
+  "au": "None",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc01d": {
+  "iana": "TLS_SRP_SHA_WITH_AES_128_CBC_SHA",
+  "openssl": "SRP-AES-128-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "SRP",
+  "au": "SRP",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc01e": {
+  "iana": "TLS_SRP_SHA_RSA_WITH_AES_128_CBC_SHA",
+  "openssl": "SRP-RSA-AES-128-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "SRP",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc01f": {
+  "iana": "TLS_SRP_SHA_DSS_WITH_AES_128_CBC_SHA",
+  "openssl": "SRP-DSS-AES-128-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "SRP",
+  "au": "DSS",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc020": {
+  "iana": "TLS_SRP_SHA_WITH_AES_256_CBC_SHA",
+  "openssl": "SRP-AES-256-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "SRP",
+  "au": "SRP",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc021": {
+  "iana": "TLS_SRP_SHA_RSA_WITH_AES_256_CBC_SHA",
+  "openssl": "SRP-RSA-AES-256-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "SRP",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc022": {
+  "iana": "TLS_SRP_SHA_DSS_WITH_AES_256_CBC_SHA",
+  "openssl": "SRP-DSS-AES-256-CBC-SHA",
+  "min_proto": "SSLv3",
+  "kx": "SRP",
+  "au": "DSS",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc023": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+  "openssl": "ECDHE-ECDSA-AES128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0xc024": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+  "openssl": "ECDHE-ECDSA-AES256-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AES(256)",
+  "mac": "SHA384"
+ },
+ "0xc027": {
+  "iana": "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+  "openssl": "ECDHE-RSA-AES128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0xc028": {
+  "iana": "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+  "openssl": "ECDHE-RSA-AES256-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "AES(256)",
+  "mac": "SHA384"
+ },
+ "0xc02b": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+  "openssl": "ECDHE-ECDSA-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc02c": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+  "openssl": "ECDHE-ECDSA-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc02f": {
+  "iana": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+  "openssl": "ECDHE-RSA-AES128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "AESGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc030": {
+  "iana": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+  "openssl": "ECDHE-RSA-AES256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "AESGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc035": {
+  "iana": "TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA",
+  "openssl": "ECDHE-PSK-AES128-CBC-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "AES(128)",
+  "mac": "SHA1"
+ },
+ "0xc036": {
+  "iana": "TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA",
+  "openssl": "ECDHE-PSK-AES256-CBC-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "AES(256)",
+  "mac": "SHA1"
+ },
+ "0xc037": {
+  "iana": "TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256",
+  "openssl": "ECDHE-PSK-AES128-CBC-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "AES(128)",
+  "mac": "SHA256"
+ },
+ "0xc038": {
+  "iana": "TLS_ECDHE_PSK_WITH_AES_256_CBC_SHA384",
+  "openssl": "ECDHE-PSK-AES256-CBC-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "AES(256)",
+  "mac": "SHA384"
+ },
+ "0xc039": {
+  "iana": "TLS_ECDHE_PSK_WITH_NULL_SHA",
+  "openssl": "ECDHE-PSK-NULL-SHA",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA1"
+ },
+ "0xc03a": {
+  "iana": "TLS_ECDHE_PSK_WITH_NULL_SHA256",
+  "openssl": "ECDHE-PSK-NULL-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA256"
+ },
+ "0xc03b": {
+  "iana": "TLS_ECDHE_PSK_WITH_NULL_SHA384",
+  "openssl": "ECDHE-PSK-NULL-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "None",
+  "mac": "SHA384"
+ },
+ "0xc050": {
+  "iana": "TLS_RSA_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc051": {
+  "iana": "TLS_RSA_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc052": {
+  "iana": "TLS_DHE_RSA_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "DHE-RSA-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc053": {
+  "iana": "TLS_DHE_RSA_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "DHE-RSA-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc056": {
+  "iana": "TLS_DHE_DSS_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "DHE-DSS-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc057": {
+  "iana": "TLS_DHE_DSS_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "DHE-DSS-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "DSS",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc05c": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "ECDHE-ECDSA-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc05d": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "ECDHE-ECDSA-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc060": {
+  "iana": "TLS_ECDHE_RSA_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "ECDHE-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc061": {
+  "iana": "TLS_ECDHE_RSA_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "ECDHE-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc06a": {
+  "iana": "TLS_PSK_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "PSK-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc06b": {
+  "iana": "TLS_PSK_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "PSK-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc06c": {
+  "iana": "TLS_DHE_PSK_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "DHE-PSK-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc06d": {
+  "iana": "TLS_DHE_PSK_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "DHE-PSK-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc06e": {
+  "iana": "TLS_RSA_PSK_WITH_ARIA_128_GCM_SHA256",
+  "openssl": "RSA-PSK-ARIA128-GCM-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "ARIAGCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc06f": {
+  "iana": "TLS_RSA_PSK_WITH_ARIA_256_GCM_SHA384",
+  "openssl": "RSA-PSK-ARIA256-GCM-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "ARIAGCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc072": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "ECDHE-ECDSA-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0xc073": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_CBC_SHA384",
+  "openssl": "ECDHE-ECDSA-CAMELLIA256-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA384"
+ },
+ "0xc076": {
+  "iana": "TLS_ECDHE_RSA_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "ECDHE-RSA-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0xc077": {
+  "iana": "TLS_ECDHE_RSA_WITH_CAMELLIA_256_CBC_SHA384",
+  "openssl": "ECDHE-RSA-CAMELLIA256-SHA384",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA384"
+ },
+ "0xc094": {
+  "iana": "TLS_PSK_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "PSK-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0xc095": {
+  "iana": "TLS_PSK_WITH_CAMELLIA_256_CBC_SHA384",
+  "openssl": "PSK-CAMELLIA256-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "Camellia(256)",
+  "mac": "SHA384"
+ },
+ "0xc096": {
+  "iana": "TLS_DHE_PSK_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "DHE-PSK-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0xc097": {
+  "iana": "TLS_DHE_PSK_WITH_CAMELLIA_256_CBC_SHA384",
+  "openssl": "DHE-PSK-CAMELLIA256-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "Camellia(256)",
+  "mac": "SHA384"
+ },
+ "0xc098": {
+  "iana": "TLS_RSA_PSK_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "RSA-PSK-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0xc099": {
+  "iana": "TLS_RSA_PSK_WITH_CAMELLIA_256_CBC_SHA384",
+  "openssl": "RSA-PSK-CAMELLIA256-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "Camellia(256)",
+  "mac": "SHA384"
+ },
+ "0xc09a": {
+  "iana": "TLS_ECDHE_PSK_WITH_CAMELLIA_128_CBC_SHA256",
+  "openssl": "ECDHE-PSK-CAMELLIA128-SHA256",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "Camellia(128)",
+  "mac": "SHA256"
+ },
+ "0xc09b": {
+  "iana": "TLS_ECDHE_PSK_WITH_CAMELLIA_256_CBC_SHA384",
+  "openssl": "ECDHE-PSK-CAMELLIA256-SHA384",
+  "min_proto": "TLSv1",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "Camellia(256)",
+  "mac": "SHA384"
+ },
+ "0xc09c": {
+  "iana": "TLS_RSA_WITH_AES_128_CCM",
+  "openssl": "AES128-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AESCCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc09d": {
+  "iana": "TLS_RSA_WITH_AES_256_CCM",
+  "openssl": "AES256-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AESCCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc09e": {
+  "iana": "TLS_DHE_RSA_WITH_AES_128_CCM",
+  "openssl": "DHE-RSA-AES128-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AESCCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc09f": {
+  "iana": "TLS_DHE_RSA_WITH_AES_256_CCM",
+  "openssl": "DHE-RSA-AES256-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AESCCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc0a0": {
+  "iana": "TLS_RSA_WITH_AES_128_CCM_8",
+  "openssl": "AES128-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AESCCM8(128)",
+  "mac": "AEAD"
+ },
+ "0xc0a1": {
+  "iana": "TLS_RSA_WITH_AES_256_CCM_8",
+  "openssl": "AES256-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "RSA",
+  "au": "RSA",
+  "enc": "AESCCM8(256)",
+  "mac": "AEAD"
+ },
+ "0xc0a2": {
+  "iana": "TLS_DHE_RSA_WITH_AES_128_CCM_8",
+  "openssl": "DHE-RSA-AES128-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AESCCM8(128)",
+  "mac": "AEAD"
+ },
+ "0xc0a3": {
+  "iana": "TLS_DHE_RSA_WITH_AES_256_CCM_8",
+  "openssl": "DHE-RSA-AES256-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "AESCCM8(256)",
+  "mac": "AEAD"
+ },
+ "0xc0a4": {
+  "iana": "TLS_PSK_WITH_AES_128_CCM",
+  "openssl": "PSK-AES128-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AESCCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc0a5": {
+  "iana": "TLS_PSK_WITH_AES_256_CCM",
+  "openssl": "PSK-AES256-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AESCCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc0a6": {
+  "iana": "TLS_DHE_PSK_WITH_AES_128_CCM",
+  "openssl": "DHE-PSK-AES128-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AESCCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc0a7": {
+  "iana": "TLS_DHE_PSK_WITH_AES_256_CCM",
+  "openssl": "DHE-PSK-AES256-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AESCCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc0a8": {
+  "iana": "TLS_PSK_WITH_AES_128_CCM_8",
+  "openssl": "PSK-AES128-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AESCCM8(128)",
+  "mac": "AEAD"
+ },
+ "0xc0a9": {
+  "iana": "TLS_PSK_WITH_AES_256_CCM_8",
+  "openssl": "PSK-AES256-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "AESCCM8(256)",
+  "mac": "AEAD"
+ },
+ "0xc0aa": {
+  "iana": "TLS_PSK_DHE_WITH_AES_128_CCM_8",
+  "openssl": "DHE-PSK-AES128-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AESCCM8(128)",
+  "mac": "AEAD"
+ },
+ "0xc0ab": {
+  "iana": "TLS_PSK_DHE_WITH_AES_256_CCM_8",
+  "openssl": "DHE-PSK-AES256-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "AESCCM8(256)",
+  "mac": "AEAD"
+ },
+ "0xc0ac": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_128_CCM",
+  "openssl": "ECDHE-ECDSA-AES128-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AESCCM(128)",
+  "mac": "AEAD"
+ },
+ "0xc0ad": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_256_CCM",
+  "openssl": "ECDHE-ECDSA-AES256-CCM",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AESCCM(256)",
+  "mac": "AEAD"
+ },
+ "0xc0ae": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8",
+  "openssl": "ECDHE-ECDSA-AES128-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AESCCM8(128)",
+  "mac": "AEAD"
+ },
+ "0xc0af": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8",
+  "openssl": "ECDHE-ECDSA-AES256-CCM8",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "AESCCM8(256)",
+  "mac": "AEAD"
+ },
+ "0xcca8": {
+  "iana": "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "ECDHE-RSA-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "RSA",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0xcca9": {
+  "iana": "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "ECDHE-ECDSA-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDH",
+  "au": "ECDSA",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0xccaa": {
+  "iana": "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "DHE-RSA-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "DH",
+  "au": "RSA",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0xccab": {
+  "iana": "TLS_PSK_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "PSK-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "PSK",
+  "au": "PSK",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0xccac": {
+  "iana": "TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "ECDHE-PSK-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "ECDHEPSK",
+  "au": "PSK",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0xccad": {
+  "iana": "TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "DHE-PSK-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "DHEPSK",
+  "au": "PSK",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ },
+ "0xccae": {
+  "iana": "TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256",
+  "openssl": "RSA-PSK-CHACHA20-POLY1305",
+  "min_proto": "TLSv1.2",
+  "kx": "RSAPSK",
+  "au": "RSA",
+  "enc": "CHACHA20/POLY1305(256)",
+  "mac": "AEAD"
+ }
+}
