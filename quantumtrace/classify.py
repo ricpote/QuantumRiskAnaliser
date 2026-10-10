@@ -354,6 +354,13 @@ def _misc(f, alg, p, flags, cwe, why):
         cwe.update({"CWE-321", "CWE-798"})
         why.append(f"key material embedded in source ({p.get('name', '?')}, {p.get('key_bits', '?')} bits): anyone with the repo can decrypt/forge")
         return "safe", ("deprecated" if "demo-code" in flags else "broken"), f"Hard-coded key ({p.get('name', '?')})", dict(algorithm="KMS / secret manager", standard="-", how="Load keys from AWS KMS / a secret manager; rotate the exposed key"), deadlines
+    if alg == "NO-CERT-VERIFY":
+        cwe.add("CWE-295")
+        why.append(f"{p.get('api', 'TLS client')} skips certificate and hostname checks: anyone on the path can impersonate the server "
+                   "and read everything, today, with no quantum computer needed")
+        return "safe", "broken", "TLS without certificate verification", dict(
+            algorithm="Certificate verification", standard="RFC 5280 / RFC 6125", action="Re-enable TLS certificate verification",
+            how="Remove the bypass; for a private CA load it explicitly (Go: tls.Config.RootCAs, Python: ssl.create_default_context(cafile=...))"), deadlines
     if alg == "LIBRARY":
         why.append(f.evidence)
         return "safe", "acceptable", f"{p.get('library')} {p.get('version') or ''}".strip(), None, deadlines

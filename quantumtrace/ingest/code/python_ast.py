@@ -7,6 +7,7 @@ modes, hashes and iteration counts.
 from __future__ import annotations
 
 import ast
+import re
 import os
 
 from ...schema import Finding
@@ -35,6 +36,8 @@ class _Ctx:
         self.consts = {}        # (func or None, name) -> ast expr
         self.funcs = {}         # name -> FunctionDef
         self.calls = []         # (fqn, call node, enclosing func)
+        self.call_targets = {}  # id(call) -> names it is assigned to (token = random.randint(...))
+        self.no_verify = []     # (node, text, func): TLS certificate checks switched off
         self.parent = {}
         self.trace = []         # names resolved during the last _value() call
         self.main_names = set() # names assigned inside `if __name__ == "__main__":`
@@ -147,6 +150,32 @@ def _nbytes(v):
     return None
 
 
+_SECRET_WORDS = {"token", "secret", "salt", "nonce", "iv", "session", "password", "passwd", "otp", "csrf", "apikey", "pin", "key"}
+_NOT_SECRET_BEFORE_KEY = {"sort", "cache", "lookup", "dict", "map", "index", "row", "col", "partition", "shard", "group", "order",
+                          "primary", "foreign", "hash", "sample", "random", "seed"}
+
+
+def _secret_name(name: str) -> bool:
+    """reset_token / apiKey / otp_code / session_id -> True; sort_key / jitter / delay -> False."""
+    words = [w.lower() for w in re.split(r"_|(?<=[a-z0-9])(?=[A-Z])", name) if w]
+    for i, w in enumerate(words):
+        if w == "key":
+            if i and words[i - 1] in _NOT_SECRET_BEFORE_KEY:
+                continue
+            return True
+        if w in _SECRET_WORDS:
+            return True
+    return False
+
+
+def _is_http_session(owner, ctx, func) -> bool:
+    """s.verify = False only matters when s is a requests.Session / httpx.Client."""
+    if isinstance(owner, ast.Name):
+        v = ctx.consts.get((func.name if func else None, owner.id)) or ctx.consts.get((None, owner.id))
+        return isinstance(v, ast.Call) and (_fqn(v.func, ctx) or "").startswith(("requests.", "httpx."))
+    return isinstance(owner, ast.Attribute) and "session" in owner.attr.lower()
+
+
 def _is_literal_key(node, ctx, func):
     """True if the key resolves to a bytes/str literal defined outside the __main__ demo block."""
     ctx.trace = []
@@ -180,6 +209,18 @@ def scan(path: str, rel: str) -> list[Finding]:
             for t in targets:
                 if isinstance(t, ast.Name) and node.value is not None:
                     ctx.consts.setdefault((encl.name if encl else None, t.id), node.value)
+            names = [t.id if isinstance(t, ast.Name) else t.attr for t in targets if isinstance(t, (ast.Name, ast.Attribute))]
+            if node.value is not None and names:
+                for sub in ast.walk(node.value):
+                    if isinstance(sub, ast.Call):
+                        ctx.call_targets.setdefault(id(sub), names)
+            # ctx.verify_mode = ssl.CERT_NONE / session.verify = False
+            for t in targets:
+                if isinstance(t, ast.Attribute) and node.value is not None and (
+                        (t.attr == "verify_mode" and (_fqn(node.value, ctx) or "").endswith("CERT_NONE"))
+                        or (t.attr == "verify" and isinstance(node.value, ast.Constant) and node.value.value is False
+                            and _is_http_session(t.value, ctx, encl))):
+                    ctx.no_verify.append((node, f"{ast.unparse(t)} = {ast.unparse(node.value)}", encl))
         elif isinstance(node, ast.Call):
             ctx.calls.append((_fqn(node.func, ctx) or "", node, _enclosing_func(node, ctx)))
 
@@ -388,11 +429,27 @@ def scan(path: str, rel: str) -> list[Finding]:
             add(call, "hash", {"MD5": "MD5", "SHA1": "SHA-1", "SHA256": "SHA-256", "SHA384": "SHA-384", "SHA512": "SHA-512"}.get(h, h), {}, f"{h}.new()", api=fqn, func=func)
         # ---------------- randomness ----------------
         elif fqn.startswith("random.") and name in RANDOM_FUNCS:
+            target = next((t for t in ctx.call_targets.get(id(call), []) if _secret_name(t)), None)
             if sec_ctx:
                 add(call, "rng", "NON-CSPRNG", dict(api=fqn), f"{fqn}() used in security-sensitive function {func.name if func else ''}()",
                     ["weak-prng"], api=fqn, func=func)
+            elif target:
+                add(call, "rng", "NON-CSPRNG", dict(api=fqn), f"{fqn}() generates {target}: the random module is predictable, use secrets",
+                    ["weak-prng"], confidence=0.9, api=fqn, func=func)
         elif fqn in ("os.urandom", "secrets.token_bytes", "secrets.token_hex", "secrets.token_urlsafe", "secrets.randbits"):
             add(call, "rng", "CSPRNG", dict(api=fqn), f"{fqn}()", api=fqn, func=func, confidence=1.0)
+        # ---------------- TLS certificate verification switched off ----------------
+        elif fqn == "ssl._create_unverified_context":
+            add(call, "authentication", "NO-CERT-VERIFY", dict(api=fqn), f"{fqn}() disables certificate and hostname verification",
+                ["no-cert-verify"], api=fqn, func=func)
+        elif fqn.startswith(("requests.", "httpx.")) and any(kw.arg == "verify" and isinstance(kw.value, ast.Constant) and kw.value.value is False
+                                                           for kw in call.keywords):
+            add(call, "authentication", "NO-CERT-VERIFY", dict(api=fqn), f"{fqn}(..., verify=False) disables certificate verification",
+                ["no-cert-verify"], api=fqn, func=func)
+
+    for node, text, func in ctx.no_verify:
+        add(node, "authentication", "NO-CERT-VERIFY", dict(api=text.split(" =")[0]), f"{text} disables certificate verification",
+            ["no-cert-verify"], api="ssl", func=func)
 
     # ---------------- hard-coded keys (module constants with key-ish names) ----------------
     for (fn, cname), expr in ctx.consts.items():

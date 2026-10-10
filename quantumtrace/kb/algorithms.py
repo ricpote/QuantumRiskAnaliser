@@ -96,6 +96,7 @@ CATALOG = {
     # ---------------- hygiene / inventory (not algorithms) ----------------
     "UNIDENTIFIED": dict(family="Unidentified protocol", primitive=None, threat="none", standard="-", oid=None),
     "HARDCODED-KEY": dict(family="Secret in source code", primitive=None, threat="none", standard="-", oid=None),
+    "NO-CERT-VERIFY": dict(family="Certificate validation disabled", primitive=None, threat="none", standard="RFC 5280 / RFC 6125", oid=None),
     "LIBRARY":  dict(family="Crypto library", primitive=None, threat="none", standard="-", oid=None),
     "PBKDF1":   dict(family="PBES1", primitive="kdf", threat="grover", standard="RFC 8018 (PBES1, legacy)", oid=None),
     "MD2":      dict(family="MD2", primitive="hash", threat="grover", standard="RFC 6149 (historic)", oid="1.2.840.113549.2.2", out=128),
