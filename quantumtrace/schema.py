@@ -64,6 +64,7 @@ class Finding:
     replacement: Optional[dict] = None        # {"algorithm": "ML-KEM-768", "standard": "FIPS 203", "how": "..."}
     cwe: list = field(default_factory=list)
     deadlines: list = field(default_factory=list)
+    deadline_year: Optional[int] = None       # earliest binding deadline (NIST / EU / RFC); CNSA 2.0 not counted
     hndl: bool = False                        # exposed to Harvest-Now-Decrypt-Later
     risk_points: float = 0.0                  # 0..100, used by score.py
     rationale: list = field(default_factory=list)  # classifier explanations (shown in UI)
