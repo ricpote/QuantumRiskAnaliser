@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { displayRisk, type Finding, type Tier } from "@/lib/quantumtrace-data";
 import { findingBadge, tierClass, tierIcon, tierLabel } from "@/lib/labels";
 
@@ -37,18 +37,41 @@ export function Segmented<T extends string>({
   label: string;
   disabled?: boolean;
 }) {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const current = Math.max(
+    0,
+    options.findIndex((o) => o.v === value),
+  );
+  // A radio group is one tab stop; the arrow keys move between (and select) its options.
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const step = ["ArrowRight", "ArrowDown"].includes(e.key)
+      ? 1
+      : ["ArrowLeft", "ArrowUp"].includes(e.key)
+        ? -1
+        : 0;
+    if (!step || disabled) return;
+    e.preventDefault();
+    const next = (current + step + options.length) % options.length;
+    onChange(options[next]!.v);
+    buttons.current[next]?.focus();
+  }
   return (
     <div
       role="radiogroup"
       aria-label={label}
+      onKeyDown={onKeyDown}
       className="inline-flex flex-wrap rounded-sm border border-border p-0.5"
     >
-      {options.map((o) => (
+      {options.map((o, i) => (
         <button
           key={o.v}
+          ref={(el) => {
+            buttons.current[i] = el;
+          }}
           type="button"
           role="radio"
           aria-checked={value === o.v}
+          tabIndex={i === current ? 0 : -1}
           disabled={disabled}
           onClick={() => onChange(o.v)}
           className={`rounded-sm px-3 py-1.5 text-sm transition disabled:opacity-50 ${value === o.v ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}

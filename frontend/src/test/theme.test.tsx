@@ -34,3 +34,15 @@ it("applies a saved light theme before React starts, and stays dark by default",
     "true",
   );
 });
+
+it("keeps every theme switch on the page in sync", () => {
+  render(
+    <>
+      <ThemeToggle />
+      <ThemeToggle />
+    </>,
+  );
+  const [sidebar, phone] = screen.getAllByRole("switch", { name: "Light mode" });
+  fireEvent.click(phone!);
+  expect(sidebar).toHaveAttribute("aria-checked", "true");
+});

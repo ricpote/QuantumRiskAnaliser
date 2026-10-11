@@ -127,7 +127,7 @@ function Findings({ r }: { r: Report }) {
       </h2>
       <div
         className="mt-6 flex h-10 gap-0.5 overflow-hidden rounded-sm bg-muted"
-        role="img"
+        role="group"
         aria-label={TIER_ORDER.map((t) => `${count(t)} ${tierLabel[t]}`).join(", ")}
       >
         {TIER_ORDER.map((t, i) => (

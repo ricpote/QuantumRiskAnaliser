@@ -81,3 +81,16 @@ it("pages through long inventories 25 findings at a time", () => {
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(shown()).toBe("Showing 26–30 of 30 findings");
 });
+
+it("moves through the risk filter with the arrow keys, as one tab stop", () => {
+  render(<Harness />);
+  const group = screen.getByRole("radiogroup", { name: "Filter by risk" });
+  const all = screen.getByRole("radio", { name: "All risks" });
+  expect(all).toHaveAttribute("tabindex", "0");
+  expect(screen.getByRole("radio", { name: "Critical" })).toHaveAttribute("tabindex", "-1");
+  fireEvent.keyDown(group, { key: "ArrowRight" });
+  expect(screen.getByRole("radio", { name: "Critical" })).toHaveAttribute("aria-checked", "true");
+  expect(screen.getByRole("radio", { name: "Critical" })).toHaveFocus();
+  fireEvent.keyDown(group, { key: "ArrowLeft" });
+  expect(all).toHaveAttribute("aria-checked", "true");
+});

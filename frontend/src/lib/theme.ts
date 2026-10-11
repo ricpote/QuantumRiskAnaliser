@@ -11,8 +11,17 @@ export function currentTheme(): Theme {
     : "dark";
 }
 
+const CHANGE = "qt-theme-change";
+
+/** Lets every switch on the page (sidebar and phone menu) follow the same theme. */
+export function subscribeTheme(onChange: () => void) {
+  window.addEventListener(CHANGE, onChange);
+  return () => window.removeEventListener(CHANGE, onChange);
+}
+
 export function setTheme(theme: Theme) {
   document.documentElement.classList.toggle("light", theme === "light");
+  window.dispatchEvent(new Event(CHANGE));
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {

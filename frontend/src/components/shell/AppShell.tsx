@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -173,6 +173,33 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [warnOpen, setWarnOpen] = useState(false);
   useEffect(() => setWarnOpen(false), [report]);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const menuPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const panel = menuPanel.current;
+    const opener = menuButton.current; // focus goes back here when the menu closes
+    panel?.querySelector<HTMLElement>("button")?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenu(false);
+      if (e.key !== "Tab" || !panel) return;
+      const items = panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+      const first = items[0],
+        last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, [menu]);
   const warnings = report?.summary.warnings ?? [];
   const onReportPage = REPORT_PAGES.includes(path);
   const status = originLabel(report);
@@ -195,6 +222,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AnimatePresence>
           {menu && (
             <motion.div
+              ref={menuPanel}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
               className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-sidebar p-6 text-sidebar-foreground lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -229,8 +260,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
             <div className="flex items-center gap-2 px-4 py-3 sm:gap-3 sm:px-5 md:px-8">
               <button
+                ref={menuButton}
                 onClick={() => setMenu(true)}
                 aria-label="Open navigation"
+                aria-expanded={menu}
                 className="rounded-sm p-2 hover:bg-accent lg:hidden"
               >
                 <Menu />

@@ -257,21 +257,13 @@ def _row(label: str, a: Assumption) -> dict:
 
 def assumptions() -> dict:
     """Every Z, X and Y default with its reasoning and sources (the dashboard's Sources page)."""
-    services: dict[int, tuple[list[str], Assumption]] = {}
-    for name, a in SHELF_LIFE_SERVICE.items():  # one row per distinct assumption, listing the services it covers
-        services.setdefault(id(a), ([], a))[0].append(name)
-    shelf = []
-    for names, a in services.values():
-        if a is _CORRESPONDENCE:
-            label = "E-mail (IMAP, POP3, SMTP and their TLS variants)"
-        elif a is _RECORDS:
-            label = "Database traffic (PostgreSQL)"
-        else:
-            label = ", ".join(_SERVICE_LABEL.get(n, n) for n in names)
-        shelf.append(_row(label, a))
-    shelf.append(_row(_KIND_LABEL["aws-kms-key"] + " (data at rest)", SHELF_LIFE_KIND["aws-kms-key"]))
-    other = [_KIND_LABEL[k] for k, a in SHELF_LIFE_KIND.items() if a is _DATA_KEY_WINDOW]
-    shelf.append(_row(", ".join(other) + "; any other confidential traffic", SHELF_LIFE_CONFIDENTIALITY_DEFAULT))
+    # one row per distinct assumption, naming every service and asset kind it covers
+    window = [_SERVICE_LABEL[n] for n, a in SHELF_LIFE_SERVICE.items() if a is _DATA_KEY_WINDOW]
+    window += [_KIND_LABEL[k] for k, a in SHELF_LIFE_KIND.items() if a is _DATA_KEY_WINDOW]
+    shelf = [_row("E-mail (IMAP, POP3, SMTP and their TLS variants)", _CORRESPONDENCE),
+             _row("Database traffic (PostgreSQL)", _RECORDS),
+             _row(_KIND_LABEL["aws-kms-key"] + " (data at rest)", SHELF_LIFE_KIND["aws-kms-key"]),
+             _row(", ".join(window) + "; any other confidential traffic", _DATA_KEY_WINDOW)]
     shelf.append(_row("Long-lived signatures: root CA, code and firmware signing", SHELF_LIFE_LONG_LIVED_SIG))
     shelf.append(_row("Short-lived signatures: TLS handshake, token, certificate", SHELF_LIFE_SHORT_SIG))
     migration = [_row(_KIND_LABEL[k], a) for k, a in MIGRATION_KIND.items()]

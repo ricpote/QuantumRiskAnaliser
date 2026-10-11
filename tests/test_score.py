@@ -100,6 +100,8 @@ def test_every_mosca_assumption_is_sourced():
     used = {i for r in rows for i in r["sources"]}
     assert used == ids                                   # no orphan reference on the Sources page
     assert {q["year"] for q in table["qday"]} == set(M.QDAY_SCENARIOS.values())
+    for kind in ("shelf_life", "migration"):                # no assumption listed twice
+        assert len({(r["years"], r["why"]) for r in table[kind]}) == len(table[kind])
 
 
 def test_sources_page_lists_the_values_the_timeline_uses():
