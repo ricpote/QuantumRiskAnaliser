@@ -289,7 +289,7 @@ export function Workspace({ view }: { view: View }) {
                 disabled={busy}
                 onClick={() => void data.reload()}
               >
-                Reload CLI results
+                Load saved scan results
               </Button>
               <Button
                 variant="ghost"

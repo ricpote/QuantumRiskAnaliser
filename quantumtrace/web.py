@@ -295,7 +295,10 @@ def handler(store: Store):
                     return self.send_json(413, {"error": "Upload must be less than 48 MiB encoded"})
                 body = json.loads(self.rfile.read(length))
                 if self.path == "/api/refresh":
-                    return self.send_json(200, store.reload())
+                    try:
+                        return self.send_json(200, store.reload())
+                    except FileNotFoundError:
+                        return self.send_json(400, {"error": "No saved scan results"})
                 if self.path == "/api/scan":
                     store.start(body)
                     return self.send_json(202, {"state": "running"})
