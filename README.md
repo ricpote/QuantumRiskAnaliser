@@ -106,6 +106,11 @@ On public third-party benchmarks (`scripts/run_benchmarks.sh` rebuilds and runs 
 | ApacheCryptoAPI-Bench (real Apache projects) | 97.9% | 88.7% |
 | NIST Juliet Test Suite, Java crypto CWEs (held-out, first run) | 88.2% | 90.8% |
 
+Except for the NIST Juliet suite, which we ran once after development, we used these benchmarks while building
+QuantumTrace to find and fix gaps, so the numbers above are current results, not first attempts: on
+ApacheCryptoAPI-Bench, for example, the first run scored 97.5% precision and 73.6% recall. The official challenge
+samples were also available during development.
+
 ## Outputs
 
 | File | Content |
