@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { ReportProvider } from "../lib/report-context";
+import { AppShell } from "../components/shell/AppShell";
 
 function NotFoundComponent() {
   return (
@@ -91,7 +92,7 @@ export const Route = createRootRoute({
     links: [
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
       },
       {
         rel: "stylesheet",
@@ -123,7 +124,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   return (
     <ReportProvider>
-      <Outlet />
+      <AppShell>
+        <Outlet />
+      </AppShell>
     </ReportProvider>
   );
 }

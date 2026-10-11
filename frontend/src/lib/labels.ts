@@ -31,6 +31,40 @@ export const classicalText: Record<string, string> = {
   acceptable: "No (acceptable)",
   recommended: "No (recommended)",
 };
+// Tiers in display order, each with an icon and a fill so colour is never the only signal.
+export const TIER_ORDER: readonly Tier[] = ["unencrypted", "critical", "medium", "safe"];
+export const tierIcon: Record<Tier, string> = {
+  unencrypted: "!",
+  critical: "✕",
+  medium: "~",
+  safe: "✓",
+};
+export const tierSwatch: Record<Tier, string> = {
+  unencrypted: "hatch-plain",
+  critical: "bg-critical",
+  medium: "bg-medium",
+  safe: "bg-safe",
+};
+export const sourceName: Record<string, string> = {
+  network: "Network traffic",
+  code: "Source code & configs",
+  cloud: "Cloud (AWS)",
+  probe: "Live probe",
+};
+// Display colour requested for the readiness score: below 40 critical, up to 50 medium, above 50 safe.
+export function scoreTone(score: number): "critical" | "medium" | "safe" {
+  return score < 40 ? "critical" : score <= 50 ? "medium" : "safe";
+}
+// Plain-language verdict for the grade the backend assigned (copy only, no scoring).
+const gradeVerdict: Record<string, string> = {
+  A: "Ready for Q-Day",
+  B: "Mostly ready",
+  C: "Halfway there",
+  D: "Exposed in places",
+  E: "Largely exposed",
+  F: "Not ready",
+};
+export const verdictOf = (grade: string) => gradeVerdict[grade] ?? `Grade ${grade}`;
 // Badge for one finding: the quantum tier, except where the quantum axis says nothing useful.
 type Badgeable = Pick<
   Finding,

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Workspace } from "@/components/quantumtrace/workspace";
+import { ExplainPanel } from "@/components/quantumtrace/explain";
 export const Route = createFileRoute("/explain")({
   head: () => ({
     meta: [
@@ -16,5 +16,5 @@ export const Route = createFileRoute("/explain")({
       { property: "og:type", content: "website" },
     ],
   }),
-  component: () => <Workspace view="explain" />,
+  component: ExplainPanel,
 });

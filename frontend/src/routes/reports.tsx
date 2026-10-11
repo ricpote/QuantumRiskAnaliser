@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Workspace } from "@/components/quantumtrace/workspace";
+import { Reports } from "@/components/quantumtrace/reports";
+import { WithReport } from "@/components/shell/AppShell";
 export const Route = createFileRoute("/reports")({
   head: () => ({
     meta: [
@@ -17,5 +18,5 @@ export const Route = createFileRoute("/reports")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: () => <Workspace view="reports" />,
+  component: () => <WithReport>{(r) => <Reports key={r.generated_at} report={r} />}</WithReport>,
 });

@@ -40,6 +40,10 @@ export async function apiRequest<T = unknown>(
   return value as T;
 }
 
+export function errorText(e: unknown) {
+  return e instanceof Error ? e.message : "Request failed";
+}
+
 export interface Headline {
   score: number | null;
   grade: string;
@@ -89,7 +93,9 @@ export interface ProbeReport {
     curve?: string;
     sig_hash?: string;
     not_after?: string;
+    self_signed?: boolean;
   }[];
+  interception_suspected?: boolean;
   verdict: { color: "green" | "red" | "grey"; text: string };
 }
 export interface ProbeJob {

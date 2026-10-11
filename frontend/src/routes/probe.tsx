@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Workspace } from "@/components/quantumtrace/workspace";
+import { ProbePanel } from "@/components/quantumtrace/probe";
 export const Route = createFileRoute("/probe")({
   head: () => ({
     meta: [
@@ -16,5 +16,5 @@ export const Route = createFileRoute("/probe")({
       { property: "og:type", content: "website" },
     ],
   }),
-  component: () => <Workspace view="probe" />,
+  component: ProbePanel,
 });

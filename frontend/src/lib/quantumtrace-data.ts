@@ -105,10 +105,12 @@ export const reportSchema = z.object({
         .array(
           z.object({
             source: z.string(),
+            key: z.string().optional(),
             label: z.string(),
             risk: z.number(),
             worst_tier: tierSchema,
             hndl: z.boolean(),
+            plaintext: z.boolean().optional(),
             classical_broken: z.number(),
           }),
         )
