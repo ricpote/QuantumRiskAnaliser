@@ -11,7 +11,7 @@ eval:           ## accuracy report vs tests/ground_truth.json
 ui:             ## React dev server + Python API on :8501 (npm ci in frontend first)
 	$(PYTHON) scripts/ui.py
 docker:         ## build + run the dashboard container
-	docker build -t quantumtrace . && docker run --rm -p 8501:8501 quantumtrace
+	docker build -t quantumtrace . && docker run --rm -p 127.0.0.1:8501:8501 quantumtrace
 lab:            ## local TLS lab (needs Go >= 1.24): modern/ on 8443 8444 8446 8447 2525 5433, legacy/ on 8445
 	cd samples/extra/tls-lab/legacy && go run . & \
 	cd samples/extra/tls-lab/modern && go run .

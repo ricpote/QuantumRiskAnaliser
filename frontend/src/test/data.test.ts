@@ -23,6 +23,23 @@ describe("Python report adapter", () => {
     expect(row.source).toBe("Probe");
     expect(filterAssets([row], "", "Unencrypted", "Probe")).toEqual([row]);
   });
+  it("keeps the Mosca timeline and exposure figures computed by Python", () => {
+    const report = reportSchema.parse(demo);
+    const mosca = report.summary.mosca!;
+    expect(mosca.status).toEqual(demo.summary.mosca.status);
+    expect(mosca.assets.map((a) => a.start_by)).toEqual(
+      demo.summary.mosca.assets.map((a) => a.start_by),
+    );
+    expect(report.summary.top_assets).toHaveLength(demo.summary.top_assets.length);
+    expect(report.summary.network).toEqual(demo.summary.network);
+  });
+  it("still accepts reports saved before the Mosca timeline existed", () => {
+    const newer = ["mosca", "network", "top_assets"];
+    const older = Object.fromEntries(
+      Object.entries(demo.summary).filter(([k]) => !newer.includes(k)),
+    );
+    expect(reportSchema.parse({ ...demo, summary: older }).summary.mosca).toBeUndefined();
+  });
   it("rejects malformed data instead of silently substituting samples", () => {
     expect(() => reportSchema.parse({ findings: [] })).toThrow();
     expect(() => reportSchema.parse({ ...demo, origin: "live" })).toThrow();

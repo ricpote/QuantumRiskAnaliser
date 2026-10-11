@@ -10,13 +10,26 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccuracyRouteImport } from './routes/accuracy'
+import { Route as ExplainRouteImport } from './routes/explain'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as MigrationRouteImport } from './routes/migration'
+import { Route as ProbeRouteImport } from './routes/probe'
 import { Route as ReportsRouteImport } from './routes/reports'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccuracyRoute = AccuracyRouteImport.update({
+  id: '/accuracy',
+  path: '/accuracy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExplainRoute = ExplainRouteImport.update({
+  id: '/explain',
+  path: '/explain',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryRoute = InventoryRouteImport.update({
@@ -29,6 +42,11 @@ const MigrationRoute = MigrationRouteImport.update({
   path: '/migration',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProbeRoute = ProbeRouteImport.update({
+  id: '/probe',
+  path: '/probe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -37,35 +55,69 @@ const ReportsRoute = ReportsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accuracy': typeof AccuracyRoute
+  '/explain': typeof ExplainRoute
   '/inventory': typeof InventoryRoute
   '/migration': typeof MigrationRoute
+  '/probe': typeof ProbeRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accuracy': typeof AccuracyRoute
+  '/explain': typeof ExplainRoute
   '/inventory': typeof InventoryRoute
   '/migration': typeof MigrationRoute
+  '/probe': typeof ProbeRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accuracy': typeof AccuracyRoute
+  '/explain': typeof ExplainRoute
   '/inventory': typeof InventoryRoute
   '/migration': typeof MigrationRoute
+  '/probe': typeof ProbeRoute
   '/reports': typeof ReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/inventory' | '/migration' | '/reports'
+  fullPaths:
+    | '/'
+    | '/accuracy'
+    | '/explain'
+    | '/inventory'
+    | '/migration'
+    | '/probe'
+    | '/reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/inventory' | '/migration' | '/reports'
-  id: '__root__' | '/' | '/inventory' | '/migration' | '/reports'
+  to:
+    | '/'
+    | '/accuracy'
+    | '/explain'
+    | '/inventory'
+    | '/migration'
+    | '/probe'
+    | '/reports'
+  id:
+    | '__root__'
+    | '/'
+    | '/accuracy'
+    | '/explain'
+    | '/inventory'
+    | '/migration'
+    | '/probe'
+    | '/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccuracyRoute: typeof AccuracyRoute
+  ExplainRoute: typeof ExplainRoute
   InventoryRoute: typeof InventoryRoute
   MigrationRoute: typeof MigrationRoute
+  ProbeRoute: typeof ProbeRoute
   ReportsRoute: typeof ReportsRoute
 }
 
@@ -76,6 +128,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accuracy': {
+      id: '/accuracy'
+      path: '/accuracy'
+      fullPath: '/accuracy'
+      preLoaderRoute: typeof AccuracyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explain': {
+      id: '/explain'
+      path: '/explain'
+      fullPath: '/explain'
+      preLoaderRoute: typeof ExplainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory': {
@@ -92,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MigrationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/probe': {
+      id: '/probe'
+      path: '/probe'
+      fullPath: '/probe'
+      preLoaderRoute: typeof ProbeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports': {
       id: '/reports'
       path: '/reports'
@@ -104,8 +177,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccuracyRoute: AccuracyRoute,
+  ExplainRoute: ExplainRoute,
   InventoryRoute: InventoryRoute,
   MigrationRoute: MigrationRoute,
+  ProbeRoute: ProbeRoute,
   ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport

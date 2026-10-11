@@ -13,6 +13,7 @@ Model (explainable, shown in the UI):
 """
 from __future__ import annotations
 
+import copy
 import os
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -161,14 +162,21 @@ def mosca(findings: list[Finding], qday_year: int | None = None, now_year: int |
                 assets=rows)
 
 
+def _plan_key(f: Finding):
+    """The migration action a finding belongs to: (source, category, replacement, how), or None if it needs none."""
+    if not f.replacement or (f.risk_points == 0 and f.classical_status not in ("broken", "deprecated")):
+        return None
+    how = f.context.get("migration_hint") if f.source == "cloud" and f.context.get("migration_hint") else f.replacement.get("how")
+    return (f.source, f.category if f.category != "authentication" else "signature", f.replacement["algorithm"], how)
+
+
 def migration_plan(findings: list[Finding]) -> list[dict]:
     """Group findings into concrete actions, ordered by total risk removed."""
     groups = defaultdict(list)
     for f in findings:
-        if not f.replacement or (f.risk_points == 0 and f.classical_status not in ("broken", "deprecated")):
-            continue
-        how = f.context.get("migration_hint") if f.source == "cloud" and f.context.get("migration_hint") else f.replacement.get("how")
-        groups[(f.source, f.category if f.category != "authentication" else "signature", f.replacement["algorithm"], how)].append(f)
+        key = _plan_key(f)
+        if key:
+            groups[key].append(f)
     plan = []
     for (src, cat, alg, how), fs in groups.items():
         assets = sorted({asset_label(f) for f in fs})
@@ -179,3 +187,25 @@ def migration_plan(findings: list[Finding]) -> list[dict]:
                          priority="P0" if any(f.hndl or f.algorithm == "PLAINTEXT" for f in fs) else ("P1" if any(f.risk_tier == "critical" or f.classical_status == "broken" for f in fs) else "P2")))
     plan.sort(key=lambda p: ({"P0": 0, "P1": 1, "P2": 2}[p["priority"]], -p["risk_removed"]))
     return plan
+
+
+def what_if(findings: list[Finding], actions: list[int]) -> dict:
+    """Simulate applying migration actions (indices into summarize()["plan"]): their findings become quantum-safe."""
+    plan = migration_plan([f for f in findings if f.algorithm not in INVENTORY_ONLY])
+    if not isinstance(actions, list) or any(type(i) is not int or not 0 <= i < len(plan) for i in actions):
+        raise ValueError(f"actions must be plan indices between 0 and {len(plan) - 1}")
+    keys = {(plan[i]["source"], plan[i]["category"], plan[i]["replacement"], plan[i]["how"]) for i in actions}
+    simulated = []
+    for f in findings:
+        if _plan_key(f) in keys:
+            f = copy.deepcopy(f)
+            f.risk_points, f.risk_tier, f.hndl, f.quantum_threat, f.classical_status = 0.0, "safe", False, "none", "recommended"
+            if f.algorithm == "PLAINTEXT":
+                f.algorithm = "TLS"
+        simulated.append(f)
+
+    def headline(s):
+        return dict(score=s["quantum_readiness_score"], grade=s["grade"], critical=s["tiers"].get("critical", 0),
+                    hndl_exposed=s["network"]["hndl_exposed"], plaintext=s["network"]["plaintext"],
+                    late=s["mosca"]["status"].get("late", 0))
+    return dict(actions=len(keys), before=headline(summarize(findings)), after=headline(summarize(simulated)))

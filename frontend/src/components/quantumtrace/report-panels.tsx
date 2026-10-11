@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowDownToLine, ArrowRight, Shield, FileText } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { apiRequest, type WhatIfResult } from "@/lib/api";
 import { useReport } from "@/lib/report-context";
 import { downloadReport, saveDownload, sourceLabels, type Report } from "@/lib/quantumtrace-data";
+import { ExposureStrip, MoscaPanel, TopAssets, WhatIfSummary } from "./analysis-panels";
 
 export function Overview({ report }: { report: Report }) {
   const s = report.summary;
@@ -33,11 +35,17 @@ export function Overview({ report }: { report: Report }) {
             value: s.quantum_readiness_score ?? "—",
             detail: `Out of 100 · grade ${s.grade}`,
           },
-          {
-            label: "Discovery sources",
-            value: Object.keys(s.sources).length,
-            detail: "Sources represented in this report",
-          },
+          s.mosca
+            ? {
+                label: `Late for Q-Day ${s.mosca.qday_year}`,
+                value: s.mosca.status["late"] ?? 0,
+                detail: `of ${s.mosca.evaluated} quantum-vulnerable systems · see Migration plan`,
+              }
+            : {
+                label: "Discovery sources",
+                value: Object.keys(s.sources).length,
+                detail: "Sources represented in this report",
+              },
         ].map((item) => (
           <div className="stat-card" key={item.label}>
             <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -46,6 +54,7 @@ export function Overview({ report }: { report: Report }) {
           </div>
         ))}
       </div>
+      <ExposureStrip report={report} />
       <div className="grid lg:grid-cols-[1.1fr_1fr] gap-5 mb-6">
         <section className="panel">
           <div className="panel-heading">
@@ -131,6 +140,7 @@ export function Overview({ report }: { report: Report }) {
           </div>
         </section>
       </div>
+      <TopAssets report={report} />
       <div className="insight-band p-5 mb-7 flex items-center gap-4">
         <Shield size={22} />
         <div className="flex-1">
@@ -148,22 +158,84 @@ export function Overview({ report }: { report: Report }) {
     </>
   );
 }
+const priorityClass = { P0: "risk-critical", P1: "risk-medium", P2: "risk-safe" } as const;
+
 export function Migration({ report }: { report: Report }) {
+  const { offlineDemo } = useReport();
+  const [chosen, setChosen] = useState<number[]>([]);
+  const [result, setResult] = useState<WhatIfResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const latest = useRef(0);
+  useEffect(() => {
+    setChosen([]);
+    setResult(null);
+    setError(null);
+  }, [report]);
+  // What-if: Python re-scores the report as if the ticked actions were done.
+  async function toggle(i: number) {
+    const next = chosen.includes(i)
+      ? chosen.filter((x) => x !== i)
+      : [...chosen, i].sort((a, b) => a - b);
+    setChosen(next);
+    setError(null);
+    const request = ++latest.current;
+    if (!next.length) {
+      setResult(null);
+      return;
+    }
+    try {
+      const value = await apiRequest<WhatIfResult>("/api/whatif", {
+        actions: next,
+        at: report.generated_at,
+      });
+      if (request === latest.current) setResult(value);
+    } catch (e) {
+      if (request === latest.current) setError(e instanceof Error ? e.message : "What-if failed");
+    }
+  }
   return (
     <section>
+      <MoscaPanel report={report} />
       <h2 className="text-sm font-semibold mb-4">Prioritized migration actions</h2>
       <p className="text-xs text-muted-foreground mb-5">
-        Priorities and recommendations are supplied by the Python scanner. These actions do not
-        modify your systems.
+        Priorities and recommendations are supplied by the Python scanner. P0 protects data that can
+        be recorded today, P1 fixes quantum-vulnerable signatures and broken crypto, P2 is hygiene.
+        Tick actions to see how much they would improve the score; nothing is changed on your
+        systems.
       </p>
+      {result ? (
+        <WhatIfSummary result={result} />
+      ) : (
+        <p className="text-xs mb-5">
+          {offlineDemo
+            ? "The what-if simulation needs the scanner API (not available for the bundled demo)."
+            : "Tick one or more actions to simulate them."}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-xs mb-5 text-critical">
+          {error}
+        </p>
+      )}
       <div className="space-y-3">
         {report.summary.plan.map((action, i) => (
           <div className="panel p-5" key={i}>
             <div className="flex flex-wrap items-center gap-4">
-              <span className="risk-badge risk-critical">{action.priority}</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                aria-label={`Simulate: ${action.action}`}
+                checked={chosen.includes(i)}
+                disabled={offlineDemo}
+                onChange={() => void toggle(i)}
+              />
+              <span className={`risk-badge ${priorityClass[action.priority]}`}>
+                {action.priority}
+              </span>
               <h3 className="text-sm font-medium flex-1">{action.action}</h3>
               <span className="text-xs text-muted-foreground">
-                {action.asset_count} assets · {action.source}
+                {action.asset_count} {action.asset_count === 1 ? "asset" : "assets"} ·{" "}
+                {action.source}
               </span>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">{action.how}</p>

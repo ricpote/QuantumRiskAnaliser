@@ -17,13 +17,49 @@ export const findingSchema = z
     quantum_threat: z.string(),
     hndl: z.boolean(),
     replacement: z
-      .object({ algorithm: z.string(), how: z.string().optional() })
+      .object({
+        algorithm: z.string(),
+        how: z.string().optional(),
+        standard: z.string().nullable().optional(),
+      })
       .passthrough()
       .nullable(),
     rationale: z.array(z.string()),
     flags: z.array(z.string()),
+    deadlines: z.array(z.string()).optional(),
+    deadline_year: z.number().nullable().optional(),
+    cwe: z.array(z.string()).optional(),
+    context: z.record(z.unknown()).optional(),
   })
   .passthrough();
+const tierSchema = z.enum(["critical", "medium", "safe", "unencrypted"]);
+// Mosca's inequality per Shor-vulnerable asset, computed by score.mosca() in Python.
+const moscaAssetSchema = z.object({
+  source: z.string(),
+  key: z.string(),
+  label: z.string(),
+  shelf_life: z.number(),
+  migration_years: z.number(),
+  qday_year: z.number(),
+  start_by: z.number(),
+  finish_by: z.number(),
+  years_late: z.number(),
+  at_risk: z.boolean(),
+  status: z.enum(["late", "start-now", "ok"]),
+  hndl: z.boolean(),
+  deadline_year: z.number().nullable(),
+  why: z.array(z.string()),
+});
+export const moscaSchema = z.object({
+  qday_year: z.number(),
+  now: z.number(),
+  evaluated: z.number(),
+  at_risk: z.number(),
+  status: z.record(z.number()),
+  scenarios: z.record(z.object({ qday_year: z.number(), at_risk: z.number() })),
+  cleartext_assets: z.number(),
+  assets: z.array(moscaAssetSchema),
+});
 const migrationSchema = z.object({
   source: z.string(),
   category: z.string(),
@@ -57,12 +93,35 @@ export const reportSchema = z.object({
           .passthrough(),
       ),
       plan: z.array(migrationSchema),
+      network: z
+        .object({
+          endpoints: z.number(),
+          hndl_exposed: z.number(),
+          pq_protected: z.number(),
+          plaintext: z.number(),
+        })
+        .optional(),
+      top_assets: z
+        .array(
+          z.object({
+            source: z.string(),
+            label: z.string(),
+            risk: z.number(),
+            worst_tier: tierSchema,
+            hndl: z.boolean(),
+            classical_broken: z.number(),
+          }),
+        )
+        .optional(),
+      mosca: moscaSchema.optional(),
       warnings: z.array(z.object({ path: z.string(), reason: z.string() })).default([]),
     })
     .passthrough(),
 });
 export type Report = z.infer<typeof reportSchema>;
 export type Finding = z.infer<typeof findingSchema>;
+export type Tier = z.infer<typeof tierSchema>;
+export type Mosca = z.infer<typeof moscaSchema>;
 export type Risk = "Critical" | "Medium" | "Resilient" | "Unencrypted";
 export type Source = "Network" | "Code" | "Cloud" | "Probe";
 export interface Asset {

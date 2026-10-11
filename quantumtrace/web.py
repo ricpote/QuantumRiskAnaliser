@@ -1,7 +1,8 @@
 """Local dashboard API. The scanner, scoring and export modules remain authoritative.
 
 Bound to loopback; the TanStack server proxies /api on the public UI port.
-No arbitrary filesystem paths or network targets are accepted from the browser.
+No arbitrary filesystem paths are accepted from the browser. The live probe (like `qtrace probe`)
+connects to the host:port the user types, so run the dashboard locally or on a trusted network.
 """
 from __future__ import annotations
 
@@ -12,6 +13,9 @@ import io
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
+import subprocess
+import sys
 import tempfile
 import threading
 from datetime import datetime, timezone
@@ -19,15 +23,22 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zipfile import ZipFile, BadZipFile
 from urllib.parse import parse_qs, urlsplit
 
-from .cli import collect
-from .schema import Finding
-from .score import summarize
+from .classify import classify, classify_all
+from .cli import collect, verdict
+from .kb import tls as TLSKB
+from .kb.algorithms import CATALOG
+from .schema import CATEGORIES, Finding
+from .score import mosca, summarize, what_if
 from .export import cyclonedx, sarif
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_BODY = 48 * 1024 * 1024
 MAX_FILES = 2000
 MAX_EXPANDED = 128 * 1024 * 1024
+MAX_TARGETS = 8
+TARGET = re.compile(r"^(?:\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?)(?::(\d{1,5}))?$")
+# internal pseudo-algorithms the scanner emits; not useful in the "Explain an algorithm" picker
+EXPLAIN_HIDDEN = {"CLASSICAL-SIG", "CSPRNG", "HARDCODED-KEY", "LIBRARY", "NO-CERT-VERIFY", "NON-CSPRNG", "PLAINTEXT", "UNIDENTIFIED"}
 
 
 def report(findings: list[Finding], *, origin: str, warnings=None, generated_at=None) -> dict:
@@ -88,12 +99,61 @@ def unpack(files: list, destination: Path) -> None:
             write(item["name"], data)
 
 
+class NoReport(Exception):
+    """An endpoint that needs the current report was called before any results were loaded."""
+
+
+def parse_targets(raw) -> list[str]:
+    if not isinstance(raw, list) or not 1 <= len(raw) <= MAX_TARGETS or not all(isinstance(t, str) for t in raw):
+        raise ValueError(f"Give 1 to {MAX_TARGETS} targets as host[:port]")
+    targets = []
+    for t in (t.strip() for t in raw):
+        m = TARGET.match(t)
+        if not m or (m.group(1) and not 1 <= int(m.group(1)) <= 65535):
+            raise ValueError(f"Invalid target {t[:80]!r}: use host[:port], e.g. example.com or 127.0.0.1:8443")
+        targets.append(t)
+    return targets
+
+
+def parse_params(text: str) -> dict:
+    """'key_bits=2048, mode=GCM' -> {'key_bits': 2048, 'mode': 'GCM'} (same syntax as `qtrace explain`)."""
+    if len(text) > 300:
+        raise ValueError("Parameters are too long")
+    params = {}
+    for item in (x for x in text.split(",") if x.strip()):
+        key, sep, value = item.partition("=")
+        if not sep or not key.strip():
+            raise ValueError(f"Parameter {item.strip()!r} must look like key=value")
+        value = value.strip()
+        params[key.strip()] = int(value) if value.isdigit() else value
+    return params
+
+
+def explain(query: dict) -> dict:
+    """Classify one algorithm in one role, exactly as the scanner would (dashboard "Explain" page)."""
+    options = dict(algorithms=sorted(a for a in CATALOG if a not in EXPLAIN_HIDDEN), categories=list(CATEGORIES))
+    algorithm = (query.get("algorithm") or [""])[0]
+    if not algorithm:
+        return dict(options=options)
+    category = (query.get("category") or ["signature"])[0]
+    if algorithm not in CATALOG or algorithm in EXPLAIN_HIDDEN:
+        raise ValueError(f"Unknown algorithm {algorithm[:40]!r}")
+    if category not in CATEGORIES:
+        raise ValueError(f"Unknown role {category[:40]!r}")
+    finding = classify(Finding(source="code", category=category, algorithm=algorithm,
+                               params=parse_params((query.get("params") or [""])[0])))
+    return dict(options=options, finding=finding.to_dict())
+
+
 class Store:
     def __init__(self, results: Path):
         self.results = results
         self.lock = threading.Lock()
         self.current = None
         self.job = {"state": "idle", "error": None}
+        self.probe_job = {"state": "idle", "error": None, "result": None}
+        self.accuracy_lock = threading.Lock()
+        self.accuracy_result = None
         if (results / "findings.json").exists():
             try:
                 self.reload()
@@ -119,6 +179,60 @@ class Store:
             self.current = value
             self.job = {"state": "idle", "error": None}
         return value
+
+    def findings(self, at=None) -> list[Finding]:
+        """Findings of the current report; `at` (the report's generated_at seen by the browser) must still match."""
+        with self.lock:
+            current = self.current
+        if current is None:
+            raise NoReport("Load results or run a scan first")
+        if at and at != current["generated_at"]:
+            raise NoReport("The backend report changed. Reload results first.")
+        return [Finding.from_dict(f) for f in current["findings"]]
+
+    def accuracy(self) -> dict:
+        """Score the scanner against tests/ground_truth.json (computed once). Runs in a child process because
+        evaluate.run() changes the working directory and QT_NOW, which would leak into concurrent scans."""
+        with self.accuracy_lock:
+            if self.accuracy_result is None:
+                code = ("import contextlib, json, sys\n"
+                        "from quantumtrace.evaluate import run\n"
+                        "with contextlib.redirect_stdout(sys.stderr):\n    result = run()\n"
+                        "json.dump(result, sys.stdout)")
+                done = subprocess.run([sys.executable, "-c", code], cwd=ROOT, capture_output=True, text=True, timeout=600)
+                if done.returncode:
+                    raise RuntimeError("Accuracy evaluation failed: " + done.stderr.strip()[-400:])
+                self.accuracy_result = json.loads(done.stdout)
+            return self.accuracy_result
+
+    def start_probe(self, body):
+        if not isinstance(body, dict) or not isinstance(body.get("deep", False), bool):
+            raise ValueError("Expected a JSON object with targets and a boolean deep field")
+        targets = parse_targets(body.get("targets"))
+        with self.lock:
+            if self.probe_job["state"] == "running":
+                raise ValueError("A probe is already running")
+            self.probe_job = {"state": "running", "error": None, "result": None}
+        threading.Thread(target=self._probe, args=(targets, body.get("deep", False)), daemon=True).start()
+
+    def _probe(self, targets, deep):
+        try:
+            from .ingest import probe as P
+            findings, reports = P.ingest(targets, deep=deep, timeout=4.0)
+            findings = classify_all(findings)
+            for r in reports:
+                color, text = verdict(r)
+                r["verdict"] = dict(color=color, text=text)
+                for g in (r.get("groups") or {}).values():
+                    g["pq"] = bool(TLSKB.GROUPS.get(g.get("code"), {}).get("pq"))
+            bom = cyclonedx.build(findings, summarize(findings), target="live probe: " + ", ".join(targets))
+            result = dict(generated_at=datetime.now(timezone.utc).isoformat(), targets=targets, deep=deep, reports=reports,
+                          findings=[f.to_dict() for f in findings], cbom=bom, cbom_valid=not cyclonedx.validate(bom))
+            with self.lock:
+                self.probe_job = {"state": "complete", "error": None, "result": result}
+        except Exception as exc:
+            with self.lock:
+                self.probe_job = {"state": "error", "error": str(exc), "result": None}
 
     def start(self, body):
         if not isinstance(body, dict) or not isinstance(body.get("demo", False), bool):
@@ -184,6 +298,26 @@ def handler(store: Store):
                 return self.send_json(200, job)
             if path == "/api/report":
                 return self.send_json(200, current)
+            query = parse_qs(urlsplit(self.path).query)
+            try:
+                if path == "/api/explain":
+                    return self.send_json(200, explain(query))
+                if path == "/api/accuracy":
+                    return self.send_json(200, store.accuracy())
+                if path == "/api/probe":
+                    with store.lock:
+                        return self.send_json(200, dict(store.probe_job))
+                if path == "/api/mosca":
+                    qday = int((query.get("qday") or ["0"])[0])
+                    if not 2026 <= qday <= 2060:
+                        raise ValueError("qday must be a year between 2026 and 2060")
+                    return self.send_json(200, mosca(store.findings((query.get("at") or [None])[0]), qday_year=qday))
+            except NoReport as exc:
+                return self.send_json(409, {"error": str(exc)})
+            except (ValueError, TypeError, KeyError) as exc:
+                return self.send_json(400, {"error": str(exc)})
+            except Exception as exc:  # never drop the connection: the proxy would report "service unavailable"
+                return self.send_json(500, {"error": f"{type(exc).__name__}: {exc}"})
             if path.startswith("/api/export/"):
                 if current is None:
                     return self.send_json(409, {"error": "Load results or run a scan first"})
@@ -218,7 +352,16 @@ def handler(store: Store):
                 if self.path == "/api/scan":
                     store.start(body)
                     return self.send_json(202, {"state": "running"})
+                if self.path == "/api/probe":
+                    store.start_probe(body)
+                    return self.send_json(202, {"state": "running"})
+                if self.path == "/api/whatif":
+                    if not isinstance(body, dict):
+                        raise ValueError("Expected a JSON object with an actions list")
+                    return self.send_json(200, what_if(store.findings(body.get("at")), body.get("actions")))
                 return self.send_json(404, {"error": "Not found"})
+            except NoReport as exc:
+                return self.send_json(409, {"error": str(exc)})
             except (ValueError, TypeError, OSError, KeyError) as exc:
                 return self.send_json(400, {"error": str(exc)})
 

@@ -13,7 +13,7 @@ git clone https://github.com/ricpote/QuantumRiskAnaliser.git && cd QuantumRiskAn
 docker build -t quantumtrace .
 
 # 1. Dashboard -> open http://localhost:8501
-docker run --rm -p 8501:8501 quantumtrace
+docker run --rm -p 127.0.0.1:8501:8501 quantumtrace
 
 # 2. CLI scan of the official samples -> CBOM, findings, SARIF, summary in ./out
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
@@ -30,11 +30,22 @@ CI builds it and runs the three commands above on every pull request.
 
 ## Dashboard
 
-`docker run --rm -p 8501:8501 quantumtrace` serves the dashboard on http://localhost:8501.
+`docker run --rm -p 127.0.0.1:8501:8501 quantumtrace` serves the dashboard on http://localhost:8501.
 It is a React (TanStack Start) app in `frontend/`, rendered by Node, on top of a small Python
 API (`quantumtrace/web.py`) that runs the same scanner, scorer and exporters as the CLI: the
-browser never computes a risk, a score or a priority. Only port 8501 is published; the API
-listens on 127.0.0.1:8502. There is no authentication, so run it locally or on a trusted network.
+browser never computes a risk, a score or a priority. The API listens on 127.0.0.1:8502 inside
+the container. There is no authentication and the live probe connects to whatever host you type,
+so keep the port on 127.0.0.1 as above (or on a trusted network).
+
+| Page | What it shows |
+|---|---|
+| Overview | Readiness score, systems late for Q-Day, HNDL and cleartext exposure, highest-risk systems |
+| Crypto inventory | Every finding with its evidence, the reasoning, the replacement standard and the deadlines |
+| Migration plan | Mosca timeline per system with Q-Day scenarios (2030 / 2033 / 2035), prioritised actions, and a what-if that re-scores the report as if the ticked actions were done |
+| Live probe | Post-quantum check of any TLS endpoint; the image runs the offline lab on 127.0.0.1 |
+| Accuracy | Results compared with `tests/ground_truth.json` (the same check CI runs) |
+| Explain | How any algorithm is classified in a given role, and why |
+| Reports | JSON, CSV, CycloneDX 1.6 CBOM and SARIF downloads |
 
 Where the data comes from (toolbar and **New scan**):
 
@@ -51,7 +62,7 @@ Show results produced by the CLI:
 
 ```bash
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
-docker run --rm -p 8501:8501 -v "$PWD/out:/results:ro" -e QT_RESULTS_DIR=/results quantumtrace
+docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results:ro" -e QT_RESULTS_DIR=/results quantumtrace
 ```
 
 ### Dashboard development

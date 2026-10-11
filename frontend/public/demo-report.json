@@ -30,7 +30,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/0"
       },
       "context": {
@@ -75,7 +75,7 @@
       "rationale": [
         "RSA relies on factoring/discrete-log: broken by Shor's algorithm"
       ],
-      "id": "187c535e6cfe"
+      "id": "3fff20a13888"
     },
     {
       "source": "cloud",
@@ -103,7 +103,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/1"
       },
       "context": {
@@ -151,7 +151,7 @@
         "ECDSA relies on factoring/discrete-log: broken by Shor's algorithm",
         "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
       ],
-      "id": "7e9aa8e32fe7"
+      "id": "de78fb60bab1"
     },
     {
       "source": "cloud",
@@ -180,7 +180,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/2"
       },
       "context": {
@@ -229,7 +229,7 @@
         "RSA relies on factoring/discrete-log: broken by Shor's algorithm",
         "Harvest-Now-Decrypt-Later: traffic/data recorded today can be decrypted once a CRQC exists"
       ],
-      "id": "fc731770904d"
+      "id": "b7cf93c629b7"
     },
     {
       "source": "cloud",
@@ -257,7 +257,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/3"
       },
       "context": {
@@ -291,7 +291,7 @@
       "rationale": [
         "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
       ],
-      "id": "afb6a4c08eb6"
+      "id": "394eb88e65dc"
     },
     {
       "source": "cloud",
@@ -319,7 +319,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/4"
       },
       "context": {
@@ -355,7 +355,7 @@
       "rationale": [
         "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
       ],
-      "id": "dd9a3fa6229f"
+      "id": "e79f96c264db"
     },
     {
       "source": "cloud",
@@ -383,7 +383,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/5"
       },
       "context": {
@@ -432,7 +432,7 @@
         "ECDSA relies on factoring/discrete-log: broken by Shor's algorithm",
         "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
       ],
-      "id": "9c70c64ac184"
+      "id": "964ceaf4a2bd"
     },
     {
       "source": "cloud",
@@ -460,7 +460,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/6"
       },
       "context": {
@@ -498,7 +498,7 @@
       "rationale": [
         "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
       ],
-      "id": "1642d9a75d27"
+      "id": "bf03896382f6"
     },
     {
       "source": "cloud",
@@ -527,7 +527,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/7"
       },
       "context": {
@@ -576,7 +576,7 @@
         "RSA relies on factoring/discrete-log: broken by Shor's algorithm",
         "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
       ],
-      "id": "1e9cf4175619"
+      "id": "3eab346f1a28"
     },
     {
       "source": "cloud",
@@ -605,7 +605,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/8"
       },
       "context": {
@@ -653,7 +653,7 @@
         "RSA relies on factoring/discrete-log: broken by Shor's algorithm",
         "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
       ],
-      "id": "4a9fc4d3113e"
+      "id": "033abe534000"
     },
     {
       "source": "cloud",
@@ -681,7 +681,7 @@
         }
       },
       "location": {
-        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "json": "samples/official/cloud-posture/kms_key_inventory.json",
         "pointer": "/Keys/9"
       },
       "context": {
@@ -715,7 +715,7 @@
       "rationale": [
         "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
       ],
-      "id": "ee0b87076804"
+      "id": "7edec4595db5"
     },
     {
       "source": "code",
@@ -726,11 +726,11 @@
       },
       "asset": {
         "kind": "source-file",
-        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "path": "samples/official/sample-repos/python/secure_transfer.py",
         "language": "python"
       },
       "location": {
-        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "file": "samples/official/sample-repos/python/secure_transfer.py",
         "line": 11,
         "column": 12,
         "snippet": "return os.urandom(KEY_LEN)",
@@ -757,7 +757,7 @@
       "hndl": false,
       "risk_points": 0.0,
       "rationale": [],
-      "id": "43056dd034ab"
+      "id": "efa6fed2e642"
     },
     {
       "source": "code",
@@ -768,11 +768,11 @@
       },
       "asset": {
         "kind": "source-file",
-        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "path": "samples/official/sample-repos/python/secure_transfer.py",
         "language": "python"
       },
       "location": {
-        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "file": "samples/official/sample-repos/python/secure_transfer.py",
         "line": 15,
         "column": 13,
         "snippet": "nonce = os.urandom(NONCE_LEN)",
@@ -799,7 +799,7 @@
       "hndl": false,
       "risk_points": 0.0,
       "rationale": [],
-      "id": "b03b4e14b813"
+      "id": "e7d1262befb6"
     },
     {
       "source": "code",
@@ -811,11 +811,11 @@
       },
       "asset": {
         "kind": "source-file",
-        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "path": "samples/official/sample-repos/python/secure_transfer.py",
         "language": "python"
       },
       "location": {
-        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "file": "samples/official/sample-repos/python/secure_transfer.py",
         "line": 16,
         "column": 18,
         "snippet": "ciphertext = AESGCM(key).encrypt(nonce, plaintext, associated_data)",
@@ -844,7 +844,7 @@
       "rationale": [
         "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
       ],
-      "id": "4b803b57bc06"
+      "id": "fa70a743965a"
     },
     {
       "source": "code",
@@ -856,11 +856,11 @@
       },
       "asset": {
         "kind": "source-file",
-        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "path": "samples/official/sample-repos/python/secure_transfer.py",
         "language": "python"
       },
       "location": {
-        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "file": "samples/official/sample-repos/python/secure_transfer.py",
         "line": 21,
         "column": 12,
         "snippet": "return AESGCM(key).decrypt(nonce, ciphertext, associated_data)",
@@ -889,7 +889,7 @@
       "rationale": [
         "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
       ],
-      "id": "0b635abe7495"
+      "id": "5a4be672e3d6"
     },
     {
       "source": "code",
@@ -898,11 +898,11 @@
       "params": {},
       "asset": {
         "kind": "source-file",
-        "path": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "path": "samples/official/sample-repos/python/webhook_signature.py",
         "language": "python"
       },
       "location": {
-        "file": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "file": "samples/official/sample-repos/python/webhook_signature.py",
         "line": 5,
         "column": 19,
         "snippet": "private_key = ed25519.Ed25519PrivateKey.generate()",
@@ -941,7 +941,7 @@
       "rationale": [
         "EdDSA relies on factoring/discrete-log: broken by Shor's algorithm"
       ],
-      "id": "980736abf6df"
+      "id": "cc4bbc13f81d"
     }
   ],
   "summary": {
@@ -1066,8 +1066,8 @@
       },
       {
         "source": "code",
-        "key": "samples\\official\\sample-repos\\python\\webhook_signature.py",
-        "label": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "key": "samples/official/sample-repos/python/webhook_signature.py",
+        "label": "samples/official/sample-repos/python/webhook_signature.py",
         "risk": 75.0,
         "worst_tier": "critical",
         "hndl": false,
@@ -1126,8 +1126,8 @@
       },
       {
         "source": "code",
-        "key": "samples\\official\\sample-repos\\python\\secure_transfer.py",
-        "label": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "key": "samples/official/sample-repos/python/secure_transfer.py",
+        "label": "samples/official/sample-repos/python/secure_transfer.py",
         "risk": 0.0,
         "worst_tier": "safe",
         "hndl": false,
@@ -1209,7 +1209,7 @@
           "Ed25519"
         ],
         "assets": [
-          "samples\\official\\sample-repos\\python\\webhook_signature.py"
+          "samples/official/sample-repos/python/webhook_signature.py"
         ],
         "asset_count": 1,
         "risk_removed": 75.0,
@@ -1364,8 +1364,8 @@
         },
         {
           "source": "code",
-          "key": "samples\\official\\sample-repos\\python\\webhook_signature.py",
-          "label": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+          "key": "samples/official/sample-repos/python/webhook_signature.py",
+          "label": "samples/official/sample-repos/python/webhook_signature.py",
           "shelf_life": 2,
           "migration_years": 2,
           "qday_year": 2033,

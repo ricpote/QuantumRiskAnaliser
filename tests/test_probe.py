@@ -134,3 +134,20 @@ def test_pq_supported_not_preferred_logic():
     fs = classify_all(P.to_findings(rep))
     main = kex(fs)[0]
     assert main.algorithm == "X25519" and "pq-supported-not-preferred" in main.flags and main.hndl
+
+
+def test_dashboard_probe_job(lab, tmp_path):
+    from quantumtrace.web import Store
+    store = Store(tmp_path)
+    store.start_probe({"targets": ["127.0.0.1:8443", "127.0.0.1:8445"]})
+    for _ in range(300):
+        if store.probe_job["state"] != "running":
+            break
+        time.sleep(0.1)
+    job = store.probe_job
+    assert job["state"] == "complete", job["error"]
+    reports = job["result"]["reports"]
+    assert [r["verdict"]["color"] for r in reports] == ["green", "red"]       # PQ lab vs legacy lab
+    assert reports[0]["groups"]["X25519MLKEM768"] == dict(reports[0]["groups"]["X25519MLKEM768"], supported=True, pq=True)
+    assert job["result"]["cbom_valid"] and job["result"]["findings"]
+

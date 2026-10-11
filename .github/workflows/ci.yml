@@ -61,7 +61,7 @@ jobs:
           grep -q "✓ TLS 1.0" probe.txt && grep -q "3DES" probe.txt   # legacy half really serves obsolete crypto
       - name: Dashboard answers on :8501
         run: |
-          docker run -d --name ui -p 8501:8501 quantumtrace
+          docker run -d --name ui -p 127.0.0.1:8501:8501 quantumtrace
           python3 scripts/smoke_ui.py || { docker logs ui; exit 1; }
       - name: Dashboard logs
         if: always()

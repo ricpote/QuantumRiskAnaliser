@@ -4,6 +4,7 @@ import {
   Activity,
   ArrowDownToLine,
   ArrowRight,
+  BadgeCheck,
   Bell,
   Box,
   Check,
@@ -16,8 +17,10 @@ import {
   Globe,
   Layers,
   LayoutDashboard,
+  Lightbulb,
   Menu,
   Plus,
+  Radar,
   Search,
   Shield,
   ShieldCheck,
@@ -37,14 +40,21 @@ import {
 
 import { useReport } from "@/lib/report-context";
 import { Overview, Migration, Reports } from "./report-panels";
+import { AccuracyPanel, ExplainPanel, ProbePanel } from "./analysis-panels";
+import { classicalText, tierMeaning } from "@/lib/labels";
 
-type View = "overview" | "inventory" | "migration" | "reports";
+type View = "overview" | "inventory" | "migration" | "reports" | "probe" | "accuracy" | "explain";
 const nav = [
   { view: "overview", label: "Overview", icon: LayoutDashboard, to: "/" },
   { view: "inventory", label: "Crypto inventory", icon: Layers, to: "/inventory" },
   { view: "migration", label: "Migration plan", icon: ShieldCheck, to: "/migration" },
+  { view: "probe", label: "Live probe", icon: Radar, to: "/probe" },
+  { view: "accuracy", label: "Accuracy", icon: BadgeCheck, to: "/accuracy" },
+  { view: "explain", label: "Explain", icon: Lightbulb, to: "/explain" },
   { view: "reports", label: "Reports", icon: FileText, to: "/reports" },
 ] as const;
+// Pages about the loaded report; probe, accuracy and explain are tools that work without one.
+const reportViews: readonly View[] = ["overview", "inventory", "migration", "reports"];
 const riskClass = (risk: Risk) =>
   risk === "Critical" || risk === "Unencrypted"
     ? "risk-critical"
@@ -100,6 +110,7 @@ export function Workspace({ view }: { view: View }) {
   const [source, setSource] = useState("All sources");
   const filtered = filterAssets(assets, query, risk, source);
   const title = nav.find((n) => n.view === view)?.label ?? "Overview";
+  const reportView = reportViews.includes(view);
   const menuRef = useRef<HTMLButtonElement>(null);
   const navigation = (
     <>
@@ -251,7 +262,13 @@ export function Workspace({ view }: { view: View }) {
                     ? "Every cryptographic asset. One clear view."
                     : view === "migration"
                       ? "A practical path from discovery to quantum resilience."
-                      : "Your cryptographic findings, ready to share."}
+                      : view === "probe"
+                        ? "Does a live server already protect its traffic against quantum computers?"
+                        : view === "accuracy"
+                          ? "Every result checked against the labelled answers for the challenge data."
+                          : view === "explain"
+                            ? "How QuantumTrace rates any algorithm, and why."
+                            : "Your cryptographic findings, ready to share."}
               </p>
             </div>
             <div className="flex gap-2">
@@ -269,22 +286,29 @@ export function Workspace({ view }: { view: View }) {
               </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <span className="risk-badge risk-medium">{label}</span>
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => void data.reload()}>
-              Reload CLI results
-            </Button>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => void data.demo()}>
-              Use bundled demo
-            </Button>
-            <span className="text-xs text-muted-foreground">{generated}</span>
-          </div>
-          {busy && (
+          {reportView && (
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="risk-badge risk-medium">{label}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => void data.reload()}
+              >
+                Reload CLI results
+              </Button>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => void data.demo()}>
+                Use bundled demo
+              </Button>
+              <span className="text-xs text-muted-foreground">{generated}</span>
+            </div>
+          )}
+          {reportView && busy && (
             <p role="status" className="panel p-5 mb-5">
               Loading or scanning inputs… Existing results remain visible until this finishes.
             </p>
           )}
-          {error && (
+          {reportView && error && (
             <div role="alert" className="panel p-5 mb-5 text-critical">
               {error}
               <p className="text-xs mt-2">
@@ -293,7 +317,7 @@ export function Workspace({ view }: { view: View }) {
               </p>
             </div>
           )}
-          {!report && !busy && (
+          {reportView && !report && !busy && (
             <div className="panel p-8 mb-5">
               <h2 className="font-semibold">Start with a scan or saved results</h2>
               <p className="mt-2 text-sm">
@@ -302,7 +326,7 @@ export function Workspace({ view }: { view: View }) {
               </p>
             </div>
           )}
-          {!!report?.summary.warnings.length && (
+          {reportView && !!report?.summary.warnings.length && (
             <details className="panel p-4 mb-5">
               <summary>
                 {report.summary.warnings.length} scanner warnings — coverage may be incomplete
@@ -503,6 +527,9 @@ export function Workspace({ view }: { view: View }) {
           )}
           {view === "migration" && report && <Migration report={report} />}
           {view === "reports" && report && <Reports report={report} />}
+          {view === "probe" && <ProbePanel />}
+          {view === "accuracy" && <AccuracyPanel />}
+          {view === "explain" && <ExplainPanel />}
           <footer className="flex flex-wrap gap-3 justify-between mt-6 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <ShieldCheck size={12} />
@@ -518,12 +545,15 @@ export function Workspace({ view }: { view: View }) {
           if (!open) setSelected(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           {selected && (
             <>
               <DialogTitle>{selected.name}</DialogTitle>
               <DialogDescription>{selected.location}</DialogDescription>
-              <Badge risk={selected.risk} />
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge risk={selected.risk} />
+                <span className="text-xs">{tierMeaning[selected.finding.risk_tier]}</span>
+              </div>
               <dl className="grid grid-cols-2 text-sm gap-5 py-3">
                 <div>
                   <dt className="text-xs text-muted-foreground mb-2">Algorithm</dt>
@@ -535,20 +565,83 @@ export function Workspace({ view }: { view: View }) {
                   <dt className="text-xs text-muted-foreground mb-2">Discovery source</dt>
                   <dd>{selected.source}</dd>
                 </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-2">
+                    Problem even without quantum?
+                  </dt>
+                  <dd>
+                    {classicalText[selected.finding.classical_status] ??
+                      selected.finding.classical_status}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-2">Risk points (0-100)</dt>
+                  <dd>
+                    {selected.finding.risk_points}
+                    {selected.finding.hndl ? " · recordable now, readable later" : ""}
+                  </dd>
+                </div>
               </dl>
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold mb-2">Evidence</h3>
                 <p className="text-xs font-mono leading-relaxed text-muted-foreground">
                   {selected.evidence}
                 </p>
+                {typeof selected.finding.location["snippet"] === "string" && (
+                  <pre className="mt-3 bg-muted p-3 rounded text-[11px] overflow-x-auto">
+                    {selected.finding.location["snippet"]}
+                  </pre>
+                )}
               </div>
+              {!!selected.finding.rationale.length && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Why</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    {selected.finding.rationale.map((r) => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="bg-secondary p-4 rounded-md">
                 <h3 className="text-sm font-semibold">Suggested next step</h3>
-                <p className="text-sm mt-2">{selected.replacement}</p>
+                {selected.finding.replacement ? (
+                  <>
+                    <p className="text-sm mt-2">
+                      {selected.finding.replacement.algorithm}
+                      {selected.finding.replacement.standard
+                        ? ` (${selected.finding.replacement.standard})`
+                        : ""}
+                    </p>
+                    {selected.finding.replacement.how && (
+                      <p className="text-xs mt-1 text-muted-foreground">
+                        {selected.finding.replacement.how}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm mt-2">{selected.replacement}</p>
+                )}
               </div>
+              {!!selected.finding.deadlines?.length && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">
+                    Deadlines
+                    {selected.finding.deadline_year
+                      ? ` · earliest binding: ${selected.finding.deadline_year}`
+                      : ""}
+                  </h3>
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-muted-foreground">
+                    {selected.finding.deadlines.map((d) => (
+                      <li key={d}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="text-[10px] text-muted-foreground">
-                {label}. Classical status: {selected.finding.classical_status}. Risk points:{" "}
-                {selected.finding.risk_points}. {selected.finding.rationale.join(" ")}
+                {label}
+                {selected.finding.cwe?.length ? ` · ${selected.finding.cwe.join(", ")}` : ""}
+                {selected.finding.flags.length ? ` · ${selected.finding.flags.join(", ")}` : ""}
               </p>
             </>
           )}

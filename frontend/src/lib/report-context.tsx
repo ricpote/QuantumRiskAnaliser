@@ -1,21 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { apiRequest as request } from "./api";
 import { reportSchema, type Report } from "./quantumtrace-data";
-
-async function request(path: string, body?: unknown, signal?: AbortSignal) {
-  const response = await fetch(path, {
-    ...(body === undefined
-      ? {}
-      : {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }),
-    ...(signal ? { signal } : {}),
-  });
-  const value = await response.json();
-  if (!response.ok) throw new Error(value.error ?? `Request failed (${response.status})`);
-  return value;
-}
 function useReportState() {
   const [report, setReport] = useState<Report | null>(null);
   const [busy, setBusy] = useState(true);
@@ -83,7 +68,11 @@ function useReportState() {
       );
       await request("/api/scan", { demo: sample, files: uploads }, signal);
       while (!signal.aborted) {
-        const status = await request("/api/status", undefined, signal);
+        const status = await request<{ state: string; error: string }>(
+          "/api/status",
+          undefined,
+          signal,
+        );
         if (status.state === "error") throw new Error(status.error);
         if (status.state !== "running")
           return reportSchema.parse(await request("/api/report", undefined, signal));

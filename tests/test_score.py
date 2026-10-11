@@ -1,7 +1,9 @@
 """Mosca's inequality per asset (score.mosca): X shelf-life + Y migration > Z years to Q-Day."""
+import pytest
+
 from quantumtrace.classify import classify
 from quantumtrace.schema import Finding
-from quantumtrace.score import mosca, summarize
+from quantumtrace.score import mosca, summarize, what_if
 
 WEB = dict(kind="network-endpoint", host="app.lab", port=443, service="https")
 DB = dict(kind="network-endpoint", host="db.lab", port=5432, service="postgresql")
@@ -64,3 +66,22 @@ def test_summary_carries_mosca_and_scenarios_are_ordered(monkeypatch):
     assert s["qday_year"] == 2033 and s["now"] == 2026
     assert sc["pessimistic"]["at_risk"] >= sc["default"]["at_risk"] >= sc["optimistic"]["at_risk"]
     assert sc["pessimistic"]["at_risk"] == 3
+
+
+def test_what_if_maps_plan_indices_to_their_findings(monkeypatch):
+    monkeypatch.setenv("QT_NOW", "2026-10-10T12:00:00Z")
+    http = dict(WEB, port=80, service="http")
+    fs = [f("network", "key-exchange", "X25519", WEB), f("network", "transport", "PLAINTEXT", http),
+          f("network", "encryption", "AES", WEB, key_bits=128, mode="GCM")]
+    plan = summarize(fs)["plan"]
+    cleartext = next(i for i, p in enumerate(plan) if p["category"] == "transport")
+    only = what_if(fs, [cleartext])
+    assert only["before"]["plaintext"] == 1 and only["after"]["plaintext"] == 0
+    assert only["after"]["hndl_exposed"] == only["before"]["hndl_exposed"] == 1     # the other actions untouched
+    assert what_if(fs, [])["after"] == what_if(fs, [])["before"]
+    everything = what_if(fs, list(range(len(plan))))["after"]
+    assert everything["score"] == 100.0 and everything["late"] == 0 and everything["critical"] == 0
+    for bad in ([len(plan)], [-1], [True], "0"):
+        with pytest.raises(ValueError):
+            what_if(fs, bad)
+

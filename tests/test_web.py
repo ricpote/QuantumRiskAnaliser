@@ -1,11 +1,13 @@
 import base64
 import io
 import json
+import os
 from pathlib import Path
 import threading
 import time
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
+from urllib.parse import quote
 from zipfile import ZipFile
 
 import pytest
@@ -102,3 +104,51 @@ def test_bad_saved_results_do_not_crash_server(tmp_path):
     store = Store(tmp_path)
     assert store.current is None
     assert store.job['state'] == 'error'
+
+
+def test_explain_whatif_and_mosca_use_the_python_engine(api, monkeypatch):
+    monkeypatch.setenv('QT_NOW', '2026-10-10T12:00:00Z')
+    store, call = api
+    status, value = call('/api/explain')
+    assert status == 200 and 'AES' in value['options']['algorithms'] and 'PLAINTEXT' not in value['options']['algorithms']
+    finding = call('/api/explain?algorithm=Ed25519&category=signature')[1]['finding']
+    assert (finding['risk_tier'], finding['quantum_threat']) == ('critical', 'shor')
+    assert call('/api/explain?algorithm=AES&params=key_bits')[0] == 400
+    assert call('/api/explain?algorithm=NOPE')[0] == 400
+    assert call('/api/mosca?qday=2030')[0] == 409                       # nothing loaded yet
+    assert call('/api/whatif', {'actions': [0]})[0] == 409
+    web = {'kind': 'network-endpoint', 'host': 'app.lab', 'port': 443, 'service': 'https'}
+    f = classify(Finding(source='network', category='key-exchange', algorithm='X25519', asset=web, location={'pcap': 'x.pcap'}))
+    (store.results / 'findings.json').write_text(json.dumps([f.to_dict()]))
+    report = call('/api/refresh', {})[1]
+    at = report['generated_at']
+    status, mosca = call(f'/api/mosca?qday=2030&at={quote(at)}')
+    assert status == 200 and mosca['qday_year'] == 2030 and mosca['assets'][0]['status'] == 'late'
+    assert report['summary']['mosca']['assets'][0]['status'] == 'start-now'  # default Q-Day 2033
+    assert call('/api/mosca?qday=2030&at=stale')[0] == 409
+    assert call('/api/mosca?qday=1990')[0] == 400
+    status, what = call('/api/whatif', {'actions': [0], 'at': at})
+    assert status == 200 and what['before']['hndl_exposed'] == 1 and what['after']['hndl_exposed'] == 0
+    assert what['after']['score'] > what['before']['score']
+    assert call('/api/whatif', {'actions': [5], 'at': at})[0] == 400
+    assert call('/api/whatif', {'actions': [0], 'at': 'stale'})[0] == 409
+
+
+def test_accuracy_runs_in_a_child_process_and_is_cached(api, monkeypatch):
+    store, call = api
+    monkeypatch.delenv('QT_NOW', raising=False)
+    cwd = os.getcwd()
+    result = store.accuracy()                      # direct call: the first run scans the official samples
+    assert result['passed'] and result['code_by_origin']['official']['expected'] > 0
+    assert 'QT_NOW' not in os.environ and os.getcwd() == cwd   # evaluate.run() side effects stay in the child
+    assert call('/api/accuracy') == (200, result)
+
+
+def test_probe_validates_targets(api):
+    store, call = api
+    assert call('/api/probe')[1]['state'] == 'idle'
+    for bad in (['https://example.com'], [], ['host:70000'], ['x'] * 9, 'example.com', [1], ['a b']):
+        assert call('/api/probe', {'targets': bad})[0] == 400, bad
+    assert call('/api/probe', {'targets': ['example.com'], 'deep': 'yes'})[0] == 400
+    assert call('/api/probe')[1]['state'] == 'idle'
+
