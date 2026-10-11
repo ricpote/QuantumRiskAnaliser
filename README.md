@@ -55,11 +55,14 @@ Where the data comes from (toolbar and **New scan**):
   archives. Unsupported repository entries are ignored with report warnings; nested ZIPs are
   not expanded. Progress stays visible until the dashboard updates automatically. A failed scan
   keeps the previous valid results and lets you retry. Temporary uploads are deleted after the
-  scan; results stay in memory until replaced, so download the report to keep them. Inventory
+  scan; successful upload reports (including zero findings) are saved atomically to
+  `QT_RESULTS_DIR/uploaded-report.json` (default `out/`). Inventory
   source filters and every report export use the current scan.
 - **Analyze official samples (demo)**: the real scanner on the bundled challenge data, labelled
   *sample data*.
-- **Reload CLI results**: reads `findings.json` from `QT_RESULTS_DIR` (default `out/`).
+- **Load saved scan results**: restores the most recent uploaded report or CLI `findings.json`
+  in `QT_RESULTS_DIR`, whichever was saved later. Reference dataset scans do not overwrite the
+  saved upload. An empty findings list is a valid saved scan, not missing results.
 - **Analyze reference dataset**: runs the Python scanner on `samples/official/`. Official
   sample attribution remains visible with the report. No offline or automatic dataset fallback
   is loaded. Accuracy evaluation remains available through `make eval` and CI.
@@ -68,8 +71,11 @@ Show results produced by the CLI:
 
 ```bash
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
-docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results:ro" -e QT_RESULTS_DIR=/results quantumtrace
+docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace
 ```
+
+Mount a writable results directory as above to retain uploads after removing the container.
+Without a volume, saved uploads last only for that container's lifetime.
 
 ### Dashboard development
 

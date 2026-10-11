@@ -106,6 +106,48 @@ def test_bad_saved_results_do_not_crash_server(tmp_path):
     assert store.job['state'] == 'error'
 
 
+@pytest.mark.parametrize('name,content,empty', [
+    ('Example.java', b'public class Example { public static void main(String[] args) {} }', True),
+    ('digest.py', b'import hashlib\nx = hashlib.md5(b"hello").hexdigest()\n', False),
+])
+def test_saved_upload_restores_after_reference_scan_and_restart(api, tmp_path, name, content, empty):
+    store, call = api
+    store._scan({'files': [{'name': name, 'content': base64.b64encode(content).decode()}]})
+    assert store.job['state'] == 'complete', store.job
+    uploaded = call('/api/report')[1]
+    assert (uploaded['findings'] == []) == empty
+    assert (tmp_path / 'uploaded-report.json').exists()
+    store._scan({'demo': True})
+    assert store.job['state'] == 'complete', store.job
+    assert store.current['origin'] == 'sample'
+    assert call('/api/refresh', {}) == (200, uploaded)
+    assert call('/api/export/report')[1] == uploaded
+    assert call('/api/export/cbom')[0] == 200
+    assert Store(tmp_path).current == uploaded
+    # A later CLI scan takes precedence, including empty CLI results.
+    cli_path = tmp_path / 'findings.json'
+    cli_path.write_text('[]')
+    stamp = (tmp_path / 'uploaded-report.json').stat().st_mtime_ns + 1_000_000_000
+    os.utime(cli_path, ns=(stamp, stamp))
+    assert call('/api/refresh', {})[1]['origin'] == 'cli'
+    assert store.current['findings'] == []
+
+
+def test_failed_save_keeps_previous_saved_and_active_results(api, monkeypatch):
+    store, call = api
+    body = {'files': [{'name': 'Example.java', 'content': base64.b64encode(b'public class Example {}').decode()}]}
+    store._scan(body)
+    previous = store.current
+    assert store.job['state'] == 'complete'
+    def fail(value):
+        raise OSError('Results directory is not writable')
+    monkeypatch.setattr(store, 'save_upload', fail)
+    store._scan(body)
+    assert store.job['state'] == 'error'
+    assert store.current == previous
+    assert call('/api/refresh', {}) == (200, previous)
+
+
 def test_explain_whatif_and_mosca_use_the_python_engine(api, monkeypatch):
     monkeypatch.setenv('QT_NOW', '2026-10-10T12:00:00Z')
     store, call = api
