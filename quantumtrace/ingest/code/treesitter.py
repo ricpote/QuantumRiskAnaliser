@@ -494,7 +494,8 @@ class GoFile(TSFile):
             return
         seen = set()
         for n in self.walk(self.root):
-            if n.type == "interpreted_string_literal" and n.parent is not None and n.parent.type in ("literal_element", "literal_value"):
+            if n.type == "interpreted_string_literal" and n.parent is not None and n.parent.type in ("literal_element", "literal_value") \
+                    and not (n.parent.parent is not None and n.parent.parent.type == "keyed_element"):  # Type: "ssh-rsa" is a label
                 v = unquote(self.t(n))
                 if v not in seen and ssh_algorithm(v):
                     seen.add(v)
@@ -1622,6 +1623,7 @@ class JavaFile(TSFile):
             if rel:
                 f.location["related_lines"] = rel
         self.jwt()
+        self.trust_all()
         self.static_material()
         self.algorithm_constants()
         self.hardcoded_keys()
@@ -1764,6 +1766,24 @@ class JavaFile(TSFile):
                     report(c, args[i], "password", "hardcoded-password")
 
     J_JWT_LIBS = ("io.jsonwebtoken", "com.auth0.jwt", "com.nimbusds.jose")
+
+    def trust_all(self):
+        """X509TrustManager whose checkServerTrusted() is empty; HostnameVerifier whose verify() only returns true."""
+        for n in self.walk(self.root):
+            body = n.child_by_field_name("body") if n.type == "method_declaration" else None
+            if body is None:
+                continue
+            name = self.t(n.child_by_field_name("name"))
+            stmts = [c for c in body.named_children if c.type not in ("line_comment", "block_comment")]
+            if name == "checkServerTrusted" and not stmts:
+                what = "X509TrustManager.checkServerTrusted() is empty: every server certificate is accepted"
+            elif name == "verify" and "SSLSession" in self.t(n.child_by_field_name("parameters")) and len(stmts) == 1 \
+                    and re.fullmatch(r"return\s+true\s*;", self.t(stmts[0])):
+                what = "HostnameVerifier.verify() always returns true: any host name is accepted"
+            else:
+                continue
+            self.add(n.child_by_field_name("name"), "authentication", "NO-CERT-VERIFY", dict(api=name), what, ["no-cert-verify"],
+                     api=name, func=self.enclosing(n))
 
     def jwt(self):
         """jjwt (SignatureAlgorithm.RS256, Jwts.SIG.ES256), Nimbus (JWSAlgorithm.PS256), auth0 (Algorithm.RSA256(...))."""

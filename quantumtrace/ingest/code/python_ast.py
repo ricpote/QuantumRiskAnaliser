@@ -482,6 +482,17 @@ PASSLIB_PBKDF2_DEFAULT = {"pbkdf2_sha1": ("SHA-1", 131000), "pbkdf2_sha256": ("S
 ARGON2_MIN_MEMORY = {1: 47104, 2: 19456, 3: 12288, 4: 9216}
 
 
+def _param_default(node, func):
+    """The default of the parameter `node` names in `func` (def f(x=[...])), or None."""
+    if not isinstance(node, ast.Name) or not isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return None
+    a = func.args
+    pos = a.posonlyargs + a.args
+    defaults = dict(zip([x.arg for x in pos[len(pos) - len(a.defaults):]], a.defaults))
+    defaults.update({x.arg: d for x, d in zip(a.kwonlyargs, a.kw_defaults) if d is not None})
+    return defaults.get(node.id)
+
+
 def _argon2_ok(t, m):
     return t is None or m is None or m >= ARGON2_MIN_MEMORY.get(t, 7168)
 
@@ -524,6 +535,15 @@ def _password_cost(ctx, add):
                        _value(call.args[1], ctx, func) if len(call.args) > 1 and "PasswordHasher" in fqn else None)
             add(call, "kdf", "Argon2", {k: v for k, v in dict(time_cost=t, memory_kib=m).items() if isinstance(v, int)},
                 f"argon2 time_cost={t}, memory_cost={m} KiB", [] if _argon2_ok(t, m) else ["weak-kdf-params"], api=fqn, func=func)
+        elif fqn.startswith("pwdlib.") and fqn.rsplit(".", 1)[-1] in ("Argon2Hasher", "BcryptHasher", "recommended"):
+            if fqn.endswith("BcryptHasher"):  # pwdlib: bcrypt, rounds=12 by default
+                r = kw.get("rounds", _value(call.args[0], ctx, func) if call.args else None)
+                add(call, "kdf", "bcrypt", dict(cost=r if isinstance(r, int) else 12), f"pwdlib BcryptHasher(rounds={r or 12})", api=fqn, func=func)
+            else:  # Argon2Hasher() / PasswordHash.recommended(): argon2-cffi parameters, defaults t=3, m=64 MiB
+                t, m = kw.get("time_cost"), kw.get("memory_cost")
+                add(call, "kdf", "Argon2", {k: v for k, v in dict(time_cost=t, memory_kib=m).items() if isinstance(v, int)},
+                    f"pwdlib {fqn.rsplit('.', 1)[-1]}(time_cost={t}, memory_cost={m})", [] if _argon2_ok(t, m) else ["weak-kdf-params"],
+                    api=fqn, func=func)
     for node in ast.walk(ctx.tree):  # argon2.profiles.CHEAPEST: a test-only profile
         if isinstance(node, (ast.Attribute, ast.Name)) and (_fqn(node, ctx) or "") == "argon2.profiles.CHEAPEST" \
                 and not isinstance(ctx.parent.get(node), ast.Attribute):
@@ -723,6 +743,7 @@ def scan(path: str, rel: str) -> list[Finding]:
             algs = [_value(a, ctx, func) if a is not None else "HS256"]  # HS256 is the PyJWT / python-jose default
         else:
             lst = kw.get("algorithms")
+            lst = _param_default(lst, func) or lst  # def decode(token, algorithms=["HS256"]): jwt.decode(..., algorithms=algorithms)
             algs = [_value(e, ctx, func) for e in lst.elts] if isinstance(lst, (ast.List, ast.Tuple)) else []
             opts = kw.get("options")
             if isinstance(opts, ast.Dict) and any(_value(k, ctx, func) == "verify_signature" and _value(v, ctx, func) is False

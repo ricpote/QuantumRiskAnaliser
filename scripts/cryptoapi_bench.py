@@ -50,10 +50,12 @@ RULES = {  # benchmark folder -> "is this test case flagged?"
     "staticinitializationvector": lambda fs: _has_flag(fs, "static-iv"),
     "staticsalts": lambda fs: _has_flag(fs, "static-salt"),
     "predictableseeds": lambda fs: _has_flag(fs, "constant-seed"),
+    "dummycertvalidation": lambda fs: any(f.algorithm == "NO-CERT-VERIFY" for f in fs),
+    "dummyhostnameverifier": lambda fs: any(f.algorithm == "NO-CERT-VERIFY" for f in fs),
 }
-# TLS trust/hostname checks, plain-HTTP URLs, and "credential in String" (Java memory hygiene: a key held in an
+# SSLSocketFactory without a hostname check, plain-HTTP URLs, and "credential in String" (Java memory hygiene: a key held in an
 # immutable String cannot be wiped, even when it is random) are not about algorithms or fixed key material.
-OUT_OF_SCOPE = ("dummycertvalidation", "dummyhostnameverifier", "impropersslsocketfactory", "http", "credentialinstring")
+OUT_OF_SCOPE = ("impropersslsocketfactory", "http", "credentialinstring")
 
 
 def load_cases(bench):

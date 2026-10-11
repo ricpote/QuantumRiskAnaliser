@@ -343,3 +343,27 @@ def test_jwt_algorithm_chosen_at_run_time(tmp_path):
     unknown = {f.location["file"] for f in found if f.algorithm == "UNKNOWN-JWT"}
     assert unknown == {"auth.py", "auth.go", "Tokens.java", "verify.js"}
     assert any(f.location["file"] == "fixed.js" and f.params.get("jose") == "RS256" for f in found)
+
+
+def test_blind_batch_7_classes(tmp_path):
+    """fastapi-users, age, RuoYi: pwdlib hashers, JWT algorithms from a parameter default, SSH labels, Java trust-all."""
+    (tmp_path / "pw.py").write_text(
+        "import jwt\nfrom pwdlib import PasswordHash\nfrom pwdlib.hashers.argon2 import Argon2Hasher\n"
+        "from pwdlib.hashers.bcrypt import BcryptHasher\nH = PasswordHash((Argon2Hasher(), BcryptHasher()))\n"
+        "def dec(t, k, algorithms=['HS256']):\n    return jwt.decode(t, k, algorithms=algorithms)\n")
+    (tmp_path / "rsa.go").write_text(
+        'package agessh\nimport "golang.org/x/crypto/ssh"\ntype Stanza struct{ Type string }\n'
+        'func wrap(k ssh.PublicKey) *Stanza { return &Stanza{Type: "ssh-rsa"} }\n')
+    (tmp_path / "Http.java").write_text(
+        "import javax.net.ssl.*;\nclass Http {\n"
+        "  static class Any implements X509TrustManager {\n"
+        "    public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) { }\n"
+        "    public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) { }\n"
+        "    public java.security.cert.X509Certificate[] getAcceptedIssuers() { return null; }\n  }\n"
+        "  static class Host implements HostnameVerifier {\n    public boolean verify(String h, SSLSession s) { return true; }\n  }\n}\n")
+    found = classify_all(code.scan(str(tmp_path), base=str(tmp_path)))
+    algs = {(f.location["file"], f.algorithm) for f in found}
+    assert {("pw.py", "Argon2"), ("pw.py", "bcrypt")} <= algs and ("pw.py", "UNKNOWN-JWT") not in algs
+    assert any(f.location["file"] == "pw.py" and f.params.get("jose") == "HS256" for f in found)
+    assert not any(f.location["file"] == "rsa.go" for f in found)  # a stanza label, not an SSH configuration
+    assert sum(f.algorithm == "NO-CERT-VERIFY" for f in found) == 2
