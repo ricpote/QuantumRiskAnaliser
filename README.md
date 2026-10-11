@@ -49,10 +49,16 @@ so keep the port on 127.0.0.1 as above (or on a trusted network).
 
 Where the data comes from (toolbar and **New scan**):
 
-- **Scan uploaded files**: PCAP/PCAPNG, Python/Java/Go/JS, config files, AWS JSON exports or a
-  ZIP (max 32 MiB, 2,000 files, 128 MiB expanded). Uploads are deleted after the scan; results
-  stay in memory until replaced, so download the report to keep them.
-- **Scan official samples (demo)**: the real scanner on the bundled challenge data, labelled
+- **Analyze files**: select PCAP/PCAPNG, Python/Java/Go/JS/TS, supported config files, AWS JSON
+  exports or a ZIP. The dialog lists filenames, sizes and validation errors; only files marked
+  **Ready** are sent. The limit is **32 MiB total uploaded bytes**, 2,000 files and 128 MiB expanded.
+  The service validates content and syntax and rejects unsafe ZIP paths, symlinks and encrypted
+  archives. Unsupported repository entries are ignored with report warnings; nested ZIPs are
+  not expanded. Progress stays visible until the dashboard updates automatically. A failed scan
+  keeps the previous valid results and lets you retry. Temporary uploads are deleted after the
+  scan; results stay in memory until replaced, so download the report to keep them. Inventory
+  source filters and every report export use the current scan.
+- **Analyze official samples (demo)**: the real scanner on the bundled challenge data, labelled
   *sample data*.
 - **Reload CLI results**: reads `findings.json` from `QT_RESULTS_DIR` (default `out/`).
 - **Use bundled demo**: a small checked-in report (`frontend/public/demo-report.json`, rebuilt

@@ -6,17 +6,36 @@ export async function apiRequest<T = unknown>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch(path, {
-    ...(body === undefined
-      ? {}
-      : {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }),
-    ...(signal ? { signal } : {}),
-  });
-  const value = await response.json();
+  const timeout = AbortSignal.timeout(30000);
+  const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...(body === undefined
+        ? {}
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }),
+      signal: requestSignal,
+    });
+  } catch (error) {
+    if (timeout.aborted)
+      throw new Error(
+        "The scanner service did not respond within 30 seconds. Check that it is running and try again.",
+      );
+    if (signal?.aborted) throw error;
+    throw new Error("Cannot reach the scanner service. Check the local server and try again.");
+  }
+  let value;
+  try {
+    value = await response.json();
+  } catch {
+    throw new Error(
+      `The scanner returned an unreadable response (${response.status}). Check the server and retry.`,
+    );
+  }
   if (!response.ok) throw new Error(value?.error ?? `Request failed (${response.status})`);
   return value as T;
 }

@@ -5,7 +5,6 @@ import {
   ArrowDownToLine,
   ArrowRight,
   BadgeCheck,
-  Bell,
   Box,
   Check,
   CheckCheck,
@@ -38,6 +37,7 @@ import {
   type Risk,
 } from "@/lib/quantumtrace-data";
 
+import { ScanDialog } from "./scan-dialog";
 import { useReport } from "@/lib/report-context";
 import { Overview, Migration, Reports } from "./report-panels";
 import { AccuracyPanel, ExplainPanel, ProbePanel } from "./analysis-panels";
@@ -90,7 +90,6 @@ export function Workspace({ view }: { view: View }) {
   const data = useReport();
   const { report, busy, error } = data;
   const assets = report ? adaptFindings(report) : [];
-  const [files, setFiles] = useState<File[]>([]);
   const [page, setPage] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const label =
@@ -236,14 +235,11 @@ export function Workspace({ view }: { view: View }) {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Notifications"
+              aria-label="Report status"
               onClick={() => setNotification(true)}
             >
-              <Bell size={17} />
+              <Activity size={17} />
             </Button>
-            <span className="rounded-full bg-secondary h-8 w-8 flex items-center justify-center text-xs font-medium">
-              RP
-            </span>
           </div>
         </header>
         <main className="page-content">
@@ -280,7 +276,7 @@ export function Workspace({ view }: { view: View }) {
                 <ArrowDownToLine />
                 Export report
               </Button>
-              <Button disabled={busy} onClick={() => setScan(true)}>
+              <Button disabled={data.scanning} onClick={() => setScan(true)}>
                 <Plus />
                 New scan
               </Button>
@@ -647,51 +643,17 @@ export function Workspace({ view }: { view: View }) {
           )}
         </DialogContent>
       </Dialog>
-      <Dialog open={scan} onOpenChange={setScan}>
-        <DialogContent>
-          <DialogTitle>New discovery scan</DialogTitle>
-          <DialogDescription>
-            Scan uploaded inputs with the Python engine, or explicitly scan the bundled official
-            samples. Maximum upload: 32 MiB.
-          </DialogDescription>
-          <label htmlFor="scan-files" className="text-sm font-medium">
-            Capture, code, AWS JSON, config files or ZIP
-          </label>
-          <input
-            id="scan-files"
-            type="file"
-            multiple
-            disabled={busy}
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          />
-          <Button
-            disabled={busy || !files.length}
-            onClick={() => {
-              setScan(false);
-              setPage(0);
-              void data.scan(files);
-            }}
-          >
-            Scan uploaded files
-            <ArrowRight />
-          </Button>
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              setScan(false);
-              setPage(0);
-              void data.scan([], true);
-            }}
-          >
-            Scan official samples (demo)
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Uploads are temporary and deleted after scanning. Download the report to retain the
-            results.
-          </p>
-        </DialogContent>
-      </Dialog>
+      <ScanDialog
+        open={scan}
+        onOpenChange={setScan}
+        onComplete={() => {
+          setPage(0);
+          setQuery("");
+          setRisk("All risks");
+          setSource("All sources");
+          setSelected(null);
+        }}
+      />
       <Dialog open={help} onOpenChange={setHelp}>
         <DialogContent>
           <DialogTitle>Help & resources</DialogTitle>
@@ -713,7 +675,7 @@ export function Workspace({ view }: { view: View }) {
       </Dialog>
       <Dialog open={notification} onOpenChange={setNotification}>
         <DialogContent>
-          <DialogTitle>Notifications</DialogTitle>
+          <DialogTitle>Report status</DialogTitle>
           <DialogDescription>Current report status</DialogDescription>
           <div className="flex gap-3 py-4">
             <CheckCheck size={20} className="text-safe" />
