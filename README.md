@@ -16,9 +16,9 @@ docker build -t quantumtrace .
 docker run --rm -p 127.0.0.1:8501:8501 quantumtrace
 ```
 
-Open http://localhost:8501 and click **Scan official samples**. Everything below is available from
-the dashboard: the scan, the live TLS probe (the offline TLS lab already runs inside the container),
-the accuracy check and the CBOM / SARIF / JSON / CSV downloads.
+Open http://localhost:8501 and click **Analyze reference dataset**. From the dashboard you can scan
+your own files, probe a live TLS endpoint (the offline TLS lab already runs inside the container)
+and download the CBOM, SARIF, JSON and CSV reports.
 
 The image pins every Python dependency (`constraints.txt`) and bundles tshark and the TLS lab.
 
@@ -41,64 +41,43 @@ so keep the port on 127.0.0.1 as above (or on a trusted network).
 
 Where the data comes from (toolbar and **New scan**):
 
-- **Analyze files**: select PCAP/PCAPNG, Python/Java/Go/JS/TS, supported config files, AWS JSON
-  exports or a ZIP. The dialog lists filenames, sizes and validation errors; only files marked
-  **Ready** are sent. The limit is **32 MiB total uploaded bytes**, 2,000 files and 128 MiB expanded.
-  The service validates content and syntax and rejects unsafe ZIP paths, symlinks and encrypted
-  archives. Unsupported repository entries are ignored with report warnings; nested ZIPs are
-  not expanded. Progress stays visible until the dashboard updates automatically. A failed scan
-  keeps the previous valid results and lets you retry. Temporary uploads are deleted after the
-  scan; successful upload reports (including zero findings) are saved atomically to
-  `QT_RESULTS_DIR/uploaded-report.json` (default `out/`). Inventory
-  source filters and every report export use the current scan.
-- **Analyze official samples (demo)**: the real scanner on the bundled challenge data, labelled
-  *sample data*.
-- **Load saved scan results**: restores the most recent uploaded report or CLI `findings.json`
-  in `QT_RESULTS_DIR`, whichever was saved later. Reference dataset scans do not overwrite the
-  saved upload. An empty findings list is a valid saved scan, not missing results.
-- **Analyze reference dataset**: runs the Python scanner on `samples/official/`. Official
-  sample attribution remains visible with the report. No offline or automatic dataset fallback
-  is loaded. Accuracy evaluation remains available through `make eval` and CI.
+- **Analyze reference dataset** / **Analyze official samples (demo)**: the real scanner on the
+  bundled challenge data in `samples/official/`, labelled *sample data*.
+- **Analyze files**: your own PCAP/PCAPNG, Python/Java/Go/JS/TS, config files, AWS JSON exports
+  or a ZIP.
+  - Limits: 32 MiB uploaded, 2,000 files, 128 MiB once expanded.
+  - Only files marked **Ready** in the dialog are sent. Unsafe ZIP paths, symlinks and encrypted
+    archives are rejected; nested ZIPs are not expanded.
+  - A failed scan keeps the previous results. Uploads are deleted after the scan and the report
+    is saved to `QT_RESULTS_DIR/uploaded-report.json` (default `out/`).
+- **Load saved scan results**: reopens the latest saved upload or CLI `findings.json` from
+  `QT_RESULTS_DIR`.
 
 ## Command line (optional)
 
-The same image runs the CLI. Scan a folder and write the CBOM, findings, SARIF and summary to `./out`,
-or probe a live TLS endpoint:
+The same image also runs the `qtrace` CLI. None of this is needed to use the dashboard.
+
+**Scan a folder.** Writes the CBOM, findings, SARIF and summary to `./out` (see [Outputs](#outputs)):
 
 ```bash
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
-<<<<<<< HEAD
-docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace
 ```
 
-Mount a writable results directory as above to retain uploads after removing the container.
-Without a volume, saved uploads last only for that container's lifetime.
-
-### Dashboard development
-
-Needs Python >= 3.10, Node 24, tshark, and Go >= 1.24 for the lab tests.
+**Probe a live TLS endpoint.** See [Live TLS probe](#live-tls-probe) for what it measures:
 
 ```bash
-pip install -e ".[dev]"
-npm --prefix frontend ci
-make ui                      # Python API + Vite dev server on http://localhost:8501 (or: python scripts/ui.py)
-```
-
-The same checks CI runs:
-
-```bash
-npm --prefix frontend run typecheck && npm --prefix frontend run lint
-npm --prefix frontend test && npm --prefix frontend run build
-make test && make eval
-python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
-```
-=======
 docker run --rm quantumtrace qtrace probe example.com --deep
 ```
 
-> Linux with SELinux (Fedora/RHEL): add `:Z` to the volume, `-v "$PWD:/data:Z"`.
-> Windows PowerShell: use `-v "${PWD}:/data"`.
->>>>>>> c56242c (Simplify README)
+**Open CLI results in the dashboard.** Mounting `./out` also keeps uploaded scans after the
+container is removed (without it they last only as long as the container):
+
+```bash
+docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace
+```
+
+> Linux with SELinux (Fedora/RHEL): add `:Z` to the volume, e.g. `-v "$PWD:/data:Z"`.
+> Windows PowerShell: use `${PWD}` instead of `$PWD`.
 
 ## Results on the official challenge data
 
@@ -320,21 +299,36 @@ a name that cannot be parsed is assumed to be classical ECDHE, never safe.
 
 ## Development and tests
 
-Not needed to run QuantumTrace. CI runs all of this, plus the Docker image, on every pull request.
+Not needed to run QuantumTrace. CI runs all of these, and builds and tests the Docker image, on
+every pull request.
 
 <details>
-<summary>Local setup (Python ≥ 3.10, Node 24, tshark, Go ≥ 1.24)</summary>
+<summary>Run locally without Docker (Python ≥ 3.10, Node 24, tshark, Go ≥ 1.24)</summary>
+
+Install and start the dashboard with hot reload on http://localhost:8501:
 
 ```bash
 pip install -e ".[dev]"
 npm --prefix frontend ci
-make ui      # Python API + Vite dev server on http://localhost:8501
-make test    # unit tests + ground truth (QT_NOW=2026-10-10)
-make eval    # accuracy report vs tests/ground_truth.json
+make ui
+```
+
+Python tests and the accuracy report against `tests/ground_truth.json`:
+
+```bash
+make test
+make eval
+```
+
+Frontend checks, and a smoke test against a running UI (routes, API, upload scan, exports):
+
+```bash
 npm --prefix frontend run typecheck && npm --prefix frontend run lint
 npm --prefix frontend test && npm --prefix frontend run build
-python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
+python scripts/smoke_ui.py http://localhost:8501
 ```
+
+`make lab` starts the offline TLS lab locally and `make probe` probes all its endpoints.
 
 </details>
 
