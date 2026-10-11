@@ -92,6 +92,36 @@ def _fqn(node, ctx):
     return None
 
 
+def _segment(ctx, node) -> str:
+    """ast.get_source_segment, cached: the stdlib version re-splits the whole file on every call, which made one 330 KB
+    test file take 8 s (2,358 calls). Same rules: the stdlib line split, and column offsets in UTF-8 bytes."""
+    memo = ctx.__dict__.setdefault("_segments", {})
+    if id(node) not in memo:
+        if "_lines" not in ctx.__dict__:
+            split = getattr(ast, "_splitlines_no_ff", None)
+            ctx._lines = split(ctx.src) if split else ctx.src.splitlines(keepends=True)
+        lines = ctx._lines
+        try:
+            first, last = node.lineno - 1, node.end_lineno - 1
+            if first == last:
+                text = lines[first].encode()[node.col_offset:node.end_col_offset].decode()
+            else:
+                text = (lines[first].encode()[node.col_offset:].decode() + "".join(lines[first + 1:last])
+                        + lines[last].encode()[:node.end_col_offset].decode())
+        except (AttributeError, IndexError, TypeError, UnicodeDecodeError):
+            text = ast.get_source_segment(ctx.src, node) or ""
+        memo[id(node)] = text
+    return memo[id(node)]
+
+
+def _enclosing_class(node, ctx) -> str:
+    while node in ctx.parent:
+        node = ctx.parent[node]
+        if isinstance(node, ast.ClassDef):
+            return node.name
+    return ""
+
+
 def _enclosing_func(node, ctx):
     while node in ctx.parent:
         node = ctx.parent[node]
@@ -303,7 +333,7 @@ def _legacy_references(tree, ctx, add):
             func = _enclosing_func(node, ctx)
             if mod and fqn[len(mod):] in PY_TLS_VERSIONS:
                 v, name = PY_TLS_VERSIONS[fqn[len(mod):]], fqn[len(mod):]
-                scope_src = ast.get_source_segment(ctx.src, func) if func is not None else ctx.src
+                scope_src = _segment(ctx, func) if func is not None else ctx.src
                 if "SSLv23" in name and "OP_NO_SSLv3" in (scope_src or ""):
                     continue  # SSL.Context(SSLv23_METHOD) + set_options(OP_NO_SSLv3): legacy versions switched off
                 add(node, "protocol", "SSL" if v.startswith("SSL") else "TLS", dict(version=v),
@@ -571,9 +601,10 @@ def _nbytes(v):
     return None
 
 
-_SECRET_WORDS = {"token", "secret", "salt", "nonce", "iv", "session", "password", "passwd", "otp", "csrf", "apikey", "pin", "key"}
+_SECRET_WORDS = {"token", "secret", "salt", "nonce", "iv", "session", "password", "passwd", "otp", "csrf", "apikey", "pin", "key",
+                 "coupon", "voucher", "invite", "invitation", "activation", "verification", "txid"}
 _NOT_SECRET_BEFORE_KEY = {"sort", "cache", "lookup", "dict", "map", "index", "row", "col", "partition", "shard", "group", "order",
-                          "primary", "foreign", "hash", "sample", "random", "seed"}
+                          "primary", "foreign", "hash", "sample", "random", "seed", "captcha", "recaptcha", "hcaptcha"}
 
 
 def _secret_name(name: str) -> bool:
@@ -640,6 +671,8 @@ def scan(path: str, rel: str) -> list[Finding]:
                 if isinstance(t, ast.Name) and node.value is not None:
                     ctx.consts.setdefault((encl.name if encl else None, t.id), node.value)
             names = [t.id if isinstance(t, ast.Name) else t.attr for t in targets if isinstance(t, (ast.Name, ast.Attribute))]
+            names += [t.slice.value for t in targets if isinstance(t, ast.Subscript) and isinstance(t.slice, ast.Constant)
+                      and isinstance(t.slice.value, str)]  # state["id"] = random.randint(...)
             if node.value is not None and names:
                 for sub in ast.walk(node.value):
                     if isinstance(sub, ast.Call):
@@ -696,6 +729,8 @@ def scan(path: str, rel: str) -> list[Finding]:
                                                   for k, v in zip(opts.keys, opts.values)):
                 add(call, "signature", "NULL", dict(jose="none"), f"{fqn}(..., options={{'verify_signature': False}}): token signature is never checked",
                     ["jwt", "signature-not-verified"], api=fqn, func=func)
+        if not any(map(jwt_algorithms.normalize, algs)) and not (name == "decode" and kw.get("options") is not None):
+            add(call, "signature", "UNKNOWN-JWT", {}, f"{fqn}(...): algorithm chosen at run time", ["jwt"], confidence=0.5, api=fqn, func=func)
         for a in algs:
             jn = jwt_algorithms.normalize(a)
             if not jn:
@@ -712,7 +747,7 @@ def scan(path: str, rel: str) -> list[Finding]:
         name = fqn.split(".")[-1]
         fname = (func.name if func else "").lower()
         fname_ = func.name if func is not None else ""
-        sec_ctx = not fake_data(fname_, ctx.path) and (sec_name(fname_) or (func is not None and sec_body(ast.get_source_segment(src, func) or "")))
+        sec_ctx = not fake_data(fname_, ctx.path) and (sec_name(fname_) or (func is not None and sec_body(_segment(ctx, func))))
         # ---------------- JWT ----------------
         if fqn.startswith(("jwt.", "jose.jwt.")) and name in ("encode", "decode"):
             jwt_call(call, name, fqn, func)
@@ -720,7 +755,7 @@ def scan(path: str, rel: str) -> list[Finding]:
         elif fqn.startswith("hashlib.") and name in HASHLIB:
             flags = []
             argnames = " ".join(ast.unparse(a) for a in call.args).lower()
-            prehash = func is not None and re.search(r"pbkdf2|bcrypt|argon2|scrypt", ast.get_source_segment(src, func) or "", re.I)
+            prehash = func is not None and re.search(r"pbkdf2|bcrypt|argon2|scrypt", _segment(ctx, func), re.I)
             if ("password" in fname or "passwd" in fname or "password" in argnames) and not prehash:
                 flags += ["password-hashing", "unsalted"]  # (a digest then fed to PBKDF2 / bcrypt is a pre-hash, not the storage hash)
             add(call, "hash", HASHLIB[name], {}, f"hashlib.{name}() call", flags + _not_for_security(call, ctx, func) + _truncated(call, ctx),
@@ -730,6 +765,8 @@ def scan(path: str, rel: str) -> list[Finding]:
             if isinstance(v, str):
                 add(call, "hash", HASHLIB.get(v.lower().replace("-", ""), v.upper()), {}, f"hashlib.new({v!r})",
                     _not_for_security(call, ctx, func), api=fqn, func=func)
+            else:  # hashlib.new(hashtype): inventoried, not judged
+                add(call, "hash", "UNKNOWN-HASH", {}, "hashlib.new(<name chosen at run time>)", confidence=0.5, api=fqn, func=func)
         elif fqn == "hashlib.pbkdf2_hmac":
             h = _value(call.args[0], ctx, func) if call.args else None
             it = _value(call.args[3], ctx, func) if len(call.args) > 3 else None
@@ -776,6 +813,8 @@ def scan(path: str, rel: str) -> list[Finding]:
             curve = (_fqn(cn, ctx) or "").split(".")[-1] if isinstance(cn, (ast.Attribute, ast.Name)) else None
             if curve and curve.upper() == curve:  # a curve class name, not a variable such as os.getenv(...)
                 add(call, "signature", "ECDSA", dict(curve=EC_CURVES.get(curve, curve.lower())), f"ec.generate_private_key({curve})", api=fqn, func=func)
+            else:  # ec.generate_private_key(self.curve): an EC key all the same, curve chosen at run time
+                add(call, "signature", "ECDSA", {}, "ec.generate_private_key(<curve chosen at run time>)", confidence=0.6, api=fqn, func=func)
         elif fqn.endswith(".exchange") and any(isinstance(a, ast.Call) and (_fqn(a.func, ctx) or "").endswith("ECDH") for a in call.args):
             add(call, "key-exchange", "ECDH", {}, "ECDH exchange()", api=fqn, func=func)
         elif "Ed25519PrivateKey.generate" in fqn or fqn.endswith("Ed25519PrivateKey.from_private_bytes"):
@@ -823,6 +862,17 @@ def scan(path: str, rel: str) -> list[Finding]:
             add(call, "encryption", alg, dict(key_bits=kb * 8 if kb else None, mode=m),
                 f"Cipher(algorithms.{a}(key), modes.{m}())" + (f" with {kb * 8}-bit key" if kb else " (key size unresolved)"),
                 flags, confidence=1.0 if kb else 0.6, api=fqn, func=func)
+        elif fqn in ("ssl.create_default_context", "ssl.SSLContext", "ssl.wrap_socket") \
+                and not re.search(r"PROTOCOL_(SSLv|TLSv1)", ast.unparse(call)) \
+                and not re.search(r"minimum_version|maximum_version|OP_NO_(SSL|TLS)", _segment(ctx, func) if func is not None else ""):
+            # no legacy version named (those are reported on their own): Python's defaults, TLS 1.2+ since 3.10
+            add(call, "protocol", "TLS", dict(version="TLS 1.3", min_version="TLS 1.2", defaults=True),
+                f"{fqn}() with Python's defaults: TLS 1.2-1.3 (minimum TLS 1.2 since Python 3.10)", confidence=0.7, api=fqn, func=func)
+        elif fqn.startswith("cryptography.fernet.") and name in ("Fernet", "MultiFernet"):
+            # Fernet = AES-128-CBC for confidentiality + HMAC-SHA256 for integrity (the spec fixes both)
+            add(call, "encryption", "AES", dict(key_bits=128, mode="CBC"), f"{name}(key): AES-128-CBC + HMAC-SHA256 (Fernet spec)",
+                api=fqn, func=func)
+            add(call, "mac", "HMAC", dict(hash="SHA-256", key_bits=128), f"{name}(key): HMAC-SHA256 half of the Fernet key", api=fqn, func=func)
         elif name in CRY_AEAD and (fqn.startswith(P) or fqn == name):
             alg, mode = CRY_AEAD[name]
             keyn = call.args[0] if call.args else None
@@ -912,6 +962,9 @@ def scan(path: str, rel: str) -> list[Finding]:
         elif fqn.startswith("random.") and name in RANDOM_FUNCS:
             names = ctx.call_targets.get(id(call), [])
             target = next((t for t in names if _secret_name(t)), None)
+            if target is None and any(t.lower() in ("id", "txid", "transaction_id", "query_id", "msg_id") for t in names) \
+                    and re.search(r"dns", f"{ctx.path} {_enclosing_class(call, ctx)}", re.I):
+                target = "a DNS transaction ID (RFC 5452: must be unpredictable, or answers can be spoofed)"
             if target:
                 add(call, "rng", "NON-CSPRNG", dict(api=fqn), f"{fqn}() generates {target}: the random module is predictable, use secrets",
                     ["weak-prng"], confidence=0.9, api=fqn, func=func)

@@ -8,7 +8,9 @@ SEC_WORDS = ("token", "key", "secret", "salt", "nonce", "iv", "session", "passwo
 # words next to "key" that make it a keyboard / dictionary key: press_key, keyCode, hotkey, keymap, sortByKey
 NOT_CRYPTO_KEY = {"press", "pressed", "down", "up", "board", "stroke", "strokes", "map", "hot", "event", "events", "code", "binding",
                    "bind", "shortcut", "release", "handler", "listener", "input", "sort", "by", "value", "values", "name", "names",
-                   "path", "lookup", "cache", "prefix", "exists", "primary", "foreign", "dict", "type"}
+                   "path", "lookup", "cache", "prefix", "exists", "primary", "foreign", "dict", "type",
+                   # the key of a map entry / event / dedup id: attributeKeyOAuth2Subject, alert_key, idempotencyKey
+                   "attribute", "alert", "dedup", "idempotency", "correlation", "trace", "metric", "header", "field"}
 
 
 def name_words(name: str) -> list[str]:
@@ -16,11 +18,17 @@ def name_words(name: str) -> list[str]:
     return [w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name or "")]
 
 
+# values that must be unguessable although they are not keys: a predictable coupon / invite / activation / verification
+# code can be forged or brute-forced (generateCouponCode() building 4 digits with java.util.Random)
+SEC_VALUE_WORDS = ("coupon", "voucher", "promo", "invite", "invitation", "activation", "verification", "pin")
+
+
 def sec_name(name: str) -> bool:
     """Does a function name say it produces a security value? Whole words only: 'private' / 'archive' / 'derive' do not
     contain the word 'iv', and press_key / keyCode are keyboard keys."""
     words = name_words(name)
-    hit = [w for w in words if w in SEC_WORDS or w in ("passwd", "pwd", "credential", "credentials", "authentication", "apikey")]
+    hit = [w for w in words if w in SEC_WORDS or w in SEC_VALUE_WORDS
+           or w in ("passwd", "pwd", "credential", "credentials", "authentication", "apikey")]
     if hit == ["key"] or set(hit) <= {"key"} and hit:
         return not (set(words) & NOT_CRYPTO_KEY)
     return bool(hit)
@@ -40,7 +48,11 @@ _KEYISH = re.compile(r"(^|_)(key|secret|passwd|password|psk)($|_)|(key|secret)$"
 def is_keyish(name: str) -> bool:
     n = re.sub(r"([a-z])([A-Z])", r"\1_\2", name)  # camelCase -> snake
     return bool(_KEYISH.search(n)) and not re.search(r"(len|length|size|bits|bytes|id|name|path|file|type)$", n, re.I) \
+        and not re.search(r"captcha|solvemedia|turnstile|site_?key|publishable|public_?key|pub_?key|"
+                          r"(attribute|header|field|param|cache|metric|label|event|config|lookup|i18n|translation|alert|"
+                          r"dedup|idempotency|correlation|trace)_?key", n, re.I) \
         and not re.search(r"(table|prefix|suffix|index|header|field|column|param|label|attr|prop|url|uri|env|format|pattern|"
+                          r"code|codes|status|error|message|msg|text|title|hint|description|route|step|"
                           r"(db|cache|storage|redis|map|dict|lookup|store)_key|chars|charset|alphabet|regex|regexp|re|allowed)s?$", n, re.I)  # not secrets
 
 
@@ -66,24 +78,36 @@ def unquote(text: str) -> str:
 
 # 'juiceshop_chat_conversations', 'scoreBoardChallenge', 'testChallenge1': names, not key material
 # storage / cache / table names: acme_keyID_accountID_index, __flush_db__, javascript-key=, user:session:
+_PUBLIC_MATERIAL = re.compile(r"-----BEGIN (RSA |EC )?PUBLIC KEY-----|-----BEGIN CERTIFICATE-----|^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-\S+) AAAA")
+_ALPHABET = re.compile(r"abcdefghijklmnop|ABCDEFGHIJKLMNOP")
 _TEMPLATE = re.compile(r"%[sdvqx]|\{\w*\}|\$\{|\s--?\w|\(\?[=!:]|\\[dwsS]|^\^.*\$$")  # format strings, command lines, regexes
 # (USER__INFO__, @activeBackup, $trigger, .data-api, [orderby, s3_test_request); real keys mix in many digits (JEECGBOOT1423670)
-_IDENTIFIER_LIKE = re.compile(r"[\[@$._#:]*[A-Za-z]+\d{0,2}(?:[_\-.:/]+[A-Za-z]+\d{0,2})*[_=:\-./\]]*")
+_IDENTIFIER_LIKE = re.compile(r"[\[@$._#:/]*\d{0,2}[A-Za-z]+\d{0,2}(?:[_\-.:/]+\d{0,2}[A-Za-z]+\d{0,2})*[_=:\-./\]]*")
+# algorithm / parameter-set names (ML-DSA-44, RSA-2048, AES-256-GCM) and dotted codes or OIDs (1.2.840.113549, 0000052D.)
+_NOT_KEY_MATERIAL = re.compile(r"(?i)(ml-(kem|dsa)|slh-dsa|rsa|ecdsa|ec|aes|sha\d*|hmac|ed25519|ed448|x25519|x448|secp|prime|brainpool|"
+                               r"p-?\d{3})[-_a-z0-9]*|[0-9a-f]+(\.[0-9a-f]+)+\.?|[0-9a-f]+\.")  # dotted: a bare hex string can be a real key
 
 
 def looks_secret(value) -> bool:
     """Could this literal be key material? Rejects identifier-like strings (storage keys, cache keys, enum names)."""
     if isinstance(value, (bytes, bytearray)):
-        try:  # Go []byte("acme_accounts"): a readable identifier is a name, not key material
-            return len(value) >= 8 and not _IDENTIFIER_LIKE.fullmatch(value.decode("ascii"))
+        try:  # Go []byte("acme_accounts"), b"-----BEGIN PUBLIC KEY-----": judge readable bytes like the text they hold
+            text = value.decode("ascii")
         except UnicodeDecodeError:
-            return len(value) >= 8
+            return len(value) >= 8  # binary: raw key bytes
+        if _PUBLIC_MATERIAL.search(text) or _ALPHABET.search(text):
+            return False
+        return len(value) >= 8 and not _IDENTIFIER_LIKE.fullmatch(text)
     if isinstance(value, str) and (_TEMPLATE.search(value) or " " in value.strip() and "-----BEGIN" not in value):
         return False
+    if isinstance(value, str) and _NOT_KEY_MATERIAL.fullmatch(value) and (len(value) <= 16 or "." in value):
+        return False
+    if isinstance(value, str) and (_PUBLIC_MATERIAL.search(value) or _ALPHABET.search(value)):
+        return False  # a public key / certificate is meant to be shared; an alphabet is a character set, not a key
     return isinstance(value, str) and len(value) >= 8 and not _IDENTIFIER_LIKE.fullmatch(value)
 
 
-_TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|spec|testdata|test-fixtures|fixtures?|e2e|cypress|playwright)/|(^|/)src/test/|"
+_TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|spec|testdata|test-fixtures|fixtures?|e2e|cypress|playwright|suites|examples)/|(^|/)src/test/|"
                         r"[._-](test|spec)\.[jt]sx?$|_test\.go$|(^|/)test_[^/]*\.py$|_test\.py$|Test\.java$")
 
 

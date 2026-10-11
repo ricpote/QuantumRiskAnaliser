@@ -403,7 +403,8 @@ def _misc(f, alg, p, flags, cwe, why):
                                                                          else "anyone with the repo can decrypt/forge"))
         rep = (dict(algorithm="Random per use", standard="NIST SP 800-38A / SP 800-132", how="Generate a fresh random IV/salt/seed (SecureRandom) every time; store it with the ciphertext")
                if what in ("IV", "salt", "seed") else dict(algorithm="KMS / secret manager", standard="-", how="Load keys from AWS KMS / a secret manager; rotate the exposed key"))
-        return "safe", ("deprecated" if "demo-code" in flags else "broken"), f"Hard-coded {what} ({p.get('name', '?')})", rep, deadlines
+        return "safe", ("deprecated" if "demo-code" in flags else "broken"), (f"Seeded SecureRandom ({p.get('name', '?')})" if what == "seed"
+                                                                   else f"Hard-coded {what} ({p.get('name', '?')})"), rep, deadlines
     if alg == "NO-CERT-VERIFY":
         cwe.add("CWE-295")
         why.append(f"{p.get('api', 'TLS client')} skips certificate and hostname checks: anyone on the path can impersonate the server "

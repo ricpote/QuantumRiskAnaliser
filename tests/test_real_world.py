@@ -85,7 +85,9 @@ def test_go_fixed_iv_and_tls_config():
     ivs = {f.location["symbol"]: f for f in fs if "static-iv" in f.flags}
     assert set(ivs) == {"sealRecord", "legacyStream"}           # seal() reads crypto/rand; openLegacy() only decrypts
     assert ivs["legacyStream"].location["related_lines"] == [11]  # where legacyIV is written
-    assert [f.params["version"] for f in fs if f.category == "protocol"] == ["TLS 1.1"]  # modernTLS(): TLS 1.3 only
+    protos = {f.params["version"]: f for f in fs if f.category == "protocol"}
+    assert sorted(protos) == ["TLS 1.1", "TLS 1.3"]  # partnerTLS() allows 1.1; modernTLS() is inventoried as TLS 1.3 only
+    assert protos["TLS 1.3"].classical_status not in ("broken", "deprecated")
     assert any(f.algorithm == "RSA" and "no-forward-secrecy" in f.flags for f in fs)
 
 
@@ -236,3 +238,108 @@ def test_go_ssh_algorithm_lists(tmp_path):
                                    'var cfg = ssh.Config{Ciphers: []string{"aes128-ctr", "arcfour"}, MACs: []string{"hmac-sha1"}}\n')
     fs = classify_all(code.scan(str(tmp_path), base=str(tmp_path)))
     assert {f.params["ssh_name"] for f in fs} == {"aes128-ctr", "arcfour", "hmac-sha1"}
+
+
+def test_predictable_codes_and_dns_ids(tmp_path):
+    """Differential run against Semgrep / Bandit on real projects (scripts/crosscheck_tools.py): a coupon code built
+    from java.util.Random (macrozheng/mall) and a DNS transaction ID from random.randint (mitmproxy) were missed."""
+    (tmp_path / "Coupons.java").write_text(
+        "import java.util.Random;\n"
+        "class Coupons {\n"
+        "  String generateCouponCode(long id) {\n"
+        "    StringBuilder sb = new StringBuilder();\n"
+        "    for (int i = 0; i < 4; i++) sb.append(new Random().nextInt(10));\n"
+        "    return sb.toString();\n"
+        "  }\n"
+        "  int pickColour() { return new Random().nextInt(3); }\n"
+        "}\n")
+    (tmp_path / "dns.py").write_text(
+        "import random\n"
+        "class DNSMessage:\n"
+        "    def copy(self):\n"
+        "        state = self.get_state()\n"
+        "        state['id'] = random.randint(0, 65535)\n"
+        "        return state\n"
+        "    def jitter(self):\n"
+        "        delay = random.uniform(0, 1)\n"
+        "        return delay\n")
+    rng = sorted((f.location["file"], f.location["line"]) for f in classify_all(code.scan(str(tmp_path), base=str(tmp_path)))
+                 if f.algorithm == "NON-CSPRNG")
+    assert rng == [("Coupons.java", 5), ("dns.py", 5)]  # the colour picker and the jitter are not security values
+
+
+def test_public_or_descriptive_values_are_not_secrets():
+    """Blind batch (Sa-Token, Authelia, pyLoad, NextAuth): captcha site keys, algorithm names, routes, LDAP codes."""
+    from quantumtrace.ingest.code.common import is_keyish
+    for name in ["RECAPTCHA_KEY", "HCAPTCHA_KEY", "SOLVEMEDIA_KEY", "stripePublishableKey", "ldapPasswordComplexityCode",
+                 "ResetPasswordStep1Route"]:
+        assert not is_keyish(name), name
+    for value in ["ML-DSA-44", "RSA-2048", "0000052D.", "1.2.840.113549", "/reset-password/step1", "/2fa/password"]:
+        assert not looks_secret(value), value
+    for value in ["1234567890adbcde", "abcdef0123456789", "JEECGBOOT1423670"]:  # real hex / mixed keys stay secrets
+        assert looks_secret(value), value
+    assert is_test_path("internal/suites/http.go") and is_test_path("apps/examples/nextjs/user-button.tsx")
+    assert not is_test_path("src/main/java/com/example/Billing.java")
+
+
+def test_seeded_securerandom_and_jsx_random(tmp_path):
+    (tmp_path / "Keys.java").write_text(
+        "import java.security.SecureRandom;\n"
+        "class Keys {\n"
+        "  static byte[] derive() throws Exception {\n"
+        "    SecureRandom random = SecureRandom.getInstance(\"SHA1PRNG\");\n"
+        "    random.setSeed(\"sa-token-secret\".getBytes());\n"
+        "    byte[] k = new byte[16]; random.nextBytes(k); return k;\n"
+        "  }\n"
+        "}\n")
+    (tmp_path / "header.tsx").write_text(
+        "export function Header({ session }) {\n"
+        "  return <img src={`https://avatars.example/svg?seed=${Math.random()}`} alt={session.user.name} />;\n"
+        "}\n")
+    fs = classify_all(code.scan(str(tmp_path), base=str(tmp_path)))
+    seed = [f for f in fs if f.params.get("what") == "seed"]
+    assert seed and seed[0].display_name.startswith("Seeded SecureRandom") and "fully determined" in seed[0].evidence
+    assert not [f for f in fs if f.algorithm == "NON-CSPRNG"]  # an avatar seed drawn into the page is not a secret
+
+
+def test_blind_batch_6_classes(tmp_path):
+    """privacyIDEA, ORY Hydra, ELADMIN, Uptime Kuma: public keys, alphabets, map keys, and switch-case key sizes."""
+    from quantumtrace.ingest.code.common import is_keyish
+    assert not looks_secret(b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBg") and not looks_secret("ssh-rsa AAAAB3NzaC1yc2E user")
+    assert not looks_secret(b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    assert looks_secret("-----BEGIN RSA PRIVATE KEY-----\nMIIEpA") and looks_secret(b"0123456789abcdef")
+    assert not any(is_keyish(n) for n in ["attributeKeyOAuth2Subject", "alert_key", "idempotencyKey"])
+    (tmp_path / "gen.go").write_text(
+        'package jwks\nimport ("crypto/rand"; "crypto/rsa")\n'
+        "func generate(alg string, bits int) (*rsa.PrivateKey, error) {\n"
+        '\tswitch alg {\n\tcase "RS256":\n\t\tif bits == 0 {\n\t\t\tbits = 2048\n\t\t}\n'
+        '\tcase "ES256":\n\t\tif bits == 0 {\n\t\t\tbits = 256\n\t\t}\n\t}\n'
+        "\treturn rsa.GenerateKey(rand.Reader, bits)\n}\n")
+    rsa = [f for f in classify_all(code.scan(str(tmp_path), base=str(tmp_path))) if f.algorithm == "RSA"]
+    assert rsa and rsa[0].params.get("key_bits") is None  # never "RSA-256": that value belongs to the ES256 case
+
+
+def test_large_python_file_scans_fast(tmp_path):
+    import time
+    body = "\n".join(f"def test_{i}(client):\n    token = client.get('/t{i}')\n    assert token.json()['status']\n" for i in range(3000))
+    (tmp_path / "test_big.py").write_text("import random\n" + body)
+    t = time.time()
+    code.scan(str(tmp_path), base=str(tmp_path))
+    assert time.time() - t < 5  # was quadratic: every call re-split the whole file to read its function's source
+
+
+def test_jwt_algorithm_chosen_at_run_time(tmp_path):
+    """Recall audit: JWT calls whose algorithm comes from config or the token are inventoried, not silently skipped."""
+    (tmp_path / "auth.py").write_text("import jwt\ndef check(tok, cfg):\n    return jwt.decode(tok, cfg['key'], algorithms=[cfg.get('alg')])\n")
+    (tmp_path / "auth.go").write_text(
+        'package auth\nimport "github.com/golang-jwt/jwt/v5"\n'
+        "func parse(s string, kf jwt.Keyfunc) (*jwt.Token, error) {\n\treturn jwt.ParseWithClaims(s, jwt.MapClaims{}, kf)\n}\n")
+    (tmp_path / "Tokens.java").write_text(
+        "import io.jsonwebtoken.Jwts;\nclass Tokens {\n  Object parse(java.security.Key k, String t) {\n"
+        "    return Jwts.parserBuilder().setSigningKey(k).build().parseClaimsJws(t);\n  }\n}\n")
+    (tmp_path / "verify.js").write_text("const jwt = require('jsonwebtoken');\nfunction v(t) { return jwt.verify(t, process.env.SECRET); }\n")
+    (tmp_path / "fixed.js").write_text("const jwt = require('jsonwebtoken');\nfunction v(t, k) { return jwt.verify(t, k, {algorithms: ['RS256']}); }\n")
+    found = classify_all(code.scan(str(tmp_path), base=str(tmp_path)))
+    unknown = {f.location["file"] for f in found if f.algorithm == "UNKNOWN-JWT"}
+    assert unknown == {"auth.py", "auth.go", "Tokens.java", "verify.js"}
+    assert any(f.location["file"] == "fixed.js" and f.params.get("jose") == "RS256" for f in found)

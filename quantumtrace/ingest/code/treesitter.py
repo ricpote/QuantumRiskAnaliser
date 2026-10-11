@@ -77,6 +77,13 @@ class TSFile:
                           snippet=snippet(self.text_src, self.line(node)), symbol=func or "<file>"),
             context=dict(api=api, language=self.lang), evidence=evidence, flags=list(flags), confidence=confidence))
 
+    def jwt_unknown(self, node, func, api, why):
+        """A JWT library call whose algorithm is chosen at run time: inventoried for review, unless this function
+        already reported a JWT algorithm."""
+        if any("jwt" in f.flags and f.location.get("symbol") == (func or "<file>") for f in self.findings):
+            return
+        self.add(node, "signature", "UNKNOWN-JWT", {}, f"{api}: {why}", ["jwt"], confidence=0.5, api=api, func=func)
+
     def sec_fn(self, fn) -> bool:
         """Does the body of function `fn` handle security values (cookies, sessions, tokens, passwords...)?"""
         return fn in self.funcs and sec_body(self.t(self.funcs[fn][0])) and not fake_data(fn, self.rel)
@@ -450,6 +457,8 @@ class GoFile(TSFile):
                 self.add(node, "kdf", "bcrypt", {}, "bcrypt.GenerateFromPassword()", api=api, func=fn)
             elif pkg == "golang.org/x/crypto/argon2" and name in ("IDKey", "Key"):
                 self.add(node, "kdf", "Argon2", {}, f"argon2.{name}()", api=api, func=fn)
+            elif pkg == "golang.org/x/crypto/chacha20poly1305" and name in ("New", "NewX"):
+                self.add(node, "encryption", "ChaCha20-Poly1305", dict(key_bits=256), f"chacha20poly1305.{name}()", api=api, func=fn)
             elif pkg == "golang.org/x/crypto/scrypt" and name == "Key":
                 self.add(node, "kdf", "scrypt", {}, "scrypt.Key()", api=api, func=fn)
             elif pkg in GO_MATH_RAND:
@@ -497,6 +506,9 @@ class GoFile(TSFile):
         """A key size: when the variable is assigned on several paths (bits := 0; if x { bits = 1024 } else { bits = n }),
         the smallest non-zero constant any path gives."""
         if n.type == "identifier" and len(self.assigns.get((fn, self.t(n)), [])) > 1:
+            if any(v is not None and any(a.type in ("expression_case", "default_case", "type_case") for a in self.ancestors(v))
+                   for v in self.assigns[(fn, self.t(n))]):
+                return None  # switch alg { case RS256: bits = 2048 ... case ES256: bits = 256 }: one value per case, none is "the" size
             vals = [self.value(v, fn) for v in self.assigns[(fn, self.t(n))] if v is not None]
             vals = [v for v in vals if isinstance(v, int) and not isinstance(v, bool) and v > 0]
             for a in self.ancestors(n):  # if bits >= 2048 { rsa.GenerateKey(r, bits) }: the guard bounds every path
@@ -728,6 +740,7 @@ class GoFile(TSFile):
             return
         types = {f"{a}.Config" for a in tls_alias}
         configs = {}  # (func, var or node id) -> {field: (value node, anchor node)}
+        literals = {}  # same key -> the tls.Config{...} literal itself
         for n in self.walk(self.root):
             if n.type == "composite_literal":
                 ty = n.child_by_field_name("type")
@@ -742,7 +755,9 @@ class GoFile(TSFile):
                     v = v.named_children[0] if v.type == "literal_element" and v.named_children else v
                     fields[self.t(k)] = (v, ke)
                 var = self._assigned_var(n)
-                configs.setdefault((self.enclosing(n), var or id(n), self._decl_block(n, var)), {}).update(fields)
+                key = (self.enclosing(n), var or id(n), self._decl_block(n, var))
+                configs.setdefault(key, {}).update(fields)
+                literals.setdefault(key, n)
             elif n.type == "assignment_statement":
                 left, right = n.child_by_field_name("left"), n.child_by_field_name("right")
                 if left is None or right is None or len(left.named_children) != 1 or len(right.named_children) != 1:
@@ -754,9 +769,23 @@ class GoFile(TSFile):
                 if field in ("MinVersion", "MaxVersion", "CipherSuites", "CurvePreferences", "InsecureSkipVerify"):
                     var = self.t(lhs.child_by_field_name("operand"))
                     configs.setdefault((self.enclosing(n), var, self._decl_block(n, var)), {})[field] = (right.named_children[0], n)
-        for (fn, _var, _block), fields in configs.items():
+        for key, fields in configs.items():
+            fn = key[0]
             if fields:
+                before = len(self.findings)
                 self._tls_config(fn, fields)
+                chosen = {"MinVersion", "MaxVersion", "CipherSuites", "CurvePreferences"} & set(fields)
+                if chosen and len(self.findings) == before:
+                    # a modern, explicit range (MinVersion: tls.VersionTLS12): nothing weak, still part of the inventory
+                    lo = self._tls_version(fields["MinVersion"][0], fn) if "MinVersion" in fields else "TLS 1.2"
+                    hi = self._tls_version(fields["MaxVersion"][0], fn) if "MaxVersion" in fields else "TLS 1.3"
+                    self.add(fields[sorted(chosen)[0]][1], "protocol", "TLS", dict(version=hi or "TLS 1.3", min_version=lo or "TLS 1.2"),
+                             f"tls.Config allows {lo or 'TLS 1.2'} to {hi or 'TLS 1.3'}", api="crypto/tls.Config", func=fn)
+            if key in literals and not {"MinVersion", "MaxVersion", "CipherSuites", "CurvePreferences"} & set(fields):
+                # nothing chosen: crypto/tls defaults (TLS 1.2-1.3, X25519MLKEM768 offered first since Go 1.24) - inventoried
+                self.add(literals[key], "protocol", "TLS", dict(version="TLS 1.3", min_version="TLS 1.2", defaults=True),
+                         "tls.Config with crypto/tls defaults: TLS 1.2-1.3; Go >= 1.24 offers the X25519MLKEM768 hybrid first",
+                         confidence=0.7, api="crypto/tls.Config", func=fn)
 
     def _decl_block(self, node, var):
         """The block that declares the `var` node refers to: `config := &tls.Config{}` in two { } blocks are two configs."""
@@ -920,6 +949,9 @@ class GoFile(TSFile):
                     jn = jwt_algorithms.normalize(unquote(self.t(s)))
                     if jn:
                         self.add_jwt(s, jn, c["func"], f"jwt.WithValidMethods({jn!r})")
+        for c in self.calls:
+            if c["obj"] in libs and c["name"] in ("Parse", "ParseWithClaims", "ParseSigned", "NewWithClaims", "New"):
+                self.jwt_unknown(c["node"], c["func"], f"jwt.{c['name']}", "signing method chosen at run time")
 
     def block_mode(self, call_node, fn):
         """Which mode wraps the block returned by aes.NewCipher? (GCM/CBC/CTR... or hand-rolled ECB)."""
@@ -996,6 +1028,10 @@ J_ENCODED_LITERAL = re.compile(r'^[\w.()]*(?:Base64|Hex|DatatypeConverter)[\w.()
 J_PASSWORD_ENCODERS = {"Md5PasswordEncoder": "MD5", "Md4PasswordEncoder": "MD4", "ShaPasswordEncoder": "SHA-1", "LdapShaPasswordEncoder": "SHA-1",
                        "MessageDigestPasswordEncoder": "SHA-1", "PlaintextPasswordEncoder": "PLAINTEXT", "NoOpPasswordEncoder": "PLAINTEXT",
                        "StandardPasswordEncoder": "SHA-256"}  # StandardPasswordEncoder: SHA-256 x1024, deprecated by Spring
+J_SPRING_ENCODERS = {"BCryptPasswordEncoder": "bcrypt", "Pbkdf2PasswordEncoder": "PBKDF2", "SCryptPasswordEncoder": "scrypt",
+                     "Argon2PasswordEncoder": "Argon2"}
+
+
 def pbe_cipher(name: str):
     """'PBEWithMD5AndDES' / 'PBEWithSHA1AndDESede' / 'PBEWithSHA1AndRC2_40' / 'PBEWithHmacSHA256AndAES_256' -> cipher id."""
     m = re.match(r"PBEWITH(?:HMAC)?\w+?AND(DESEDE|TRIPLEDES|DES|RC2|RC4|AES)", str(name or "").upper())
@@ -1541,6 +1577,17 @@ class JavaFile(TSFile):
                     self.add(node, "kdf", "PBKDF1", dict(scheme=a), f'SecretKeyFactory.getInstance("{a}") (PBES1: weak)', ["weak-kdf"], api="SecretKeyFactory", func=fn)
                     if pbe_cipher(u) not in (None, "AES"):
                         self.add(node, "encryption", pbe_cipher(u), {}, f'SecretKeyFactory.getInstance("{a}")', api="SecretKeyFactory", func=fn)
+                elif J_CIPHER.get(u) in ("DES", "3DES") and not any(
+                        d["func"] == fn and d["obj"] == "Cipher" and J_CIPHER.get(str(self.str_arg(d) or "").upper().split("/")[0]) == J_CIPHER[u]
+                        for d in self.calls):
+                    self.add(node, "encryption", J_CIPHER[u], {}, f'SecretKeyFactory.getInstance("{a}"): {J_CIPHER[u]} keys', api="SecretKeyFactory", func=fn)
+            elif c["new"] and name.split(".")[-1] in J_SPRING_ENCODERS:
+                cls = name.split(".")[-1]
+                alg = J_SPRING_ENCODERS[cls]
+                strength = self.value(c["args"][0], fn) if cls == "BCryptPasswordEncoder" and c["args"] else None
+                params = dict(cost=strength if isinstance(strength, int) else 10) if alg == "bcrypt" else {}
+                self.add(node, "kdf", alg, params, f"new {cls}()" + (f" strength {params['cost']}" if alg == "bcrypt" else ""),
+                         api=cls, func=fn)  # Spring Security password hashing (BCrypt default strength 10)
             elif name == "getInstance" and obj in ("KeyAgreement",):
                 a = str(self.str_arg(c) or "").upper()
                 alg = {"ECDH": "ECDH", "DH": "DH", "DIFFIEHELLMAN": "DH", "X25519": "X25519", "XDH": "X25519", "X448": "X448"}.get(a, a)
@@ -1679,8 +1726,10 @@ class JavaFile(TSFile):
         def report(c, arg, what, flag):
             fixed, demo = self.fixed(arg, c["func"])
             if fixed:
-                self.add(c["node"], "key", "HARDCODED-KEY", dict(name=f"{self.t(arg)[:40]}", what=what),
-                         f"{what} passed to {c['name']}() is fixed in the source: {self.t(arg)[:60]}",
+                ev = (f"SecureRandom seeded with {self.t(arg)[:50]}: its output, and any key drawn from it, is fully determined by "
+                      "that value. Derive keys with PBKDF2 / Argon2, or leave SecureRandom unseeded"
+                      if what == "seed" else f"{what} passed to {c['name']}() is fixed in the source: {self.t(arg)[:60]}")
+                self.add(c["node"], "key", "HARDCODED-KEY", dict(name=f"{self.t(arg)[:40]}", what=what), ev,
                          [flag] + (["demo-code"] if demo else []), confidence=0.6 if demo else 1.0, func=c["func"])
                 key = next(((s, self.t(arg)) for s in (c["func"], None) if (s, self.t(arg)) in self.consts), None) \
                     if arg.type in ("identifier", "field_access") else None
@@ -1741,6 +1790,10 @@ class JavaFile(TSFile):
             elif c["name"] == "compact" and "Jwts.builder()" in (c["obj"] or "") and ".signWith(" not in (c["obj"] or "") \
                     and ".encryptWith(" not in (c["obj"] or ""):
                 self.add_jwt(c["node"], "none", c["func"], "Jwts.builder()...compact() without signWith(): unsigned JWT")
+        for c in self.calls:
+            if c["obj"] == "Jwts" and c["name"] in ("builder", "parser", "parserBuilder") \
+                    or c["obj"] == "JWT" and c["name"] in ("create", "require"):
+                self.jwt_unknown(c["node"], c["func"], f"{c['obj']}.{c['name']}()", "signing algorithm chosen at run time")
 
 
 # =============================================================================================== JavaScript / TypeScript
@@ -1783,7 +1836,7 @@ CRYPTOJS_HASHES = {"MD5": "MD5", "SHA1": "SHA-1", "SHA224": "SHA-224", "SHA256":
 FORGE_CIPHERS = {"AES": "AES", "3DES": "3DES", "DES": "DES", "RC2": "RC2"}
 # variable / property names that say a random value is a secret (React's `key: Math.random()` is deliberately not one)
 JS_SECRET_WORDS = {"pw", "pwd", "pass", "password", "passwd", "secret", "token", "salt", "nonce", "uuid", "uid", "otp", "csrf", "session",
-                   "sid", "apikey"}
+                   "sid", "apikey", "coupon", "voucher", "invite", "activation", "verification"}
 
 
 def js_secret_name(name: str) -> bool:
@@ -1869,6 +1922,8 @@ class JsFile(TSFile):
         if obj is None:
             imp = self.imports.get(name, "")
             return imp.rsplit(".", 1)[0] if "." in imp else (imp or None)  # expressJwt(...) where expressJwt = require('express-jwt')
+        if re.search(r"\)\s*\.subtle$|^webcrypto\.subtle$", obj):
+            return "webcrypto"  # (await getWebcrypto()).subtle.sign(...) / const webcrypto = ...; webcrypto.subtle
         if re.fullmatch(r"(?:(?:window|globalThis|self)\.)?crypto(?:\.webcrypto)?\.subtle|subtle", obj) and \
                 (obj != "subtle" or self.imports.get("subtle", "").startswith("crypto")):
             return "webcrypto"  # crypto.subtle / window.crypto.subtle / require('crypto').webcrypto.subtle (not notCrypto.subtle)
@@ -1981,6 +2036,9 @@ class JsFile(TSFile):
                     flags = ["hardcoded-key"] if len(args) > 1 and self.is_literal(args[1], fn) else []
                     self.add(node, "mac", "HMAC", dict(hash=JS_HASH.get(arg(0).lower(), arg(0).upper()), key_bits=kb * 8 if kb else None),
                              f"createHmac('{arg(0)}', key)", flags, api=api, func=fn)
+                elif name in ("createCipheriv", "createDecipheriv") and args and not isinstance(arg(0), str):
+                    self.add(node, "encryption", "UNKNOWN-CIPHER", {}, f"{name}(<algorithm chosen at run time>)", confidence=0.5,
+                             api=api, func=fn)  # createDecipheriv(this._algorithm, ...): inventoried, not judged
                 elif name in ("createCipheriv", "createDecipheriv", "createCipher", "createDecipher") and isinstance(arg(0), str):
                     spec = js_cipher(arg(0))
                     if not spec:
@@ -2045,7 +2103,14 @@ class JsFile(TSFile):
                 self.jwt(c)
             elif c["obj"] == "Math" and name == "random":
                 self.math_random(c)
-            elif (mod or "").startswith("crypto-js"):
+            elif (mod or "").split("/")[0] in ("bcrypt", "bcryptjs") and name in ("hash", "hashSync"):
+                # bcrypt.hash(password, 10), or a salt from genSalt(rounds) in the same function
+                cost = arg(1) if isinstance(arg(1), int) else next(
+                    (self.value(d["args"][0], fn) for d in self.calls if d["func"] == fn and d["name"] in ("genSalt", "genSaltSync")
+                     and d["args"] and isinstance(self.value(d["args"][0], fn), int)), None)
+                self.add(node, "kdf", "bcrypt", dict(cost=cost), f"bcrypt.{name}(password, {cost if cost is not None else 'cost'})",
+                         api=api, func=fn)
+            elif (mod or "").startswith("crypto-js") or mod is None and (c["obj"] or "").startswith("CryptoJS."):  # also the browser global
                 self.cryptojs(c)
             elif (mod or "").startswith("express-session") and args:  # session({secret: 'keyboard cat'}): HMAC key of the session cookie
                 sec = self.prop(args[0], "secret", fn)
@@ -2124,6 +2189,8 @@ class JsFile(TSFile):
         """Math.random() whose value becomes a secret: in a security function, assigned to a secret-looking name
         (pw, sessionUid, o.password), passed to a secret-looking parameter, or used directly as a key (createHmac(.., Math.random()))."""
         node, fn = c["node"], c["func"]
+        if any(a.type in ("jsx_attribute", "jsx_expression") for a in self.ancestors(node)):
+            return  # <img src={`...seed=${Math.random()}`}>: a value drawn into the page, not a secret
         fl = (fn or "").lower()
         why, related = None, []
         by_name = sec_name(fn) and not fake_data(fn, self.rel)
@@ -2302,10 +2369,12 @@ class JsFile(TSFile):
                 algs = [self.value(x, fn) for x in lst.named_children] if lst is not None and lst.type == "array" else []
                 if not algs and literal_key:
                     algs = ["HS256"]  # a string secret means HMAC
-            for a in algs:
-                jn = jwt_algorithms.normalize(a)
-                if jn:
-                    self.add_jwt(node, jn, fn, f"jwt.{name}", key)
+            jns = [jn for jn in map(jwt_algorithms.normalize, algs) if jn]
+            for jn in jns:
+                self.add_jwt(node, jn, fn, f"jwt.{name}", key)
+            if not jns:
+                self.jwt_unknown(node, fn, f"jwt.{name}", "algorithm chosen at run time" if algs else
+                                 "no algorithms option: the algorithm comes from the token header (limited by the key type)")
         elif lib == "jsonwebtoken" and name == "decode" and not any(
                 d["name"] == "verify" and (d["mod"] or "").startswith("jsonwebtoken") and d["func"] == fn for d in self.calls):
             self.add(node, "signature", "NULL", dict(jose="none"), "jwt.decode() without jwt.verify(): the signature is never checked",
