@@ -691,6 +691,7 @@ function ProbeCard({ report: r, findings }: { report: ProbeReport; findings: Fin
 }
 
 export function ProbePanel() {
+  const [showExplanation, setShowExplanation] = useState(false);
   const [targets, setTargets] = useState("127.0.0.1:8443, 127.0.0.1:8446, 127.0.0.1:8445");
   const [deep, setDeep] = useState(false);
   const [job, setJob] = useState<ProbeJob | null>(null);
@@ -719,14 +720,86 @@ export function ProbePanel() {
   return (
     <>
       <section className="panel p-6 mb-6">
-        <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-          Connects to each endpoint the way a browser would, once per key-exchange group, version
-          and cipher, and reports whether a modern client gets post-quantum protection. STARTTLS is
-          used automatically on mail, FTP and Postgres ports. The Docker image runs a small lab:
-          8443 post-quantum, 8444 classical, 8445 legacy, 8446 post-quantum with a classical
-          fallback, 8447 post-quantum only, 2525 SMTP, 5433 Postgres. Public sites work too when
-          online.
-        </p>
+        <Button
+          type="button"
+          variant="outline"
+          aria-expanded={showExplanation}
+          aria-controls="probe-process-explanation"
+          onClick={() => setShowExplanation((shown) => !shown)}
+        >
+          {showExplanation ? "Hide probe explanation" : "Understand probe process"}
+        </Button>
+        <div id="probe-process-explanation" hidden={!showExplanation} className="mt-5">
+          <h2 className="text-sm font-semibold">
+            Is this server's connection ready for quantum threats?
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mt-2 max-w-3xl">
+            Enter a server address. QuantumTrace connects to it and checks how it establishes an
+            encrypted connection: does a modern client get post-quantum key exchange, or could its
+            traffic be recorded today and decrypted by a future quantum computer?
+          </p>
+          <div className="grid md:grid-cols-3 gap-4 mt-5 text-xs leading-relaxed">
+            <div>
+              <h3 className="font-semibold mb-2">1. Choose a server</h3>
+              <p className="text-muted-foreground">
+                An endpoint is a hostname or IP address, optionally followed by a port:
+                <code> example.com:443</code> or <code>127.0.0.1:8443</code>. Separate multiple
+                addresses with commas. Without a port, we use 443. Enter addresses, without
+                <code> https://</code> or page paths.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">2. Check its encryption</h3>
+              <p className="text-muted-foreground">
+                The probe makes several TLS handshake attempts to check supported protocol versions,
+                key-exchange methods and ciphers. It also checks which method the server actually
+                chooses for a modern client. TLS 1.3 alone does not guarantee post-quantum
+                protection.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">3. Understand the result</h3>
+              <ul className="space-y-2">
+                <li>
+                  <span className="risk-badge risk-safe">PQ-protected</span> Modern-client key
+                  exchange uses a post-quantum method.
+                </li>
+                <li>
+                  <span className="risk-badge risk-critical">HNDL-exposed</span> The connection uses
+                  classical key exchange: “harvest now, decrypt later” is a risk.
+                </li>
+                <li>
+                  <span className="risk-badge bg-muted text-muted-foreground">Inconclusive</span>{" "}
+                  The server could not be reached or a TLS handshake could not be established.
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed mt-4">
+            This tests the connection, not the whole application. A green result does not mean every
+            certificate, signature or older-client connection is quantum-safe. Read the fallback and
+            certificate details below. The probe does not send application content or scan server
+            files.
+          </p>
+          <details className="mt-4 text-xs leading-relaxed">
+            <summary className="cursor-pointer font-medium">
+              Try the local lab · advanced checks
+            </summary>
+            <p className="mt-2 text-muted-foreground">
+              The Docker lab provides real servers with known configurations. Use “Whole lab” to
+              fill in their addresses, then click “Probe”: 8443 post-quantum, 8444 classical, 8445
+              legacy, 8446 post-quantum with classical fallback, 8447 post-quantum only, 2525 SMTP
+              and 5433 Postgres. These lab servers must be running; public servers need network
+              access.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              STARTTLS automatically upgrades the connection to TLS on recognized mail, FTP and
+              Postgres ports. “Also test signature schemes” makes extra handshake attempts to check
+              how the server can authenticate itself, including post-quantum signatures; it takes
+              longer.
+            </p>
+          </details>
+        </div>
         <form
           className="flex flex-wrap gap-3 items-center mt-5"
           onSubmit={(e) => {

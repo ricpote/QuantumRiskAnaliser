@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Box,
   Check,
-  ChevronRight,
   ChevronDown,
   CircleHelp,
   Code2,
@@ -341,26 +340,15 @@ export function Workspace({ view }: { view: View }) {
             </details>
           )}
           {view === "overview" && report && <Overview key={report.generated_at} report={report} />}
-          {report && (view === "overview" || view === "inventory") && (
+          {report && view === "inventory" && (
             <section className="panel overflow-hidden">
               <div className="px-6 py-5 flex flex-wrap gap-3 justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-sm font-semibold">
-                    {view === "overview" ? "Cryptographic inventory" : "Cryptographic findings"}
-                  </h2>
+                  <h2 className="text-sm font-semibold">Cryptographic findings</h2>
                   <span className="text-[10px] bg-muted rounded px-2 py-1 text-muted-foreground">
                     {assets.length} findings
                   </span>
                 </div>
-                {view === "overview" && (
-                  <Link
-                    to="/inventory"
-                    className={buttonVariants({ variant: "ghost", size: "sm" })}
-                  >
-                    View all findings
-                    <ArrowRight />
-                  </Link>
-                )}
               </div>
               <div className="px-6 pb-5 flex flex-wrap gap-3">
                 <div className="relative flex-1 min-w-40">
@@ -442,57 +430,48 @@ export function Workspace({ view }: { view: View }) {
                       <th>Key size</th>
                       <th>Source</th>
                       <th>Quantum risk</th>
-                      <th />
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered
-                      .slice(
-                        view === "overview" ? 0 : page * 25,
-                        view === "overview" ? 5 : (page + 1) * 25,
-                      )
-                      .map((a) => {
-                        const Icon = sourceIcon[a.source];
-                        return (
-                          <tr key={a.id}>
-                            <td>
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto text-xs text-foreground"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelected(a);
-                                }}
-                              >
-                                {a.name}
-                              </Button>
-                              <p className="font-mono text-[10px] text-muted-foreground mt-1.5">
-                                {a.location}
-                              </p>
-                            </td>
-                            <td>
-                              <span className="font-mono bg-muted px-2 py-1 rounded text-[11px]">
-                                {a.algorithm}
-                              </span>
-                            </td>
-                            <td className="font-mono text-muted-foreground text-[11px]">
-                              {a.keySize}
-                            </td>
-                            <td>
-                              <span className="flex gap-2 items-center text-muted-foreground">
-                                <Icon size={13} />
-                                {a.source}
-                              </span>
-                            </td>
-                            <td>
-                              <Badge risk={a.risk} />
-                            </td>
-                            <td>
-                              <ChevronRight size={14} className="text-muted-foreground" />
-                            </td>
-                          </tr>
-                        );
-                      })}
+                    {filtered.slice(page * 25, (page + 1) * 25).map((a) => {
+                      const Icon = sourceIcon[a.source];
+                      return (
+                        <tr key={a.id}>
+                          <td>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-xs text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelected(a);
+                              }}
+                            >
+                              {a.name}
+                            </Button>
+                            <p className="font-mono text-[10px] text-muted-foreground mt-1.5">
+                              {a.location}
+                            </p>
+                          </td>
+                          <td>
+                            <span className="font-mono bg-muted px-2 py-1 rounded text-[11px]">
+                              {a.algorithm}
+                            </span>
+                          </td>
+                          <td className="font-mono text-muted-foreground text-[11px]">
+                            {a.keySize}
+                          </td>
+                          <td>
+                            <span className="flex gap-2 items-center text-muted-foreground">
+                              <Icon size={13} />
+                              {a.source}
+                            </span>
+                          </td>
+                          <td>
+                            <Badge risk={a.risk} />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {filtered.length === 0 && (
@@ -503,8 +482,7 @@ export function Workspace({ view }: { view: View }) {
               </div>
               <div className="px-6 py-4 border-t flex justify-between text-[10px] text-muted-foreground">
                 <span>
-                  Showing {Math.min(filtered.length, view === "overview" ? 5 : (page + 1) * 25)} of{" "}
-                  {filtered.length} findings
+                  Showing {Math.min(filtered.length, (page + 1) * 25)} of {filtered.length} findings
                 </span>
               </div>
             </section>

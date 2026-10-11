@@ -8,10 +8,19 @@ import { MoscaPanel, TopAssets, WhatIfSummary } from "./analysis-panels";
 
 export function Overview({ report }: { report: Report }) {
   const s = report.summary;
+  const score = s.quantum_readiness_score;
+  const scoreColor =
+    score === null
+      ? undefined
+      : score < 40
+        ? "var(--risk-chart-critical)"
+        : score <= 50
+          ? "var(--risk-chart-medium)"
+          : "var(--risk-chart-safe)";
   const tiers = [
-    { key: "critical", label: "Critical", color: "var(--critical)" },
-    { key: "medium", label: "Medium", color: "var(--medium)" },
-    { key: "safe", label: "Quantum-safe", color: "var(--safe)" },
+    { key: "critical", label: "Critical", color: "var(--risk-chart-critical)" },
+    { key: "medium", label: "Medium", color: "var(--risk-chart-medium)" },
+    { key: "safe", label: "Quantum-safe", color: "var(--risk-chart-safe)" },
     { key: "unencrypted", label: "Unencrypted", color: "var(--foreground)" },
   ];
   let offset = 0;
@@ -25,7 +34,10 @@ export function Overview({ report }: { report: Report }) {
           ) : (
             <>
               <div className="flex flex-wrap items-baseline gap-x-3">
-                <p className="text-[76px] sm:text-[88px] leading-none tracking-tight font-medium">
+                <p
+                  className="text-[76px] sm:text-[88px] leading-none tracking-tight font-medium"
+                  style={{ color: scoreColor }}
+                >
                   {s.quantum_readiness_score}
                 </p>
                 <span className="text-lg text-muted-foreground">/ 100</span>
@@ -42,8 +54,8 @@ export function Overview({ report }: { report: Report }) {
                 className="h-2 rounded-full bg-secondary overflow-hidden"
               >
                 <div
-                  className="h-full bg-khaki rounded-full"
-                  style={{ width: `${s.quantum_readiness_score}%` }}
+                  className="h-full rounded-full"
+                  style={{ width: `${s.quantum_readiness_score}%`, backgroundColor: scoreColor }}
                 />
               </div>
             </>
@@ -228,9 +240,24 @@ export function Migration({ report }: { report: Report }) {
     <section>
       <MoscaPanel report={report} />
       <h2 className="text-sm font-semibold mb-4">Prioritized migration actions</h2>
+      <p className="text-xs text-muted-foreground mb-3">
+        Priorities and recommendations are supplied by the Python scanner.
+      </p>
+      <ul aria-label="Migration priority explanations" className="grid md:grid-cols-3 gap-3 mb-4">
+        {(
+          [
+            { priority: "P0", text: "protects data that can be recorded today" },
+            { priority: "P1", text: "fixes quantum-vulnerable signatures and broken crypto" },
+            { priority: "P2", text: "is hygiene" },
+          ] as const
+        ).map(({ priority, text }) => (
+          <li key={priority} className="rounded-md border bg-card p-4 flex items-start gap-3">
+            <span className={`risk-badge shrink-0 ${priorityClass[priority]}`}>{priority}</span>
+            <p className="text-xs leading-relaxed">{text}.</p>
+          </li>
+        ))}
+      </ul>
       <p className="text-xs text-muted-foreground mb-5">
-        Priorities and recommendations are supplied by the Python scanner. P0 protects data that can
-        be recorded today, P1 fixes quantum-vulnerable signatures and broken crypto, P2 is hygiene.
         Tick actions to see how much they would improve the score; nothing is changed on your
         systems.
       </p>

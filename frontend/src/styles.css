@@ -62,6 +62,10 @@
 }
 
 :root {
+  /* Brighter assessment colors for the readiness metric and distribution chart. */
+  --risk-chart-critical: oklch(0.58 0.22 25);
+  --risk-chart-medium: oklch(0.72 0.17 80);
+  --risk-chart-safe: oklch(0.58 0.17 150);
   --radius: 0.5rem;
   --background: oklch(0.975 0.013 91);
   --foreground: oklch(0.23 0.012 80);
