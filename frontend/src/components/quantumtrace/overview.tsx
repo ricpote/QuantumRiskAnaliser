@@ -107,10 +107,6 @@ function Hero({ r }: { r: Report }) {
             ? `${mosca.at_risk} of ${mosca.evaluated} quantum-vulnerable systems will still be exposed when Q-Day arrives in ${mosca.qday_year}.`
             : "No quantum-vulnerable system needs a migration timeline in these inputs."}
         </p>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Python scanner assessment · {Object.keys(s.sources).length} discovery sources · {s.assets}{" "}
-          cryptographic assets
-        </p>
       </div>
     </section>
   );

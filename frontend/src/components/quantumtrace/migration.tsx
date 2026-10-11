@@ -414,10 +414,7 @@ function Steps({ report }: { report: Report }) {
     setPending(false);
   }
   // What-if: Python re-scores the report as if the ticked actions were done.
-  async function toggle(i: number) {
-    const next = chosen.includes(i)
-      ? chosen.filter((x) => x !== i)
-      : [...chosen, i].sort((a, b) => a - b);
+  async function simulate(next: number[]) {
     setChosen(next);
     setError(null);
     const request = ++latest.current;
@@ -438,6 +435,15 @@ function Steps({ report }: { report: Report }) {
     } finally {
       if (request === latest.current) setPending(false);
     }
+  }
+  function toggle(i: number) {
+    return simulate(
+      chosen.includes(i) ? chosen.filter((x) => x !== i) : [...chosen, i].sort((a, b) => a - b),
+    );
+  }
+  const allChosen = plan.length > 0 && chosen.length === plan.length;
+  function toggleAll() {
+    return allChosen ? clear() : simulate(plan.map((_, i) => i)); // every page, not only this one
   }
   const first = plan.filter((p) => p.priority === "P0").length;
   if (!plan.length)
@@ -469,7 +475,19 @@ function Steps({ report }: { report: Report }) {
             </li>
           ))}
         </ul>
-        <ol className="mt-6 space-y-2" aria-label="Migration actions">
+        <label className="mt-6 flex w-fit cursor-pointer items-center gap-3 rounded-sm border border-border px-3 py-2 text-sm hover:bg-accent">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[var(--primary)]"
+            checked={allChosen}
+            ref={(el) => {
+              if (el) el.indeterminate = chosen.length > 0 && !allChosen;
+            }}
+            onChange={() => void toggleAll()}
+          />
+          Select all {plan.length} actions{pages > 1 ? ", on every page" : ""}
+        </label>
+        <ol className="mt-3 space-y-2" aria-label="Migration actions">
           {plan.slice(start, start + ACTIONS_PER_PAGE).map((p, k) => {
             const i = start + k; // index in the whole plan: the what-if works on these
             const on = chosen.includes(i);

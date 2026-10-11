@@ -21,8 +21,8 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
   { to: "/", label: "Overview" },
-  { to: "/inventory", label: "Crypto inventory", count: true },
   { to: "/migration", label: "Migration plan" },
+  { to: "/inventory", label: "Crypto inventory", count: true },
   { to: "/probe", label: "Live probe" },
   { to: "/explain", label: "Explain" },
   { to: "/reports", label: "Reports" },

@@ -35,8 +35,9 @@ it("presents backend readiness and supporting metrics without recomputing them",
     `Grade ${report.summary.grade}`,
   );
   expect(
-    metrics.getByText(new RegExp(`${report.summary.assets} cryptographic assets`)),
+    screen.getByRole("heading", { name: new RegExp(`in ${report.summary.assets} assets`) }),
   ).toBeInTheDocument();
+  expect(screen.queryByText(/Python scanner assessment/)).not.toBeInTheDocument();
   const mosca = report.summary.mosca!;
   expect(
     metrics.getByText(

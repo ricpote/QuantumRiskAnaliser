@@ -138,3 +138,35 @@ it("pages long plans 10 actions at a time and keeps ticked actions across pages"
   expect(screen.getByText("Tick one or more actions to simulate them.")).toBeInTheDocument();
   expect(screen.getByRole("checkbox", { name: "Simulate: Action 1" })).not.toBeChecked();
 });
+
+it("selects every action on every page at once, and clears them again", async () => {
+  const report = reportSchema.parse(structuredClone(fixture));
+  const base = report.summary.plan[0]!;
+  report.summary.plan = Array.from({ length: 25 }, (_, i) => ({
+    ...base,
+    action: `Action ${i + 1}`,
+  }));
+  const headline = { score: 50, grade: "D", critical: 7, hndl_exposed: 0, plaintext: 0, late: 5 };
+  const fetch = vi.fn().mockImplementation(async (_path: string, init: { body: string }) =>
+    response({
+      actions: JSON.parse(init.body).actions.length,
+      before: headline,
+      after: headline,
+    }),
+  );
+  vi.stubGlobal("fetch", fetch);
+  render(<Migration report={report} />);
+  const all = screen.getByRole("checkbox", { name: "Select all 25 actions, on every page" });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Simulate: Action 2" }));
+  expect(all).not.toBeChecked();
+  expect((all as HTMLInputElement).indeterminate).toBe(true);
+  fireEvent.click(all);
+  await screen.findByText(/Applying 25 actions/);
+  expect(JSON.parse(fetch.mock.calls.at(-1)![1]!.body).actions).toEqual([...Array(25).keys()]);
+  expect(all).toBeChecked();
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(screen.getByRole("checkbox", { name: "Simulate: Action 11" })).toBeChecked();
+  fireEvent.click(all);
+  expect(all).not.toBeChecked();
+  expect(screen.getByText("Tick one or more actions to simulate them.")).toBeInTheDocument();
+});
