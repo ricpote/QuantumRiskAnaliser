@@ -1,6 +1,8 @@
+import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "framer-motion";
+import { BookOpen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Notice, PageHead, Readout } from "@/components/Bits";
+import { Notice, PageHead, Pager, Readout } from "@/components/Bits";
 import { apiRequest, errorText, type WhatIfResult } from "@/lib/api";
 import { moscaSchema, type Mosca, type Report } from "@/lib/quantumtrace-data";
 import { sourceName } from "@/lib/labels";
@@ -61,6 +63,8 @@ function Timeline({ base, at }: { base: Mosca; at: string }) {
   const pos = (year: number) => `${((Math.min(year, horizon) - now) / (horizon - now)) * 100}%`;
   const span = (from: number, to: number) =>
     `${(Math.max(0, Math.min(to, horizon) - Math.min(from, horizon)) / (horizon - now)) * 100}%`;
+  // Q-Day's place on the axis: near either end its label takes the end label's spot instead of overlapping it
+  const qdayAt = (Math.min(qday, horizon) - now) / (horizon - now);
   const rows = all ? data.assets : data.assets.slice(0, 12);
   const bands = [
     {
@@ -102,10 +106,15 @@ function Timeline({ base, at }: { base: Mosca; at: string }) {
             public-key cryptography. Anything recorded before the migration becomes readable after
             Q-Day.
           </p>
+          <Link to="/migration/sources" className="btn-link mt-2 text-sm">
+            <BookOpen className="h-3.5 w-3.5" aria-hidden />
+            Where these numbers come from: the source of every X, Y and Q-Day value
+          </Link>
         </div>
-        <Segmented
+        <ScenarioPicker
           scenarios={scenarios}
           qday={qday}
+          now={now}
           pending={pending}
           onChoose={(y) => void choose(y)}
         />
@@ -213,16 +222,18 @@ function Timeline({ base, at }: { base: Mosca; at: string }) {
           <div className="mt-2 grid gap-3 whitespace-nowrap text-xs text-muted-foreground sm:grid-cols-[minmax(0,15rem)_1fr_9rem]">
             <span className="hidden sm:block" />
             <div className="relative h-4">
-              <span className="absolute" style={{ left: 0 }}>
-                {now}
-              </span>
+              {qdayAt >= 0.15 && (
+                <span className="absolute" style={{ left: 0 }}>
+                  {now}
+                </span>
+              )}
               <span
-                className="absolute -translate-x-1/2 font-semibold text-primary"
+                className={`absolute font-semibold text-primary ${qdayAt > 0.85 ? "-translate-x-full" : qdayAt < 0.15 ? "" : "-translate-x-1/2"}`}
                 style={{ left: pos(qday) }}
               >
                 Q-Day {qday}
               </span>
-              <span className="absolute right-0">{horizon}</span>
+              {qdayAt <= 0.85 && <span className="absolute right-0">{horizon}</span>}
             </div>
             <span className="hidden sm:block" />
           </div>
@@ -237,7 +248,12 @@ function Timeline({ base, at }: { base: Mosca; at: string }) {
               <span className="hatch-critical h-2.5 w-4 rounded-sm" /> Must stay secret after Q-Day:
               exposed
             </span>
-            <span>Hover a row for the assumptions behind it.</span>
+            <span>
+              Hover a row for the assumptions behind it ·{" "}
+              <Link to="/migration/sources" className="btn-link">
+                sources
+              </Link>
+            </span>
           </div>
           {data.assets.length > 12 && (
             <button className="btn-link mt-3 text-sm" onClick={() => setAll(!all)}>
@@ -250,38 +266,110 @@ function Timeline({ base, at }: { base: Mosca; at: string }) {
   );
 }
 
-function Segmented({
+// Q-Day years /api/mosca accepts (quantumtrace/web.py).
+const QDAY_MAX = 9999; // any four-digit year from the current one
+
+function ScenarioPicker({
   scenarios,
   qday,
+  now,
   pending,
   onChoose,
 }: {
   scenarios: [string, { qday_year: number; at_risk: number }][];
   qday: number;
+  now: number;
   pending: boolean;
   onChoose: (year: number) => void;
 }) {
+  const [text, setText] = useState(String(qday));
+  const [invalid, setInvalid] = useState<string | null>(null);
+  useEffect(() => {
+    setText(String(qday));
+    setInvalid(null);
+  }, [qday]);
+  const min = now;
+  const custom = !scenarios.some(([, sc]) => sc.qday_year === qday);
+  function submit() {
+    const year = Number(text);
+    if (!Number.isInteger(year) || year < min || year > QDAY_MAX) {
+      setInvalid(
+        Number.isInteger(year) && year > QDAY_MAX
+          ? `Choose a year of four digits at most (up to ${QDAY_MAX}).`
+          : `Choose a year from ${min} onwards: Q-Day cannot be in the past.`,
+      );
+      return;
+    }
+    setInvalid(null);
+    onChoose(year);
+  }
   return (
-    <div
-      role="group"
-      aria-label="Q-Day scenario"
-      className="inline-flex flex-wrap rounded-sm border border-border p-0.5"
-    >
-      {scenarios.map(([name, sc]) => (
-        <button
-          key={name}
-          type="button"
-          aria-pressed={sc.qday_year === qday}
-          disabled={pending}
-          onClick={() => onChoose(sc.qday_year)}
-          className={`rounded-sm px-3 py-1.5 text-sm transition disabled:opacity-50 ${sc.qday_year === qday ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="group"
+          aria-label="Q-Day scenario"
+          className="inline-flex flex-wrap rounded-sm border border-border p-0.5"
         >
-          {scenarioName[name] ?? name} · Q-Day {sc.qday_year} · {sc.at_risk} late
-        </button>
-      ))}
+          {scenarios.map(([name, sc]) => (
+            <button
+              key={name}
+              type="button"
+              aria-pressed={sc.qday_year === qday}
+              disabled={pending}
+              onClick={() => onChoose(sc.qday_year)}
+              className={`rounded-sm px-3 py-1.5 text-sm transition disabled:opacity-50 ${sc.qday_year === qday ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+            >
+              {scenarioName[name] ?? name} · Q-Day {sc.qday_year} · {sc.at_risk} late
+            </button>
+          ))}
+        </div>
+        <form
+          noValidate // our own range message, in the app's style, instead of the browser's bubble
+          className={`inline-flex items-center gap-1.5 rounded-sm border p-0.5 pl-3 transition ${custom ? "border-primary" : "border-border"}`}
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <label htmlFor="qday-custom" className="text-sm text-muted-foreground">
+            Custom year
+          </label>
+          <input
+            id="qday-custom"
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={QDAY_MAX}
+            step={1}
+            value={text}
+            disabled={pending}
+            aria-invalid={!!invalid}
+            onChange={(e) => {
+              setText(e.target.value);
+              setInvalid(null);
+            }}
+            className="field w-24 py-1 tabular-nums"
+          />
+          <button
+            type="submit"
+            disabled={pending}
+            className={`rounded-sm px-3 py-1.5 text-sm transition disabled:opacity-50 ${custom ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+          >
+            Show
+          </button>
+        </form>
+      </div>
+      {invalid && (
+        <p role="alert" className="text-sm text-critical">
+          {invalid}
+        </p>
+      )}
     </div>
   );
 }
+
+const ACTIONS_PER_PAGE = 10;
 
 const PRIORITY = {
   P0: {
@@ -303,12 +391,28 @@ function Steps({ report }: { report: Report }) {
   const [result, setResult] = useState<WhatIfResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [page, setPage] = useState(0);
   const latest = useRef(0);
+  const top = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     setChosen([]);
     setResult(null);
     setError(null);
+    setPage(0);
   }, [report]);
+  const pages = Math.ceil(plan.length / ACTIONS_PER_PAGE);
+  const start = page * ACTIONS_PER_PAGE;
+  function goTo(next: number) {
+    setPage(next);
+    top.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+  }
+  function clear() {
+    latest.current++; // ignore any answer still on its way
+    setChosen([]);
+    setResult(null);
+    setError(null);
+    setPending(false);
+  }
   // What-if: Python re-scores the report as if the ticked actions were done.
   async function toggle(i: number) {
     const next = chosen.includes(i)
@@ -345,7 +449,7 @@ function Steps({ report }: { report: Report }) {
   return (
     <section aria-labelledby="steps" className="grid grid-cols-1 gap-10 lg:grid-cols-[1.5fr_1fr]">
       <div>
-        <h2 id="steps" className="text-3xl">
+        <h2 id="steps" ref={top} className="scroll-mt-28 text-3xl">
           {plan.length} prioritized actions, {first} of them first.
         </h2>
         <p className="mt-2 text-muted-foreground">
@@ -365,8 +469,9 @@ function Steps({ report }: { report: Report }) {
             </li>
           ))}
         </ul>
-        <ol className="mt-6 space-y-2">
-          {plan.map((p, i) => {
+        <ol className="mt-6 space-y-2" aria-label="Migration actions">
+          {plan.slice(start, start + ACTIONS_PER_PAGE).map((p, k) => {
+            const i = start + k; // index in the whole plan: the what-if works on these
             const on = chosen.includes(i);
             return (
               <li key={i} className={`panel p-3 transition ${on ? "border-primary" : ""}`}>
@@ -409,6 +514,13 @@ function Steps({ report }: { report: Report }) {
             );
           })}
         </ol>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            Showing {start + 1}–{Math.min(plan.length, start + ACTIONS_PER_PAGE)} of {plan.length}{" "}
+            actions
+          </p>
+          <Pager page={page} pages={pages} onPage={goTo} />
+        </div>
       </div>
       <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start" aria-live="polite">
         {!result && !error && (
@@ -418,6 +530,14 @@ function Steps({ report }: { report: Report }) {
         )}
         {error && <Notice tone="critical">{error}</Notice>}
         {result && <WhatIfSummary result={result} pending={pending} />}
+        {chosen.length > 0 && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {chosen.length} {chosen.length === 1 ? "action" : "actions"} ticked, on any page.
+            <button type="button" className="btn-link" onClick={clear}>
+              Clear selection
+            </button>
+          </p>
+        )}
       </aside>
     </section>
   );

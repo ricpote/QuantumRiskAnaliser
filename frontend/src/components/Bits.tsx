@@ -141,3 +141,39 @@ export function Fact({ label, value }: { label: string; value: ReactNode }) {
     </div>
   );
 }
+
+/** Previous / "Page x of y" / Next for long lists; nothing when everything fits on one page. */
+export function Pager({
+  page,
+  pages,
+  onPage,
+}: {
+  page: number;
+  pages: number;
+  onPage: (page: number) => void;
+}) {
+  if (pages <= 1) return null;
+  return (
+    <nav aria-label="Pagination" className="flex items-center justify-end gap-3">
+      <button
+        type="button"
+        className="btn-ghost"
+        disabled={page === 0}
+        onClick={() => onPage(page - 1)}
+      >
+        Previous
+      </button>
+      <span className="text-sm tabular-nums">
+        Page {page + 1} of {pages}
+      </span>
+      <button
+        type="button"
+        className="btn-ghost"
+        disabled={page + 1 >= pages}
+        onClick={() => onPage(page + 1)}
+      >
+        Next
+      </button>
+    </nav>
+  );
+}

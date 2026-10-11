@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { ReportProvider } from "../lib/report-context";
 import { AppShell } from "../components/shell/AppShell";
+import { themeScript } from "../lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -109,8 +110,10 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: themeScript may add the "light" class before React hydrates
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
       </head>
       <body>

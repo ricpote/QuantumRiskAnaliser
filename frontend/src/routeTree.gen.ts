@@ -15,6 +15,7 @@ import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as MigrationRouteImport } from './routes/migration'
 import { Route as ProbeRouteImport } from './routes/probe'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as MigrationSourcesRouteImport } from './routes/migration_.sources'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MigrationSourcesRoute = MigrationSourcesRouteImport.update({
+  id: '/migration_/sources',
+  path: '/migration/sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/migration': typeof MigrationRoute
   '/probe': typeof ProbeRoute
   '/reports': typeof ReportsRoute
+  '/migration/sources': typeof MigrationSourcesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/migration': typeof MigrationRoute
   '/probe': typeof ProbeRoute
   '/reports': typeof ReportsRoute
+  '/migration/sources': typeof MigrationSourcesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,27 @@ export interface FileRoutesById {
   '/migration': typeof MigrationRoute
   '/probe': typeof ProbeRoute
   '/reports': typeof ReportsRoute
+  '/migration_/sources': typeof MigrationSourcesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/explain' | '/inventory' | '/migration' | '/probe' | '/reports'
+    | '/'
+    | '/explain'
+    | '/inventory'
+    | '/migration'
+    | '/probe'
+    | '/reports'
+    | '/migration/sources'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explain' | '/inventory' | '/migration' | '/probe' | '/reports'
+  to:
+    | '/'
+    | '/explain'
+    | '/inventory'
+    | '/migration'
+    | '/probe'
+    | '/reports'
+    | '/migration/sources'
   id:
     | '__root__'
     | '/'
@@ -86,6 +108,7 @@ export interface FileRouteTypes {
     | '/migration'
     | '/probe'
     | '/reports'
+    | '/migration_/sources'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,6 +118,7 @@ export interface RootRouteChildren {
   MigrationRoute: typeof MigrationRoute
   ProbeRoute: typeof ProbeRoute
   ReportsRoute: typeof ReportsRoute
+  MigrationSourcesRoute: typeof MigrationSourcesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/migration_/sources': {
+      id: '/migration_/sources'
+      path: '/migration/sources'
+      fullPath: '/migration/sources'
+      preLoaderRoute: typeof MigrationSourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -151,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   MigrationRoute: MigrationRoute,
   ProbeRoute: ProbeRoute,
   ReportsRoute: ReportsRoute,
+  MigrationSourcesRoute: MigrationSourcesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

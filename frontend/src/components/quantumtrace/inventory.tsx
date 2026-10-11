@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PageHead, RiskBadge, Segmented } from "@/components/Bits";
+import { PageHead, Pager, RiskBadge, Segmented } from "@/components/Bits";
 import {
   adaptFindings,
   filterAssets,
@@ -187,23 +187,7 @@ export function Inventory({
           ))}
         </ul>
       )}
-      {rows.length > PAGE && (
-        <div className="flex items-center justify-end gap-3">
-          <button className="btn-ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-            Previous
-          </button>
-          <span className="text-sm">
-            Page {page + 1} of {Math.ceil(rows.length / PAGE)}
-          </span>
-          <button
-            className="btn-ghost"
-            disabled={(page + 1) * PAGE >= rows.length}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <Pager page={page} pages={Math.ceil(rows.length / PAGE)} onPage={setPage} />
     </div>
   );
 }

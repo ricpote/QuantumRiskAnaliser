@@ -36,7 +36,8 @@ def test_database_traffic_lives_longer_than_web():
 
 def test_long_lived_signature_root_is_most_urgent():
     a = one([f("cloud", "signature", "RSA", KMS_ROOT, flags=["long-lived"], key_bits=4096)])
-    assert (a["shelf_life"], a["migration_years"], a["years_late"]) == (20, 5, 18)
+    # X = 15: root programs trust a root CA at most 15 years after key generation; Y = 5: CNSA 2.0 firmware signing
+    assert (a["shelf_life"], a["migration_years"], a["years_late"]) == (15, 5, 13)
     assert a["deadline_year"] == 2030                # EU high-risk (long-lived signature)
 
 
@@ -47,7 +48,7 @@ def test_long_lived_flag_on_encryption_key_is_not_a_trust_anchor():
 
 def test_short_signature_is_ok():
     a = one([f("network", "authentication", "ECDSA", WEB, curve="P-256")])
-    assert a["shelf_life"] == 2 and a["status"] == "ok"
+    assert a["shelf_life"] == 1 and a["status"] == "ok"   # certificates last at most 200 days (CA/B SC-081v3)
 
 
 def test_only_shor_assets_are_evaluated_cleartext_counted_apart():
@@ -85,3 +86,28 @@ def test_what_if_maps_plan_indices_to_their_findings(monkeypatch):
         with pytest.raises(ValueError):
             what_if(fs, bad)
 
+
+
+def test_every_mosca_assumption_is_sourced():
+    """X, Y and Z defaults each name at least one source, and every source has a link and a summary."""
+    from quantumtrace.kb import mosca as M
+    table = M.assumptions()
+    ids = {s["id"] for s in table["sources"]}
+    rows = table["shelf_life"] + table["migration"] + table["qday"]
+    assert rows and all(r["sources"] and set(r["sources"]) <= ids for r in rows)
+    assert all(r["basis"] in ("stated", "derived", "estimate") for r in table["shelf_life"] + table["migration"])
+    assert all(s["url"].startswith("https://") and s["says"] and s["title"] for s in table["sources"])
+    used = {i for r in rows for i in r["sources"]}
+    assert used == ids                                   # no orphan reference on the Sources page
+    assert {q["year"] for q in table["qday"]} == set(M.QDAY_SCENARIOS.values())
+
+
+def test_sources_page_lists_the_values_the_timeline_uses():
+    from quantumtrace.kb import mosca as M
+    shelf = {r["label"]: r["years"] for r in M.assumptions()["shelf_life"]}
+    assert shelf["E-mail (IMAP, POP3, SMTP and their TLS variants)"] == M.SHELF_LIFE_SERVICE["imaps"].years == 10
+    assert shelf["Long-lived signatures: root CA, code and firmware signing"] == 15
+    move = {r["label"]: r["years"] for r in M.assumptions()["migration"]}
+    assert move["AWS ACM certificate"] == 3                 # no public post-quantum certificates before ~2027
+    a = one([f("network", "key-exchange", "X25519", WEB)])
+    assert "NIST SP 800-57" in a["why"][0]                  # the hover text names its source

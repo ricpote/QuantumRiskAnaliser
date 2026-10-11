@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   ChevronDown,
+  CircleHelp,
   Download,
   FolderOpen,
-  HelpCircle,
   Menu,
   Radar,
   RefreshCw,
@@ -16,6 +17,7 @@ import { useReport } from "@/lib/report-context";
 import { downloadReport, type Report } from "@/lib/quantumtrace-data";
 import { ScanDialog } from "@/components/quantumtrace/scan-dialog";
 import { HelpDialog } from "./HelpDialog";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
   { to: "/", label: "Overview" },
@@ -27,12 +29,6 @@ const NAV = [
 ] as const;
 // Pages about the loaded report; probe and explain are tools that work without one.
 const REPORT_PAGES = ["/", "/inventory", "/migration", "/reports"];
-const SOURCES = [
-  "Network traffic (PCAP/PCAPNG)",
-  "Source code & server configs",
-  "Cloud (AWS exports)",
-  "Certificates & keys",
-];
 
 const OpenScan = createContext<() => void>(() => {});
 
@@ -71,11 +67,11 @@ function Nav({ onPick }: { onPick?: () => void }) {
             to={n.to}
             onClick={onPick}
             activeOptions={{ exact: n.to === "/" }}
-            className="group flex items-center justify-between rounded-sm px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground data-[status=active]:bg-accent data-[status=active]:text-foreground"
+            className="group flex items-center justify-between rounded-sm px-3 py-2 text-sidebar-muted transition hover:bg-sidebar-accent hover:text-sidebar-foreground data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-foreground"
           >
             <span className="flex items-center gap-2">
               <span
-                className="h-1.5 w-1.5 rounded-full bg-transparent group-data-[status=active]:bg-primary"
+                className="h-1.5 w-1.5 rounded-full bg-transparent group-data-[status=active]:bg-sidebar-primary"
                 aria-hidden
               />
               {n.label}
@@ -95,11 +91,56 @@ function Nav({ onPick }: { onPick?: () => void }) {
   );
 }
 
-function Wordmark() {
+export function QuantumMark({ className = "" }: { className?: string }) {
   return (
-    <Link to="/" className="font-mono text-lg font-semibold tracking-tight">
-      Quantum<span className="text-primary">Trace</span>
+    <svg viewBox="0 0 32 32" fill="none" className={className} aria-hidden="true">
+      <path d="M16 2 28 9v14l-12 7-12-7V9L16 2Z" stroke="currentColor" strokeWidth="1.5" />
+      <path d="m10 12 6-3 6 3v8l-6 3-6-3v-8Z" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="m17 18 10 10M16 2v7M4 9l6 3M28 9l-6 3M4 23l6-3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+// Logo of the previous dashboard: the hexagon mark and "QuantumTrace." with an accent dot.
+function Wordmark({ tone = "sidebar" }: { tone?: "sidebar" | "page" }) {
+  const accent = tone === "sidebar" ? "text-sidebar-primary" : "text-primary";
+  return (
+    <Link to="/" className="flex items-center gap-2.5" aria-label="QuantumTrace home">
+      <QuantumMark className={`h-8 w-8 shrink-0 ${accent}`} />
+      <span className="text-[19px] font-semibold">
+        QuantumTrace<span className={accent}>.</span>
+      </span>
     </Link>
+  );
+}
+
+const SIDE_ITEM =
+  "flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sidebar-muted transition hover:bg-sidebar-accent hover:text-sidebar-foreground";
+
+/** Bottom of the sidebar: results status, help (as in the previous dashboard) and the light-mode switch. */
+function SideFooter({
+  status,
+  live,
+  onHelp,
+}: {
+  status: string;
+  live: boolean;
+  onHelp: () => void;
+}) {
+  return (
+    <div className="mt-auto space-y-1 border-t border-sidebar-border pt-4">
+      <StatusPill label={status} live={live} className="px-3 pb-2" />
+      <button type="button" className={SIDE_ITEM} onClick={onHelp}>
+        <CircleHelp className="h-4 w-4" aria-hidden />
+        Help & resources
+        <ArrowRight className="ml-auto h-4 w-4" aria-hidden />
+      </button>
+      <ThemeToggle className={SIDE_ITEM} />
+    </div>
   );
 }
 
@@ -115,7 +156,7 @@ function StatusPill({
   return (
     <p className={`flex items-center gap-2 text-sm ${className}`} aria-live="polite">
       <span
-        className={`h-2 w-2 rounded-full ${live ? "bg-safe" : "border border-muted-foreground"}`}
+        className={`h-2 w-2 rounded-full ${live ? "bg-safe" : "border border-current opacity-60"}`}
         aria-hidden
       />
       {label}
@@ -143,26 +184,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <OpenScan.Provider value={() => setScanOpen(true)}>
       <div className="workspace min-h-screen lg:grid lg:grid-cols-[15rem_1fr]">
-        <aside className="sticky top-0 hidden h-screen flex-col border-r border-border px-4 py-6 lg:flex">
+        <aside className="sticky top-0 hidden h-screen flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
           <Wordmark />
           <nav aria-label="Main" className="mt-8">
             <Nav />
           </nav>
-          <div className="mt-10 px-3 text-sm text-muted-foreground">
-            <p className="text-xs uppercase tracking-wide">Reads</p>
-            <ul className="mt-2 space-y-1">
-              {SOURCES.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          </div>
-          <StatusPill label={status} live={!!report} className="mt-auto" />
+          <SideFooter status={status} live={!!report} onHelp={() => setHelpOpen(true)} />
         </aside>
 
         <AnimatePresence>
           {menu && (
             <motion.div
-              className="fixed inset-0 z-40 bg-background/95 p-6 lg:hidden"
+              className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-sidebar p-6 text-sidebar-foreground lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -172,7 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <button
                   onClick={() => setMenu(false)}
                   aria-label="Close menu"
-                  className="rounded-sm p-2 hover:bg-accent"
+                  className="rounded-sm p-2 hover:bg-sidebar-accent"
                 >
                   <X />
                 </button>
@@ -180,7 +213,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               <nav aria-label="Main" className="mt-8 text-lg">
                 <Nav onPick={() => setMenu(false)} />
               </nav>
-              <StatusPill label={status} live={!!report} className="mt-8" />
+              <SideFooter
+                status={status}
+                live={!!report}
+                onHelp={() => {
+                  setMenu(false);
+                  setHelpOpen(true);
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -196,18 +236,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Menu />
               </button>
               <span className="lg:hidden">
-                <Wordmark />
+                <Wordmark tone="page" />
               </span>
               <StatusPill label={status} live={!!report} className="hidden md:flex lg:hidden" />
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={() => setHelpOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-sm border border-border p-2 text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45 sm:px-[0.9rem] sm:py-[0.45rem]"
-                  aria-label="Help"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Help</span>
-                </button>
                 <button
                   onClick={() => report && downloadReport(report, "json")}
                   disabled={!report}

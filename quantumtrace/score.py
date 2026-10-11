@@ -145,7 +145,8 @@ def mosca(findings: list[Finding], qday_year: int | None = None, now_year: int |
         if not shor:
             continue
         a = fs[0].asset or {}
-        (x, xwhy), (y, ywhy) = _shelf_life(a, shor), _migration(a, shor)
+        xa, ya = _shelf_life(a, shor), _migration(a, shor)  # kb/mosca.py Assumption: years, why, sources
+        x, xwhy, y, ywhy = xa.years, xa.why, ya.years, ya.why
         start_by = qday - x - y
         rows.append(dict(source=src, key=key, label=asset_label(fs[0]), shelf_life=x, migration_years=y,
                          qday_year=qday, start_by=start_by, finish_by=qday - x, years_late=max(0, now - start_by),

@@ -44,6 +44,29 @@ export function errorText(e: unknown) {
   return e instanceof Error ? e.message : "Request failed";
 }
 
+// GET /api/assumptions: Mosca's X / Y / Z defaults and their sources (quantumtrace/kb/mosca.py).
+export interface AssumptionRow {
+  label: string;
+  years: number;
+  why: string;
+  basis: "stated" | "derived" | "estimate";
+  sources: string[];
+}
+export interface Assumptions {
+  qday: { scenario: string; year: number; why: string; sources: string[] }[];
+  shelf_life: AssumptionRow[];
+  migration: AssumptionRow[];
+  sources: {
+    id: string;
+    title: string;
+    publisher: string;
+    date: string;
+    url: string;
+    primary: boolean;
+    says: string;
+  }[];
+}
+
 export interface Headline {
   score: number | null;
   grade: string;

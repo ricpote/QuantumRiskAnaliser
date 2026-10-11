@@ -22,10 +22,11 @@ from urllib.parse import parse_qs, urlsplit
 from .uploads import unpack
 from .classify import classify, classify_all
 from .cli import collect, verdict
+from .kb import mosca as MOSCA_KB
 from .kb import tls as TLSKB
 from .kb.algorithms import CATALOG
 from .schema import CATEGORIES, Finding
-from .score import mosca, summarize, what_if
+from .score import _now_year, mosca, summarize, what_if
 from .export import cyclonedx, sarif
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -270,6 +271,8 @@ def handler(store: Store):
                 return self.send_json(200, job)
             if path == "/api/report":
                 return self.send_json(200, current)
+            if path == "/api/assumptions":  # Mosca X / Y / Z defaults and their sources
+                return self.send_json(200, MOSCA_KB.assumptions())
             query = parse_qs(urlsplit(self.path).query)
             try:
                 if path == "/api/explain":
@@ -281,8 +284,9 @@ def handler(store: Store):
                         return self.send_json(200, dict(store.probe_job))
                 if path == "/api/mosca":
                     qday = int((query.get("qday") or ["0"])[0])
-                    if not 2026 <= qday <= 2060:
-                        raise ValueError("qday must be a year between 2026 and 2060")
+                    now = _now_year()  # any Q-Day from this year on (the dashboard's custom year)
+                    if not now <= qday <= 9999:
+                        raise ValueError(f"qday must be a year from {now} onwards (Q-Day cannot be in the past)")
                     return self.send_json(200, mosca(store.findings((query.get("at") or [None])[0]), qday_year=qday))
             except NoReport as exc:
                 return self.send_json(409, {"error": str(exc)})

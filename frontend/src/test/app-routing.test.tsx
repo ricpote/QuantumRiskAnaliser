@@ -10,14 +10,19 @@ describe("App routing", () => {
     const router = createRouter({ routeTree });
     expect(router.matchRoutes("/accuracy").at(-1)?.routeId).toBe(rootRouteId);
   });
-  it.each(["/", "/inventory", "/migration", "/probe", "/explain", "/reports"])(
-    "matches a page for %s instead of falling back to not found",
-    (path) => {
-      const router = createRouter({ routeTree });
+  it.each([
+    "/",
+    "/inventory",
+    "/migration",
+    "/migration/sources",
+    "/probe",
+    "/explain",
+    "/reports",
+  ])("matches a page for %s instead of falling back to not found", (path) => {
+    const router = createRouter({ routeTree });
 
-      const matches = router.matchRoutes(path);
+    const matches = router.matchRoutes(path);
 
-      expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
-    },
-  );
+    expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
+  });
 });

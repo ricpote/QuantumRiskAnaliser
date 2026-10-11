@@ -38,6 +38,12 @@
   --color-safe: var(--safe);
   --color-plain: var(--plain);
   --color-surface: var(--surface);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-border: var(--sidebar-border);
   --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   --font-sans: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -69,7 +75,49 @@
   --border: oklch(0.93 0.01 85 / 16%);
   --input: oklch(0.93 0.01 85 / 22%);
   --ring: oklch(0.8 0.13 75);
+  /* dark theme: the sidebar shares the page colours */
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-muted: var(--muted-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-primary: var(--primary);
+  --sidebar-border: var(--border);
   color-scheme: dark;
+}
+
+/* Light mode: the colour scheme of the previous dashboard (cream page, dark sidebar, khaki accent). */
+:root.light {
+  --background: oklch(0.975 0.013 91);
+  --foreground: oklch(0.23 0.012 80);
+  --surface: oklch(0.995 0.005 90);
+  --card: oklch(0.995 0.005 90);
+  --card-foreground: oklch(0.23 0.012 80);
+  --popover: oklch(0.995 0.005 90);
+  --popover-foreground: oklch(0.23 0.012 80);
+  --primary: oklch(0.26 0.018 85);
+  --primary-foreground: oklch(0.97 0.025 95);
+  --secondary: oklch(0.92 0.035 91);
+  --secondary-foreground: oklch(0.23 0.012 80);
+  --muted: oklch(0.94 0.014 91);
+  --muted-foreground: oklch(0.54 0.02 85);
+  --accent: oklch(0.92 0.035 91);
+  --accent-foreground: oklch(0.23 0.012 80);
+  --destructive: oklch(0.57 0.15 30);
+  --destructive-foreground: oklch(0.995 0.005 90);
+  --critical: oklch(0.59 0.15 28);
+  --medium: oklch(0.63 0.115 76);
+  --safe: oklch(0.53 0.076 158);
+  --plain: oklch(0.45 0.12 320);
+  --border: oklch(0.89 0.021 90);
+  --input: oklch(0.89 0.021 90);
+  --ring: oklch(0.67 0.07 89);
+  --sidebar: oklch(0.215 0.008 85);
+  --sidebar-foreground: oklch(0.94 0.015 90);
+  --sidebar-muted: oklch(0.65 0.018 85);
+  --sidebar-accent: oklch(0.31 0.016 85);
+  --sidebar-primary: oklch(0.84 0.064 93);
+  --sidebar-border: oklch(0.31 0.016 85);
+  color-scheme: light;
 }
 
 @layer base {

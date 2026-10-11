@@ -169,6 +169,7 @@ def test_explain_whatif_and_mosca_use_the_python_engine(api, monkeypatch):
     assert report['summary']['mosca']['assets'][0]['status'] == 'start-now'  # default Q-Day 2033
     assert call('/api/mosca?qday=2030&at=stale')[0] == 409
     assert call('/api/mosca?qday=1990')[0] == 400
+    assert call(f'/api/mosca?qday=2075&at={quote(at)}')[1]['qday_year'] == 2075   # no upper cap at 2060
     status, what = call('/api/whatif', {'actions': [0], 'at': at})
     assert status == 200 and what['before']['hndl_exposed'] == 1 and what['after']['hndl_exposed'] == 0
     assert what['after']['score'] > what['before']['score']
@@ -194,3 +195,11 @@ def test_probe_validates_targets(api):
     assert call('/api/probe', {'targets': ['example.com'], 'deep': 'yes'})[0] == 400
     assert call('/api/probe')[1]['state'] == 'idle'
 
+
+
+def test_assumptions_endpoint_serves_sourced_mosca_defaults(api):
+    _, call = api
+    status, table = call('/api/assumptions')
+    assert status == 200 and table['qday'] and table['shelf_life'] and table['migration']
+    ids = {s['id'] for s in table['sources']}
+    assert all(set(r['sources']) <= ids for r in table['shelf_life'] + table['migration'] + table['qday'])
