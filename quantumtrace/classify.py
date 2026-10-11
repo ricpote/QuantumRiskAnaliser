@@ -5,6 +5,8 @@ OID, display name, replacement (FIPS 203/204/205), CWE, deadlines, HNDL, risk po
 """
 from __future__ import annotations
 
+import re
+
 from .kb import deadlines as DL
 from .kb.algorithms import (AES_OIDS, CATALOG, CURVE_BITS, CURVE_OIDS, HMAC_OIDS, MLDSA, MLKEM,
                             SIG_OIDS, rsa_bits)
@@ -30,6 +32,12 @@ QUANTUM_POINTS = {"critical": 80.0, "medium": 40.0, "safe": 0.0, "unencrypted": 
 CLASSICAL_POINTS = {"broken": 70.0, "deprecated": 35.0, "acceptable": 0.0, "recommended": 0.0}
 
 LONG_LIVED_HINTS = ("root", "ca", "codesign", "code-sign", "release", "firmware", "attestation", "settlement")
+
+
+def _curve_bits_from_name(curve):
+    """secp112r2 / sect131r1 / c2tnb191v1 / prime192v2 -> about half the field size, for curves not listed in the KB."""
+    m = re.match(r"(?:secp|sect|prime|c2[tpo]nb|brainpoolp|ansi[pt]|nist[pkb])(\d{3})|ec-(\d+)$", str(curve or "").lower())
+    return int(m.group(1) or m.group(2)) // 2 if m else None  # EC-128: KeyPairGenerator("EC").initialize(128)
 
 
 def classify(f: Finding) -> Finding:
@@ -60,10 +68,10 @@ def classify(f: Finding) -> Finding:
     if threat == "shor":
         tier = "critical"
         why.append(f"{cat['family']} relies on factoring/discrete-log: broken by Shor's algorithm")
-        if alg in ("RSA", "DH", "DHE", "DH-static", "DSA"):
+        if alg in ("RSA", "DH", "DHE", "DH-static", "DSA", "ElGamal"):
             kb = p.get("key_bits")
             cbits = rsa_bits(kb)
-            name = f"{'RSA' if alg == 'RSA' else ('DSA' if alg == 'DSA' else 'DH')}-{kb}" if kb else alg
+            name = f"{alg if alg in ('RSA', 'DSA', 'ElGamal') else 'DH'}-{kb}" if kb else alg
             if kb and kb < 2048:
                 classical = "deprecated"
                 flags.add("short-key")
@@ -76,7 +84,7 @@ def classify(f: Finding) -> Finding:
                 why.append("DSA signature generation is no longer approved (FIPS 186-5)")
         elif alg in ("ECDSA", "ECDH", "ECDHE", "ECDH-static"):
             curve = p.get("curve")
-            cbits = CURVE_BITS.get(curve)
+            cbits = CURVE_BITS.get(curve) or _curve_bits_from_name(curve)
             name = f"{alg}-{curve}" if curve else alg
             if curve in CURVE_OIDS and alg.startswith("ECDH"):
                 oid = CURVE_OIDS[curve]
@@ -92,8 +100,8 @@ def classify(f: Finding) -> Finding:
         else:
             classical = "acceptable"
         h = p.get("hash")
-        if h in ("SHA-1", "MD5") and f.category in ("signature", "authentication", "certificate", "key"):
-            classical = "broken" if h == "MD5" else "deprecated"
+        if h in ("SHA-1", "MD5", "MD2", "MD4") and f.category in ("signature", "authentication", "certificate", "key"):
+            classical = "deprecated" if h == "SHA-1" else "broken"
             flags.add("weak-signature-hash")
             cwe.add("CWE-328")
             why.append(f"signature uses {h} (collision attacks)")
@@ -104,6 +112,16 @@ def classify(f: Finding) -> Finding:
             classical = "deprecated"
             flags.add("sha1-kex")
             why.append("key exchange hash is SHA-1 (deprecated, RFC 9142)")
+        if alg == "RSA" and isinstance(p.get("public_exponent"), int) and p["public_exponent"] < 65537:
+            classical = "deprecated" if classical != "broken" else classical
+            flags.add("small-public-exponent")
+            cwe.add("CWE-326")
+            why.append(f"public exponent {p['public_exponent']} is below 65537 (low-exponent attacks)")
+        if alg == "RSA" and p.get("padding") == "none" and f.category == "encryption":
+            classical = "broken"
+            flags.add("rsa-no-padding")
+            cwe.add("CWE-780")
+            why.append("RSA without padding (textbook RSA) is deterministic and malleable")
         if alg == "RSA" and p.get("padding") == "PKCS1v15" and f.category == "encryption":
             classical = "deprecated"
             why.append("RSA PKCS#1 v1.5 encryption is vulnerable to padding-oracle attacks (Bleichenbacher)")
@@ -231,12 +249,17 @@ def _grover(f, alg, p, cat, flags, cwe, why):
             oid = AES_OIDS.get((kb_eff, mode), "2.16.840.1.101.3.4.1")
             cbits = kb_eff
             level = {128: 1, 192: 3, 256: 5}.get(kb_eff, 0)
+            if kb and kb < 128:  # KeyGenerator("AES").init(64): not a valid AES size, brute-forceable
+                classical = "broken"
+                flags.add("short-key")
+                cwe.add("CWE-326")
+                why.append(f"{kb}-bit key is below AES's 128-bit minimum")
         elif alg == "3DES":
             name, cbits, level, classical = "3DES-EDE" + (f"-{mode}" if mode else ""), 112, 0, "deprecated"
             deadlines.append(DL.TDEA)
             cwe.add("CWE-327")
             why.append("3DES: 64-bit block (Sweet32) and only 112-bit classical strength")
-        elif alg in ("DES", "RC4"):
+        elif alg in ("DES", "RC4", "XOR"):
             name, cbits, level, classical = alg, (kb or 56) if alg == "DES" else 0, 0, "broken"
             cwe.add("CWE-327")
             why.append(f"{alg} is classically broken")
@@ -245,8 +268,9 @@ def _grover(f, alg, p, cat, flags, cwe, why):
         else:
             cbits = kb or 128
             level = {128: 1, 192: 3, 256: 5}.get(cbits, 0)
-            if alg == "Blowfish":
+            if alg in ("Blowfish", "IDEA", "CAST5", "RC2"):  # 64-bit blocks (Sweet32); RC2 also has related-key attacks
                 classical = "deprecated"
+                why.append(f"{alg}: 64-bit block cipher (birthday-bound attacks such as Sweet32)")
         pq_bits = (cbits or 0) / 2
         tier = "safe" if pq_bits >= 128 else "medium"
         why.append(f"Grover reduces a {cbits}-bit key to ~{int(pq_bits)}-bit post-quantum strength")
@@ -271,7 +295,7 @@ def _grover(f, alg, p, cat, flags, cwe, why):
         pq_pre = out / 2
         tier = "safe" if pq_pre >= 128 and alg not in ("MD5", "MD4", "SHA-1") else "medium"
         why.append(f"{alg}: {out}-bit digest; Grover gives ~{int(pq_pre)}-bit preimage resistance")
-        if alg in ("MD5", "MD4"):
+        if alg in ("MD5", "MD4", "MD2", "SHA-0", "HAVAL-128", "RIPEMD-128"):
             classical, level = "broken", 0
             cwe.update({"CWE-327", "CWE-328"})
             why.append(f"{alg} collisions are practical (classically broken)")
@@ -317,6 +341,22 @@ def _grover(f, alg, p, cat, flags, cwe, why):
         tier = "safe"
         cbits, level = 128, None
         classical = "recommended"
+        if alg == "scrypt" and ((p.get("cost_n") or 1 << 14) < 1 << 13 or (p.get("block_size") or 8) < 8 or (p.get("key_bits") or 256) < 256):
+            classical = "deprecated"
+            cwe.add("CWE-916")
+            why.append(f"weak scrypt parameters (N={p.get('cost_n')}, r={p.get('block_size')}, output={p.get('key_bits')} bits): "
+                       "OWASP minimum N=2^13..2^17, r=8, 32-byte output")
+            rep = REP_PWD
+        if alg == "bcrypt" and isinstance(p.get("cost"), int) and p["cost"] < 10:
+            classical = "deprecated"
+            cwe.add("CWE-916")
+            why.append(f"bcrypt cost {p['cost']} is below the OWASP minimum of 10")
+            rep = REP_PWD
+        if "weak-kdf-params" in flags:
+            classical = "deprecated"
+            cwe.add("CWE-916")
+            why.append("password-hash work factor below the OWASP minimums (Argon2id: m=19 MiB/t=2 ... m=7 MiB/t=5)")
+            rep = REP_PWD
         if alg == "PBKDF1":
             classical = "broken"
             cwe.add("CWE-916")
@@ -342,6 +382,10 @@ def _grover(f, alg, p, cat, flags, cwe, why):
 
 def _misc(f, alg, p, flags, cwe, why):
     deadlines = []
+    if alg == "PLAINTEXT" and f.category == "hash":  # e.g. Spring NoOpPasswordEncoder: passwords stored as-is
+        cwe.update({"CWE-256", "CWE-916"})
+        why.append("passwords are stored without any hashing: a database leak exposes every password TODAY")
+        return "unencrypted", "broken", "No password hashing (plaintext)", REP_PWD, deadlines
     if alg == "PLAINTEXT":
         cwe.add("CWE-319")
         flags.add("plaintext")
@@ -351,9 +395,15 @@ def _misc(f, alg, p, flags, cwe, why):
         why.append("protocol could not be identified from the capture: not scored, review manually")
         return "safe", "acceptable", "Unidentified TCP protocol", None, deadlines
     if alg == "HARDCODED-KEY":
-        cwe.update({"CWE-321", "CWE-798"})
-        why.append(f"key material embedded in source ({p.get('name', '?')}, {p.get('key_bits', '?')} bits): anyone with the repo can decrypt/forge")
-        return "safe", ("deprecated" if "demo-code" in flags else "broken"), f"Hard-coded key ({p.get('name', '?')})", dict(algorithm="KMS / secret manager", standard="-", how="Load keys from AWS KMS / a secret manager; rotate the exposed key"), deadlines
+        # p["what"]: key (default) | password | IV | salt | seed - all fixed in the source, none of them may be
+        what = p.get("what", "key")
+        cwe.update({"key": {"CWE-321", "CWE-798"}, "password": {"CWE-259", "CWE-798"}, "IV": {"CWE-329"},
+                    "salt": {"CWE-760"}, "seed": {"CWE-336"}}.get(what, {"CWE-798"}))
+        why.append(f"{what} fixed in the source ({p.get('name', '?')}): " + ("predictable to anyone who reads the code" if what in ("IV", "salt", "seed")
+                                                                         else "anyone with the repo can decrypt/forge"))
+        rep = (dict(algorithm="Random per use", standard="NIST SP 800-38A / SP 800-132", how="Generate a fresh random IV/salt/seed (SecureRandom) every time; store it with the ciphertext")
+               if what in ("IV", "salt", "seed") else dict(algorithm="KMS / secret manager", standard="-", how="Load keys from AWS KMS / a secret manager; rotate the exposed key"))
+        return "safe", ("deprecated" if "demo-code" in flags else "broken"), f"Hard-coded {what} ({p.get('name', '?')})", rep, deadlines
     if alg == "NO-CERT-VERIFY":
         cwe.add("CWE-295")
         why.append(f"{p.get('api', 'TLS client')} skips certificate and hostname checks: anyone on the path can impersonate the server "

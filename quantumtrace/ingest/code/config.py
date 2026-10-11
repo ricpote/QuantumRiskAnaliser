@@ -10,6 +10,7 @@ modify the default list instead of replacing it and are resolved against kb.ssh.
 """
 from __future__ import annotations
 
+import base64
 import os
 import re
 import ssl
@@ -19,7 +20,7 @@ from ...kb import ssh as SSH
 from ...kb import tls as TLS
 from ...schema import Finding
 from .. import cloud
-from .common import snippet, unquote
+from .common import looks_secret, snippet, unquote
 
 # ============================================================== file detection
 SSH_NAMES = ("sshd_config", "ssh_config")
@@ -146,6 +147,13 @@ _LEGACY_SUITES = {
 }
 
 
+# cipher-string keyword -> (cipher family, representative suite)
+_WEAK_KEYWORDS = {"3DES": ("3DES", "TLS_RSA_WITH_3DES_EDE_CBC_SHA"), "RC4": ("RC4", "TLS_RSA_WITH_RC4_128_SHA"),
+                  "DES": ("DES", "TLS_RSA_WITH_DES_CBC_SHA"), "LOW": ("DES", "TLS_RSA_WITH_DES_CBC_SHA"),
+                  "NULL": ("NULL", "TLS_RSA_WITH_NULL_SHA"), "ENULL": ("NULL", "TLS_RSA_WITH_NULL_SHA"),
+                  "EXPORT": ("RC4", "TLS_RSA_EXPORT_WITH_RC4_40_MD5"), "EXP": ("RC4", "TLS_RSA_EXPORT_WITH_RC4_40_MD5")}
+
+
 def _iana(tok: str) -> str | None:
     """OpenSSL (or IANA) suite name -> IANA name; None for keywords like HIGH / ECDHE+AESGCM."""
     if tok.startswith("TLS_") and "_WITH_" in tok:
@@ -200,6 +208,16 @@ def _expand_ciphers(spec: str) -> tuple[list[tuple[str, dict]], bool]:
         if n in excl or any(_FAMILY.get(e.lower(), lambda _: False)(s) for e in excl):
             continue
         out.append((n, s))
+    # weak families requested by keyword (ECDH+3DES, LOW, eNULL...) that THIS machine's OpenSSL no longer ships: the config
+    # still asks for them, and a server linked against another OpenSSL will offer them
+    have = {s["cipher"] for _, s in out}
+    for tok in keywords:
+        for part in tok.split("+"):
+            fam = _WEAK_KEYWORDS.get(part.upper())
+            if fam and fam[0] not in have and not any(e.upper() in (part.upper(), fam[0].upper()) for e in excl):
+                s = dict(TLS.decompose(fam[1]), kex=None, auth=None, fs=None, mac=None)  # only the cipher is known
+                out.append((tok, s))
+                have.add(fam[0])
     return out, bool(keywords)
 
 
@@ -574,7 +592,9 @@ def _ssh(path, rel, src) -> list[Finding]:
 
 
 # ============================================================== Terraform
-_TF_BLOCK = re.compile(r'^\s*(resource|data)\s+"([\w-]+)"\s+"([\w-]+)"\s*\{|^\s*(variable)\s+"([\w-]+)"\s*\{|^\s*(locals)\s*\{', re.M)
+_TF_BLOCK = re.compile(r'^\s*(resource|data)\s+"([\w-]+)"\s+"([\w-]+)"\s*\{|^\s*(variable|provider)\s+"([\w-]+)"\s*\{|^\s*(locals)\s*\{', re.M)
+# attributes whose literal value is a credential (aws_iam_server_certificate.private_key, provider "aws" secret_key...)
+_TF_SECRET_ATTRS = ("private_key", "secret_key", "access_key", "password", "master_password", "client_secret", "api_key", "token", "secret")
 
 
 def _strip_hcl_comments(src: str) -> str:
@@ -669,6 +689,7 @@ def _terraform(path, rel, src) -> list[Finding]:
                     for lk, (lv, _ln) in _attrs(body, off, other).items():
                         env[f"local.{lk}"] = lv
     res = {(t, n): (body, line, off) for k, t, n, body, line, off in blocks if k == "resource"}
+    res.update({("provider", n): (body, line, off) for k, _, n, body, line, off in blocks if k == "provider"})
 
     def val(raw, depth=0):
         if raw is None or depth > 4:
@@ -682,6 +703,16 @@ def _terraform(path, rel, src) -> list[Finding]:
             return int(r)
         if r in ("true", "false"):
             return r == "true"
+        m = re.fullmatch(r'base64decode\(\s*(".*")\s*\)', r)  # base64decode("LS0tLS1CRUdJTi...") hides a literal, it does not protect it
+        if m:
+            inner = val(m.group(1), depth + 1)
+            if not isinstance(inner, str):
+                return None
+            b64 = re.sub(r"[^A-Za-z0-9+/]", "", inner)  # tolerate truncated / redacted blobs
+            try:
+                return base64.b64decode(b64 + "=" * (-len(b64) % 4)).decode("utf-8", errors="replace")
+            except ValueError:
+                return None
         return None
 
     out = []
@@ -691,6 +722,10 @@ def _terraform(path, rel, src) -> list[Finding]:
         at = lambda k: a[k][1] if k in a else line
         addr = f"{rtype}.{rname}"
         mk = lambda ln, *x, **kw: _mk(rel, src, "terraform", ln, *x, symbol=addr, asset_extra=dict(address=addr), **kw)
+        for attr in _TF_SECRET_ATTRS:
+            v = get(attr)
+            if isinstance(v, str) and looks_secret(v):
+                out += _tf_secret(mk, at(attr), addr, attr, v)
 
         if rtype in ("aws_lb_listener", "aws_alb_listener"):
             proto = get("protocol") or ("HTTPS" if "ssl_policy" in a or "certificate_arn" in a else "HTTP")
@@ -784,4 +819,23 @@ def _terraform(path, rel, src) -> list[Finding]:
                 ver = "TLS 1.0" if "1_0" in raw.group(1) else ("TLS 1.3" if "1_3" in raw.group(1) else "TLS 1.2")
                 ln = line + body[:raw.start()].count("\n")
                 out.append(mk(ln, "protocol", "TLS", dict(version=ver), f"{addr}: API Gateway security_policy {raw.group(1)}", ctx=dict(service="AWS API Gateway")))
+    return out
+
+
+def _tf_secret(mk, line, addr, attr, value) -> list[Finding]:
+    """A credential written in Terraform: always a hard-coded secret; a PEM private key also tells us its algorithm and size."""
+    out = [mk(line, "key", "HARDCODED-KEY", dict(name=f"{addr}.{attr}", key_bits=len(value.encode()) * 8),
+              f"{addr}: {attr} is a literal in the Terraform source", flags=["hardcoded-key"])]
+    if "PRIVATE KEY-----" in value:
+        try:
+            from cryptography.hazmat.primitives.asymmetric import ec, rsa
+            from cryptography.hazmat.primitives.serialization import load_pem_private_key
+            key = load_pem_private_key(value.replace("\\n", "\n").encode(), password=None)
+        except Exception:  # truncated / encrypted / unsupported PEM: the hard-coded finding stands alone
+            return out
+        if isinstance(key, rsa.RSAPrivateKey):
+            out.append(mk(line, "key", "RSA", dict(key_bits=key.key_size), f"{addr}: hard-coded RSA-{key.key_size} private key", flags=["hardcoded-key"]))
+        elif isinstance(key, ec.EllipticCurvePrivateKey):
+            curve = {"secp256r1": "P-256", "secp384r1": "P-384", "secp521r1": "P-521"}.get(key.curve.name, key.curve.name)
+            out.append(mk(line, "key", "ECDSA", dict(curve=curve), f"{addr}: hard-coded ECDSA {curve} private key", flags=["hardcoded-key"]))
     return out

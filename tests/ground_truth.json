@@ -1046,6 +1046,1117 @@
    "flags": [
     "hardcoded-key"
    ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 128,
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "api": "Math.random"
+   },
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024,
+    "hash": "SHA-1"
+   },
+   "flags": [
+    "weak-signature-hash"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "hash": "SHA-1",
+    "iterations": 1000
+   }
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "RS256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "CARD_KEY",
+    "key_bits": 128
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 128,
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 2048,
+    "padding": "OAEP"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-256"
+   }
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "jose": "ES256"
+   },
+   "flags": [
+    "jwt"
+   ]
+  },
+  {
+   "file": "extra/code/js/web-client/src/vault.ts",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "aws_iam_server_certificate.legacy.private_key"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "aws_iam_server_certificate.obfuscated.private_key"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "provider.aws.access_key"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "name": "provider.aws.secret_key"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "broken",
+   "params": {
+    "key_bits": 1024
+   },
+   "flags": [
+    "hardcoded-key",
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/java-props/src/main/java/com/example/vault/VaultService.java",
+   "category": "encryption",
+   "algorithm": "DES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode"
+   ]
+  },
+  {
+   "file": "extra/code/java-props/src/main/java/com/example/vault/VaultService.java",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/LegacyCipher.java",
+   "category": "encryption",
+   "algorithm": "DES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode"
+   ]
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "IV"
+   },
+   "flags": [
+    "static-iv"
+   ]
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "salt"
+   },
+   "flags": [
+    "static-salt"
+   ]
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "seed"
+   },
+   "flags": [
+    "constant-seed"
+   ]
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "password"
+   },
+   "flags": [
+    "hardcoded-password"
+   ]
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "iterations": 1000
+   }
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "encryption",
+   "algorithm": "RC2",
+   "tier": "medium",
+   "classical": "deprecated"
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "not-for-security"
+   ]
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "curve": "P-192"
+   }
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "signature",
+   "algorithm": "DSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "extra/code/api-variants/LegacyDigests.java",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/api-variants/LegacyDigests.java",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/api-variants/LegacyDigests.java",
+   "category": "encryption",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/api-variants/LegacyDigests.java",
+   "category": "encryption",
+   "algorithm": "3DES",
+   "tier": "medium",
+   "classical": "deprecated"
+  },
+  {
+   "file": "extra/code/api-variants/LegacyDigests.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 512
+   }
+  },
+  {
+   "file": "extra/code/api-variants/LegacyDigests.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 4096
+   }
+  },
+  {
+   "file": "extra/code/api-variants/gosvc/main.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "extra/code/api-variants/gosvc/main.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 3072
+   }
+  },
+  {
+   "file": "extra/code/api-variants/gosvc/main.go",
+   "category": "hash",
+   "algorithm": "SHA3-224",
+   "tier": "medium",
+   "classical": "recommended"
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "encryption",
+   "algorithm": "RC4",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "overwritten-before-use"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "not-for-security",
+    "truncated-digest"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "iterations": 29000
+   }
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "salt",
+    "name": "FIXED_SALT"
+   },
+   "flags": [
+    "static-salt"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "salt",
+    "name": "password"
+   },
+   "flags": [
+    "static-salt"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "IV",
+    "mode": "CBC"
+   },
+   "flags": [
+    "static-iv"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "encryption",
+   "algorithm": "3DES",
+   "tier": "medium",
+   "classical": "deprecated"
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "transport": true
+   },
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/accounts.py",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "broken",
+   "params": {
+    "padding": "none"
+   },
+   "flags": [
+    "rsa-no-padding"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 3072
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "curve": "secp112r1"
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "IV"
+   },
+   "flags": [
+    "static-iv"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "flags": [
+    "jwt",
+    "unsigned-token"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/Gateway.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/hardening/sessions.js",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "jose": "HS256"
+   },
+   "flags": [
+    "jwt",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/sessions.js",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "flags": [
+    "jwt",
+    "signature-not-verified"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/main.go",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "jose": "HS512",
+    "key_bits": 128
+   },
+   "flags": [
+    "jwt",
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/main.go",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "flags": [
+    "jwt",
+    "signature-not-verified"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "nonce"
+   },
+   "flags": [
+    "static-iv"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "what": "IV"
+   },
+   "flags": [
+    "static-iv"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.1"
+   }
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "key-exchange",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "flags": [
+    "no-forward-secrecy"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "mode": "CTR"
+   }
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.1"
+   }
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "protocol",
+   "algorithm": "TLS",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "version": "TLS 1.0"
+   }
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "encryption",
+   "algorithm": "UNKNOWN-CIPHER",
+   "tier": "medium",
+   "params": {
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 3072
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
+   "category": "signature",
+   "algorithm": "DSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   },
+   "flags": [
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 4096
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
+   "category": "signature",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "curve": "prime192v2"
+   }
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
+   "category": "key-exchange",
+   "algorithm": "DH",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   },
+   "flags": [
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/javasrc/com/example/hard/KeyMaterial.java",
+   "category": "key",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 64
+   },
+   "flags": [
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   },
+   "flags": [
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable"
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "signature",
+   "algorithm": "Ed25519",
+   "tier": "critical",
+   "classical": "recommended"
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "protocol",
+   "algorithm": "SSL",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "version": "SSL 3.0"
+   }
+  },
+  {
+   "file": "extra/code/hardening/gosvc/keys.go",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 128,
+    "mode": "CBC"
+   },
+   "flags": [
+    "insecure-cipher-suite"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024
+   },
+   "flags": [
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "hash",
+   "algorithm": "SHA-256",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "encryption",
+   "algorithm": "RC4",
+   "tier": "medium",
+   "classical": "broken"
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "broken",
+   "params": {
+    "key_bits": 256,
+    "mode": "ECB"
+   },
+   "flags": [
+    "ecb-mode"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "tier": "safe",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 64
+   }
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "encryption",
+   "algorithm": "3DES",
+   "tier": "medium",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 192,
+    "mode": "CBC"
+   }
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "rng",
+   "algorithm": "NON-CSPRNG",
+   "tier": "safe",
+   "classical": "broken",
+   "flags": [
+    "weak-prng"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "signature",
+   "algorithm": "NULL",
+   "tier": "unencrypted",
+   "classical": "broken",
+   "params": {
+    "jose": "none"
+   },
+   "flags": [
+    "signature-not-verified"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "mac",
+   "algorithm": "HMAC",
+   "tier": "medium",
+   "classical": "broken",
+   "params": {
+    "key_bits": 96
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "hash",
+   "algorithm": "MD5",
+   "tier": "medium",
+   "classical": "broken",
+   "flags": [
+    "password-hashing"
+   ]
+  },
+  {
+   "file": "extra/code/hardening/web/client.js",
+   "category": "signature",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 512
+   },
+   "flags": [
+    "short-key"
+   ]
   }
  ],
  "code_absent": [
@@ -1141,6 +2252,84 @@
     "key_bits": 2048
    },
    "why": "aws_kms_key.old (RSA_2048) is commented out"
+  },
+  {
+   "file": "extra/code/js/web-client/src/cache.ts",
+   "category": "hash",
+   "algorithm": "MD5",
+   "why": "createHash comes from ./hash-utils (own helper), not node:crypto"
+  },
+  {
+   "file": "extra/code/java-props/src/main/java/com/example/vault/VaultService.java",
+   "category": "hash",
+   "algorithm": "MD5",
+   "why": "getProperty default MD5 is overridden by crypto.properties (SHA-256)"
+  },
+  {
+   "file": "extra/code/js/payments-api/src/crypto-utils.js",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "params": {
+    "name": "CACHE_KEY"
+   },
+   "why": "'user_profile_cache' is a cache key name, not key material"
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "params": {
+    "name": "aws_iam_server_certificate.from_file.private_key"
+   },
+   "why": "read with file()"
+  },
+  {
+   "file": "extra/code/terraform/secrets.tf",
+   "category": "key",
+   "algorithm": "HARDCODED-KEY",
+   "params": {
+    "name": "aws_db_instance.orders.password"
+   },
+   "why": "var.db_password"
+  },
+  {
+   "file": "extra/code/java-flow/src/main/java/com/example/flow/Checkout.java",
+   "category": "kdf",
+   "algorithm": "PBKDF2",
+   "params": {
+    "iterations": 5
+   },
+   "why": "count is raised to 210000 before PBEParameterSpec"
+  },
+  {
+   "file": "extra/code/api-variants/legacy_crypto.py",
+   "category": "hash",
+   "algorithm": "SHA3-256",
+   "params": {},
+   "tier": "medium",
+   "why": "SHA3_256 from Cryptodome.Hash is SHA3-256 (safe), not an unknown algorithm"
+  },
+  {
+   "file": "extra/code/hardening/sessions.js",
+   "category": "hash",
+   "algorithm": "SHA-1",
+   "why": "notCrypto.subtle is not WebCrypto"
+  },
+  {
+   "file": "extra/code/hardening/gosvc/transport.go",
+   "category": "protocol",
+   "why": "modernTLS() requires TLS 1.3; partnerTLS() enables TLS 1.1 only (no TLS 1.0 finding expected)",
+   "params": {
+    "version": "TLS 1.0"
+   }
+  },
+  {
+   "file": "extra/code/hardening/legacy_tls.py",
+   "category": "protocol",
+   "params": {
+    "version": "SSL 3.0"
+   },
+   "why": "pinned_context(): SSLv23_METHOD with OP_NO_SSLv3 / OP_NO_TLSv1 set"
   }
  ],
  "network": [
