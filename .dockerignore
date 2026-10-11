@@ -8,8 +8,6 @@
 !constraints.txt
 !README.md
 !quantumtrace/
-!app/
-!.streamlit/
 !samples/
 !tests/
 !frontend/

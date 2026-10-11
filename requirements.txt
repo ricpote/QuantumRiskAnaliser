@@ -3,8 +3,4 @@ cryptography>=42
 tree-sitter-language-pack>=0.7
 cyclonedx-python-lib[json-validation]>=8
 rich>=13
-# dashboard
-streamlit>=1.38
-plotly>=5.22
-pandas>=2.2
 # system dependency: tshark (Wireshark CLI) for pcap ingestion

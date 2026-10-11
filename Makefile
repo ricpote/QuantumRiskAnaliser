@@ -1,4 +1,4 @@
-.PHONY: install scan test eval ui ui-legacy docker lab probe
+.PHONY: install scan test eval ui docker lab probe
 PYTHON ?= python
 install:        ## python deps (+ apt install tshark / brew install wireshark)
 	pip install -r requirements.txt
@@ -10,8 +10,6 @@ eval:           ## accuracy report vs tests/ground_truth.json
 	python -m quantumtrace.evaluate
 ui:             ## React dev server + Python API on :8501 (npm ci in frontend first)
 	$(PYTHON) scripts/ui.py
-ui-legacy:      ## temporary Streamlit fallback
-	$(PYTHON) -m streamlit run app/streamlit_app.py
 docker:         ## build + run the dashboard container
 	docker build -t quantumtrace . && docker run --rm -p 8501:8501 quantumtrace
 lab:            ## local TLS lab (needs Go >= 1.24): modern/ on 8443 8444 8446 8447 2525 5433, legacy/ on 8445
