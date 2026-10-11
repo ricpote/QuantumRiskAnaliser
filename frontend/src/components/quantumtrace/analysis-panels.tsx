@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDownToLine, Radar } from "lucide-react";
+import { ArrowDownToLine, ChevronDown, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   apiRequest,
@@ -728,6 +728,7 @@ export function ProbePanel() {
           onClick={() => setShowExplanation((shown) => !shown)}
         >
           {showExplanation ? "Hide probe explanation" : "Understand probe process"}
+          <ChevronDown aria-hidden="true" className={showExplanation ? "rotate-180" : ""} />
         </Button>
         <div id="probe-process-explanation" hidden={!showExplanation} className="mt-5">
           <h2 className="text-sm font-semibold">
