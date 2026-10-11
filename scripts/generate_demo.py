@@ -18,5 +18,5 @@ findings = collect([
 if warnings:
     raise RuntimeError(warnings)
 output = report(findings, origin='sample', generated_at='2026-10-10T12:00:00Z')
-(ROOT / 'frontend/public/demo-report.json').write_text(json.dumps(output, indent=2), encoding='utf-8')
+(ROOT / 'frontend/src/test/fixtures/scanner-report.json').write_text(json.dumps(output, indent=2), encoding='utf-8')
 print(f'Wrote {len(findings)} explicitly labelled sample findings')

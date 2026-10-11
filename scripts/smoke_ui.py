@@ -21,11 +21,9 @@ for attempt in range(60):
         if attempt == 59:
             raise
         time.sleep(1)
-for route in ('/', '/inventory', '/migration', '/probe', '/accuracy', '/explain', '/reports'):
+for route in ('/', '/inventory', '/migration', '/probe', '/explain', '/reports'):
     html = request(route).decode()
     assert 'QuantumTrace' in html and 'workspace' in html and '<html' in html, route
-sample = json.loads(request('/demo-report.json'))
-assert sample['origin']=='sample' and sample['findings']
 content=base64.b64encode(b'import hashlib\nx=hashlib.md5(b"smoke").hexdigest()\n').decode()
 request('/api/scan', {'files':[{'name':'smoke.py','content':content}]})
 for _ in range(100):

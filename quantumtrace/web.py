@@ -7,12 +7,9 @@ connects to the host:port the user types, so run the dashboard locally or on a t
 from __future__ import annotations
 
 import argparse
-import base64
-import binascii
-import io
 import json
 import os
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -20,9 +17,9 @@ import tempfile
 import threading
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from zipfile import ZipFile, BadZipFile
 from urllib.parse import parse_qs, urlsplit
 
+from .uploads import unpack
 from .classify import classify, classify_all
 from .cli import collect, verdict
 from .kb import tls as TLSKB
@@ -33,8 +30,6 @@ from .export import cyclonedx, sarif
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_BODY = 48 * 1024 * 1024
-MAX_FILES = 2000
-MAX_EXPANDED = 128 * 1024 * 1024
 MAX_TARGETS = 8
 TARGET = re.compile(r"^(?:\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?)(?::(\d{1,5}))?$")
 # internal pseudo-algorithms the scanner emits; not useful in the "Explain an algorithm" picker
@@ -47,56 +42,6 @@ def report(findings: list[Finding], *, origin: str, warnings=None, generated_at=
     return dict(schema_version=1, origin=origin,
                 generated_at=generated_at or datetime.now(timezone.utc).isoformat(),
                 findings=[f.to_dict() for f in findings], summary=summary)
-
-
-def unpack(files: list, destination: Path) -> None:
-    """Bounded extraction; reject traversal, symlinks, duplicates and ZIP bombs."""
-    count, total = 0, 0
-    seen = set()
-
-    def write(name, data):
-        nonlocal count, total
-        name = name.replace("\\", "/")
-        path = PurePosixPath(name)
-        if path.is_absolute() or any(p in ("..", ".") or ":" in p for p in path.parts) or not path.parts:
-            raise ValueError("Upload contains an unsafe filename")
-        target = (destination / Path(*path.parts)).resolve()
-        if not target.is_relative_to(destination.resolve()) or target in seen:
-            raise ValueError("Upload contains an unsafe or duplicate filename")
-        count += 1
-        total += len(data)
-        if count > MAX_FILES or total > MAX_EXPANDED:
-            raise ValueError("Upload exceeds 2,000 files or 128 MiB expanded")
-        seen.add(target)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(data)
-
-    if not isinstance(files, list) or not 1 <= len(files) <= MAX_FILES:
-        raise ValueError("Choose at least one file (maximum 2,000)")
-    for item in files:
-        if not isinstance(item, dict) or not isinstance(item.get("name"), str) or not isinstance(item.get("content"), str):
-            raise ValueError("Each upload requires a name and base64 content")
-        try:
-            data = base64.b64decode(item["content"], validate=True)
-        except (ValueError, binascii.Error) as exc:
-            raise ValueError("Invalid base64 upload") from exc
-        if item["name"].lower().endswith(".zip"):
-            try:
-                with ZipFile(io.BytesIO(data)) as archive:
-                    if len(archive.infolist()) + count > MAX_FILES:
-                        raise ValueError("Too many files in ZIP")
-                    for entry in archive.infolist():
-                        if entry.is_dir():
-                            continue
-                        if (entry.external_attr >> 16) & 0o170000 == 0o120000:
-                            raise ValueError("ZIP symlinks are not supported")
-                        if entry.file_size + total > MAX_EXPANDED:
-                            raise ValueError("ZIP expands beyond 128 MiB")
-                        write(entry.filename, archive.read(entry))
-            except BadZipFile as exc:
-                raise ValueError("Invalid ZIP archive") from exc
-        else:
-            write(item["name"], data)
 
 
 class NoReport(Exception):
@@ -154,31 +99,51 @@ class Store:
         self.probe_job = {"state": "idle", "error": None, "result": None}
         self.accuracy_lock = threading.Lock()
         self.accuracy_result = None
-        if (results / "findings.json").exists():
+        if (results / "findings.json").exists() or (results / "uploaded-report.json").exists():
             try:
                 self.reload()
             except (OSError, ValueError, TypeError, KeyError):
                 self.job = {"state": "error", "error": "Saved results could not be loaded. Run qtrace scan again, then reload."}
 
     def reload(self):
-        raw = json.loads((self.results / "findings.json").read_text(encoding="utf-8"))
+        cli_path = self.results / "findings.json"
+        upload_path = self.results / "uploaded-report.json"
+        saved = None
+        if upload_path.exists() and (not cli_path.exists() or upload_path.stat().st_mtime_ns >= cli_path.stat().st_mtime_ns):
+            saved = json.loads(upload_path.read_text(encoding="utf-8"))
+        raw = saved["findings"] if saved is not None else json.loads(cli_path.read_text(encoding="utf-8"))
         findings = [Finding.from_dict(f) for f in raw]
         # Recalculate only in the backend, avoiding a stale findings/summary pair.
         if any(f.risk_tier is None or f.quantum_threat is None for f in findings):
             raise ValueError("Results must contain classified findings from qtrace scan")
         warnings = []
         summary_path = self.results / "summary.json"
-        if summary_path.exists():
+        if saved is not None:
+            warnings = saved["summary"].get("warnings", [])
+        elif summary_path.exists():
             warnings = json.loads(summary_path.read_text(encoding="utf-8")).get("warnings", [])
         fixture = any("samples/" in json.dumps(f.location).replace("\\\\", "/") for f in findings)
-        value = report(findings, origin="sample" if fixture else "cli", warnings=warnings,
-                       generated_at=datetime.fromtimestamp((self.results / "findings.json").stat().st_mtime, timezone.utc).isoformat())
+        value = report(findings, origin="upload" if saved is not None else "sample" if fixture else "cli", warnings=warnings,
+                       generated_at=saved["generated_at"] if saved is not None else datetime.fromtimestamp(cli_path.stat().st_mtime, timezone.utc).isoformat())
         with self.lock:
             if self.job["state"] == "running":
                 raise ValueError("A scan is already running")
             self.current = value
             self.job = {"state": "idle", "error": None}
         return value
+
+    def save_upload(self, value):
+        """Atomically persist an upload without overwriting CLI outputs or reference scans."""
+        self.results.mkdir(parents=True, exist_ok=True)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.results, delete=False) as stream:
+                temporary = Path(stream.name)
+                json.dump(value, stream)
+            os.replace(temporary, self.results / "uploaded-report.json")
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     def findings(self, at=None) -> list[Finding]:
         """Findings of the current report; `at` (the report's generated_at seen by the browser) must still match."""
@@ -240,7 +205,7 @@ class Store:
         with self.lock:
             if self.job["state"] == "running":
                 raise ValueError("A scan is already running")
-            self.job = {"state": "running", "error": None}
+            self.job = {"state": "running", "error": None, "phase": "validating"}
         threading.Thread(target=self._scan, args=(body,), daemon=True).start()
 
     def _scan(self, body):
@@ -251,7 +216,9 @@ class Store:
                 origin = "sample"
             else:
                 with tempfile.TemporaryDirectory(prefix="quantumtrace-upload-") as tmp:
-                    unpack(body.get("files"), Path(tmp))
+                    warnings += unpack(body.get("files"), Path(tmp))
+                    with self.lock:
+                        self.job["phase"] = "analyzing"
                     findings = collect([tmp], warnings, quiet=True)
                     # Preserve useful archive-relative evidence, not deleted temp paths.
                     prefix = os.path.relpath(tmp).replace("\\", "/") + "/"
@@ -263,9 +230,11 @@ class Store:
                                     normal = value.replace("\\", "/")
                                     mapping[key] = normal.removeprefix(prefix).removeprefix(tmp.replace("\\", "/") + "/")
                 origin = "upload"
-            if not findings:
+            if (not findings and any(w["reason"] != "Unsupported archive entry ignored" for w in warnings)) or (findings and all(f.algorithm == "SCAN-ERROR" for f in findings)):
                 raise ValueError("No cryptographic findings. Check supported input formats and scanner warnings. " + "; ".join(w["reason"] for w in warnings)[:500])
             value = report(findings, origin=origin, warnings=warnings)
+            if origin == "upload":
+                self.save_upload(value)
             with self.lock:
                 self.current = value
                 self.job = {"state": "complete", "error": None}
@@ -348,7 +317,10 @@ def handler(store: Store):
                     return self.send_json(413, {"error": "Upload must be less than 48 MiB encoded"})
                 body = json.loads(self.rfile.read(length))
                 if self.path == "/api/refresh":
-                    return self.send_json(200, store.reload())
+                    try:
+                        return self.send_json(200, store.reload())
+                    except FileNotFoundError:
+                        return self.send_json(400, {"error": "No saved scan results"})
                 if self.path == "/api/scan":
                     store.start(body)
                     return self.send_json(202, {"state": "running"})

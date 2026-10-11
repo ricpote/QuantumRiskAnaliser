@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import demo from "../../public/demo-report.json";
+import demo from "./fixtures/scanner-report.json";
 import { adaptFindings, filterAssets, reportSchema } from "@/lib/quantumtrace-data";
 
 describe("Python report adapter", () => {

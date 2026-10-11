@@ -1,16 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Activity,
   ArrowDownToLine,
   ArrowRight,
-  BadgeCheck,
-  Bell,
   Box,
   Check,
-  CheckCheck,
   ChevronDown,
-  ChevronRight,
   CircleHelp,
   Code2,
   FileText,
@@ -38,22 +34,22 @@ import {
   type Risk,
 } from "@/lib/quantumtrace-data";
 
+import { ScanDialog } from "./scan-dialog";
 import { useReport } from "@/lib/report-context";
 import { Overview, Migration, Reports } from "./report-panels";
-import { AccuracyPanel, ExplainPanel, ProbePanel } from "./analysis-panels";
+import { ExplainPanel, ProbePanel } from "./analysis-panels";
 import { classicalText, tierMeaning } from "@/lib/labels";
 
-type View = "overview" | "inventory" | "migration" | "reports" | "probe" | "accuracy" | "explain";
+type View = "overview" | "inventory" | "migration" | "reports" | "probe" | "explain";
 const nav = [
   { view: "overview", label: "Overview", icon: LayoutDashboard, to: "/" },
   { view: "inventory", label: "Crypto inventory", icon: Layers, to: "/inventory" },
   { view: "migration", label: "Migration plan", icon: ShieldCheck, to: "/migration" },
   { view: "probe", label: "Live probe", icon: Radar, to: "/probe" },
-  { view: "accuracy", label: "Accuracy", icon: BadgeCheck, to: "/accuracy" },
   { view: "explain", label: "Explain", icon: Lightbulb, to: "/explain" },
   { view: "reports", label: "Reports", icon: FileText, to: "/reports" },
 ] as const;
-// Pages about the loaded report; probe, accuracy and explain are tools that work without one.
+// Pages about the loaded report; probe and explain are tools that work without one.
 const reportViews: readonly View[] = ["overview", "inventory", "migration", "reports"];
 const riskClass = (risk: Risk) =>
   risk === "Critical" || risk === "Unencrypted"
@@ -86,21 +82,35 @@ export function Workspace({ view }: { view: View }) {
   const [menu, setMenu] = useState(false);
   const [scan, setScan] = useState(false);
   const [help, setHelp] = useState(false);
-  const [notification, setNotification] = useState(false);
   const data = useReport();
   const { report, busy, error } = data;
   const assets = report ? adaptFindings(report) : [];
-  const [files, setFiles] = useState<File[]>([]);
   const [page, setPage] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const label =
     report?.origin === "sample"
-      ? "Demo · sample data"
+      ? "Official reference samples"
       : report?.origin === "upload"
         ? "Uploaded scan results"
         : report
           ? "Loaded CLI results"
           : "No results loaded";
+  const dataset =
+    report?.origin === "sample"
+      ? "samples/official/"
+      : report
+        ? Array.from(
+            new Set(
+              report.findings.flatMap((f) =>
+                [f.location["file"], f.location["pcap"], f.location["json"]].filter(
+                  (v): v is string => typeof v === "string",
+                ),
+              ),
+            ),
+          )
+            .slice(0, 3)
+            .join(", ")
+        : "";
   const generated = report
     ? new Date(report.generated_at).toLocaleString("en-GB", { timeZone: "UTC" }) + " UTC"
     : "";
@@ -108,6 +118,13 @@ export function Workspace({ view }: { view: View }) {
   const [query, setQuery] = useState("");
   const [risk, setRisk] = useState("All risks");
   const [source, setSource] = useState("All sources");
+  useEffect(() => {
+    setPage(0);
+    setQuery("");
+    setRisk("All risks");
+    setSource("All sources");
+    setSelected(null);
+  }, [report]);
   const filtered = filterAssets(assets, query, risk, source);
   const title = nav.find((n) => n.view === view)?.label ?? "Overview";
   const reportView = reportViews.includes(view);
@@ -159,7 +176,6 @@ export function Workspace({ view }: { view: View }) {
             );
           })}
         </div>
-        <p className="mt-4 text-[10px] text-sidebar-muted">{label}</p>
       </div>
       <div className="mt-auto">
         <div className="mx-2 mb-6 border border-sidebar-accent rounded-md p-4">
@@ -186,7 +202,6 @@ export function Workspace({ view }: { view: View }) {
           </span>
           <div>
             <p className="text-xs">Scan workspace</p>
-            <p className="text-[10px] text-sidebar-muted mt-1">{label}</p>
           </div>
           <ChevronDown size={13} className="ml-auto text-sidebar-muted" />
         </div>
@@ -224,30 +239,11 @@ export function Workspace({ view }: { view: View }) {
             >
               <Menu />
             </Button>
-            <span className="text-xs text-muted-foreground">Workspace</span>
-            <ChevronRight size={13} className="text-muted-foreground" />
-            <span className="text-xs font-medium">{title}</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <span className="hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="w-1.5 h-1.5 bg-safe rounded-full" />
-              {label}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              onClick={() => setNotification(true)}
-            >
-              <Bell size={17} />
-            </Button>
-            <span className="rounded-full bg-secondary h-8 w-8 flex items-center justify-center text-xs font-medium">
-              RP
-            </span>
+            <span className="text-sm font-medium">{title}</span>
           </div>
         </header>
         <main className="page-content">
-          <div className="flex flex-wrap gap-5 items-end justify-between mb-7">
+          <div className="flex flex-wrap gap-4 items-end justify-between mb-4">
             <div>
               <p className="text-[10px] uppercase text-muted-foreground mb-2">
                 Cryptographic posture
@@ -264,11 +260,9 @@ export function Workspace({ view }: { view: View }) {
                       ? "A practical path from discovery to quantum resilience."
                       : view === "probe"
                         ? "Does a live server already protect its traffic against quantum computers?"
-                        : view === "accuracy"
-                          ? "Every result checked against the labelled answers for the challenge data."
-                          : view === "explain"
-                            ? "How QuantumTrace rates any algorithm, and why."
-                            : "Your cryptographic findings, ready to share."}
+                        : view === "explain"
+                          ? "How QuantumTrace rates any algorithm, and why."
+                          : "Your cryptographic findings, ready to share."}
               </p>
             </div>
             <div className="flex gap-2">
@@ -280,7 +274,7 @@ export function Workspace({ view }: { view: View }) {
                 <ArrowDownToLine />
                 Export report
               </Button>
-              <Button disabled={busy} onClick={() => setScan(true)}>
+              <Button disabled={data.scanning} onClick={() => setScan(true)}>
                 <Plus />
                 New scan
               </Button>
@@ -288,19 +282,27 @@ export function Workspace({ view }: { view: View }) {
           </div>
           {reportView && (
             <div className="flex flex-wrap items-center gap-3 mb-6">
-              <span className="risk-badge risk-medium">{label}</span>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={busy}
                 onClick={() => void data.reload()}
               >
-                Reload CLI results
+                Load saved scan results
               </Button>
-              <Button variant="ghost" size="sm" disabled={busy} onClick={() => void data.demo()}>
-                Use bundled demo
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => void data.scan([], true)}
+              >
+                Analyze reference dataset
               </Button>
-              <span className="text-xs text-muted-foreground">{generated}</span>
+              <span className="text-xs text-muted-foreground break-all">
+                {label}
+                {dataset && ` · ${dataset}`}
+                {generated && ` · ${generated}`}
+              </span>
             </div>
           )}
           {reportView && busy && (
@@ -311,18 +313,15 @@ export function Workspace({ view }: { view: View }) {
           {reportView && error && (
             <div role="alert" className="panel p-5 mb-5 text-critical">
               {error}
-              <p className="text-xs mt-2">
-                Check the inputs or backend service, then retry. You can also use the explicitly
-                labelled bundled demo.
-              </p>
+              <p className="text-xs mt-2">Check the inputs or backend service, then retry.</p>
             </div>
           )}
           {reportView && !report && !busy && (
             <div className="panel p-8 mb-5">
-              <h2 className="font-semibold">Start with a scan or saved results</h2>
+              <h2 className="font-semibold">No scan results available</h2>
               <p className="mt-2 text-sm">
-                Upload captures, source files, AWS JSON exports or a ZIP using New scan. Reload CLI
-                results after running qtrace scan with the configured output directory.
+                Upload files or analyze the reference dataset to discover your cryptographic
+                exposure.
               </p>
             </div>
           )}
@@ -340,27 +339,16 @@ export function Workspace({ view }: { view: View }) {
               </ul>
             </details>
           )}
-          {view === "overview" && report && <Overview report={report} />}
-          {report && (view === "overview" || view === "inventory") && (
+          {view === "overview" && report && <Overview key={report.generated_at} report={report} />}
+          {report && view === "inventory" && (
             <section className="panel overflow-hidden">
               <div className="px-6 py-5 flex flex-wrap gap-3 justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-sm font-semibold">
-                    {view === "overview" ? "Cryptographic inventory" : "Cryptographic findings"}
-                  </h2>
+                  <h2 className="text-sm font-semibold">Cryptographic findings</h2>
                   <span className="text-[10px] bg-muted rounded px-2 py-1 text-muted-foreground">
                     {assets.length} findings
                   </span>
                 </div>
-                {view === "overview" && (
-                  <Link
-                    to="/inventory"
-                    className={buttonVariants({ variant: "ghost", size: "sm" })}
-                  >
-                    View all findings
-                    <ArrowRight />
-                  </Link>
-                )}
               </div>
               <div className="px-6 pb-5 flex flex-wrap gap-3">
                 <div className="relative flex-1 min-w-40">
@@ -442,57 +430,48 @@ export function Workspace({ view }: { view: View }) {
                       <th>Key size</th>
                       <th>Source</th>
                       <th>Quantum risk</th>
-                      <th />
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered
-                      .slice(
-                        view === "overview" ? 0 : page * 25,
-                        view === "overview" ? 5 : (page + 1) * 25,
-                      )
-                      .map((a) => {
-                        const Icon = sourceIcon[a.source];
-                        return (
-                          <tr key={a.id}>
-                            <td>
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto text-xs text-foreground"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelected(a);
-                                }}
-                              >
-                                {a.name}
-                              </Button>
-                              <p className="font-mono text-[10px] text-muted-foreground mt-1.5">
-                                {a.location}
-                              </p>
-                            </td>
-                            <td>
-                              <span className="font-mono bg-muted px-2 py-1 rounded text-[11px]">
-                                {a.algorithm}
-                              </span>
-                            </td>
-                            <td className="font-mono text-muted-foreground text-[11px]">
-                              {a.keySize}
-                            </td>
-                            <td>
-                              <span className="flex gap-2 items-center text-muted-foreground">
-                                <Icon size={13} />
-                                {a.source}
-                              </span>
-                            </td>
-                            <td>
-                              <Badge risk={a.risk} />
-                            </td>
-                            <td>
-                              <ChevronRight size={14} className="text-muted-foreground" />
-                            </td>
-                          </tr>
-                        );
-                      })}
+                    {filtered.slice(page * 25, (page + 1) * 25).map((a) => {
+                      const Icon = sourceIcon[a.source];
+                      return (
+                        <tr key={a.id}>
+                          <td>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-xs text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelected(a);
+                              }}
+                            >
+                              {a.name}
+                            </Button>
+                            <p className="font-mono text-[10px] text-muted-foreground mt-1.5">
+                              {a.location}
+                            </p>
+                          </td>
+                          <td>
+                            <span className="font-mono bg-muted px-2 py-1 rounded text-[11px]">
+                              {a.algorithm}
+                            </span>
+                          </td>
+                          <td className="font-mono text-muted-foreground text-[11px]">
+                            {a.keySize}
+                          </td>
+                          <td>
+                            <span className="flex gap-2 items-center text-muted-foreground">
+                              <Icon size={13} />
+                              {a.source}
+                            </span>
+                          </td>
+                          <td>
+                            <Badge risk={a.risk} />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {filtered.length === 0 && (
@@ -503,10 +482,8 @@ export function Workspace({ view }: { view: View }) {
               </div>
               <div className="px-6 py-4 border-t flex justify-between text-[10px] text-muted-foreground">
                 <span>
-                  Showing {Math.min(filtered.length, view === "overview" ? 5 : (page + 1) * 25)} of{" "}
-                  {filtered.length} findings
+                  Showing {Math.min(filtered.length, (page + 1) * 25)} of {filtered.length} findings
                 </span>
-                <span>{generated}</span>
               </div>
             </section>
           )}
@@ -525,17 +502,18 @@ export function Workspace({ view }: { view: View }) {
               </Button>
             </div>
           )}
-          {view === "migration" && report && <Migration report={report} />}
-          {view === "reports" && report && <Reports report={report} />}
+          {view === "migration" && report && (
+            <Migration key={report.generated_at} report={report} />
+          )}
+          {view === "reports" && report && <Reports key={report.generated_at} report={report} />}
           {view === "probe" && <ProbePanel />}
-          {view === "accuracy" && <AccuracyPanel />}
           {view === "explain" && <ExplainPanel />}
           <footer className="flex flex-wrap gap-3 justify-between mt-6 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <ShieldCheck size={12} />
               QuantumTrace · Discover today. Secure tomorrow.
             </span>
-            <span>{label} · Evidence reflects the supplied inputs</span>
+            <span>Evidence reflects the supplied inputs</span>
           </footer>
         </main>
       </div>
@@ -639,7 +617,6 @@ export function Workspace({ view }: { view: View }) {
                 </div>
               )}
               <p className="text-[10px] text-muted-foreground">
-                {label}
                 {selected.finding.cwe?.length ? ` · ${selected.finding.cwe.join(", ")}` : ""}
                 {selected.finding.flags.length ? ` · ${selected.finding.flags.join(", ")}` : ""}
               </p>
@@ -647,51 +624,17 @@ export function Workspace({ view }: { view: View }) {
           )}
         </DialogContent>
       </Dialog>
-      <Dialog open={scan} onOpenChange={setScan}>
-        <DialogContent>
-          <DialogTitle>New discovery scan</DialogTitle>
-          <DialogDescription>
-            Scan uploaded inputs with the Python engine, or explicitly scan the bundled official
-            samples. Maximum upload: 32 MiB.
-          </DialogDescription>
-          <label htmlFor="scan-files" className="text-sm font-medium">
-            Capture, code, AWS JSON, config files or ZIP
-          </label>
-          <input
-            id="scan-files"
-            type="file"
-            multiple
-            disabled={busy}
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          />
-          <Button
-            disabled={busy || !files.length}
-            onClick={() => {
-              setScan(false);
-              setPage(0);
-              void data.scan(files);
-            }}
-          >
-            Scan uploaded files
-            <ArrowRight />
-          </Button>
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              setScan(false);
-              setPage(0);
-              void data.scan([], true);
-            }}
-          >
-            Scan official samples (demo)
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Uploads are temporary and deleted after scanning. Download the report to retain the
-            results.
-          </p>
-        </DialogContent>
-      </Dialog>
+      <ScanDialog
+        open={scan}
+        onOpenChange={setScan}
+        onComplete={() => {
+          setPage(0);
+          setQuery("");
+          setRisk("All risks");
+          setSource("All sources");
+          setSelected(null);
+        }}
+      />
       <Dialog open={help} onOpenChange={setHelp}>
         <DialogContent>
           <DialogTitle>Help & resources</DialogTitle>
@@ -709,23 +652,6 @@ export function Workspace({ view }: { view: View }) {
             NIST post-quantum standards
             <ArrowRight />
           </a>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={notification} onOpenChange={setNotification}>
-        <DialogContent>
-          <DialogTitle>Notifications</DialogTitle>
-          <DialogDescription>Current report status</DialogDescription>
-          <div className="flex gap-3 py-4">
-            <CheckCheck size={20} className="text-safe" />
-            <div>
-              <p className="text-sm font-medium">
-                {busy ? "Scan in progress" : error ? "Attention required" : "Report status"}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {error ?? `${report?.summary.assets ?? 0} assets. ${label}.`}
-              </p>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

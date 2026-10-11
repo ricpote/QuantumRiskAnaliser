@@ -43,27 +43,39 @@ so keep the port on 127.0.0.1 as above (or on a trusted network).
 | Crypto inventory | Every finding with its evidence, the reasoning, the replacement standard and the deadlines |
 | Migration plan | Mosca timeline per system with Q-Day scenarios (2030 / 2033 / 2035), prioritised actions, and a what-if that re-scores the report as if the ticked actions were done |
 | Live probe | Post-quantum check of any TLS endpoint; the image runs the offline lab on 127.0.0.1 |
-| Accuracy | Results compared with `tests/ground_truth.json` (the same check CI runs) |
 | Explain | How any algorithm is classified in a given role, and why |
 | Reports | JSON, CSV, CycloneDX 1.6 CBOM and SARIF downloads |
 
 Where the data comes from (toolbar and **New scan**):
 
-- **Scan uploaded files**: PCAP/PCAPNG, Python/Java/Go/JS, config files, AWS JSON exports or a
-  ZIP (max 32 MiB, 2,000 files, 128 MiB expanded). Uploads are deleted after the scan; results
-  stay in memory until replaced, so download the report to keep them.
-- **Scan official samples (demo)**: the real scanner on the bundled challenge data, labelled
+- **Analyze files**: select PCAP/PCAPNG, Python/Java/Go/JS/TS, supported config files, AWS JSON
+  exports or a ZIP. The dialog lists filenames, sizes and validation errors; only files marked
+  **Ready** are sent. The limit is **32 MiB total uploaded bytes**, 2,000 files and 128 MiB expanded.
+  The service validates content and syntax and rejects unsafe ZIP paths, symlinks and encrypted
+  archives. Unsupported repository entries are ignored with report warnings; nested ZIPs are
+  not expanded. Progress stays visible until the dashboard updates automatically. A failed scan
+  keeps the previous valid results and lets you retry. Temporary uploads are deleted after the
+  scan; successful upload reports (including zero findings) are saved atomically to
+  `QT_RESULTS_DIR/uploaded-report.json` (default `out/`). Inventory
+  source filters and every report export use the current scan.
+- **Analyze official samples (demo)**: the real scanner on the bundled challenge data, labelled
   *sample data*.
-- **Reload CLI results**: reads `findings.json` from `QT_RESULTS_DIR` (default `out/`).
-- **Use bundled demo**: a small checked-in report (`frontend/public/demo-report.json`, rebuilt
-  with `python scripts/generate_demo.py`). It works even without the API.
+- **Load saved scan results**: restores the most recent uploaded report or CLI `findings.json`
+  in `QT_RESULTS_DIR`, whichever was saved later. Reference dataset scans do not overwrite the
+  saved upload. An empty findings list is a valid saved scan, not missing results.
+- **Analyze reference dataset**: runs the Python scanner on `samples/official/`. Official
+  sample attribution remains visible with the report. No offline or automatic dataset fallback
+  is loaded. Accuracy evaluation remains available through `make eval` and CI.
 
 Show results produced by the CLI:
 
 ```bash
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
-docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results:ro" -e QT_RESULTS_DIR=/results quantumtrace
+docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace
 ```
+
+Mount a writable results directory as above to retain uploads after removing the container.
+Without a volume, saved uploads last only for that container's lifetime.
 
 ### Dashboard development
 

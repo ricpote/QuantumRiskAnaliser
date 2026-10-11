@@ -12,9 +12,7 @@
         "key_spec": "RSA_2048",
         "padding": "PKCS1v15",
         "hash": "SHA-256",
-        "signing_algorithms": [
-          "RSASSA_PKCS1_V1_5_SHA_256"
-        ]
+        "signing_algorithms": ["RSASSA_PKCS1_V1_5_SHA_256"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -61,9 +59,7 @@
         "standard": "FIPS 204",
         "how": "Migrate signatures to ML-DSA-65 (hybrid/composite during transition)"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): 112-bit quantum-vulnerable public-key crypto (RSA-2048, DH-2048) deprecated after 2030, disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; remaining use cases quantum-safe by end-2035",
@@ -72,9 +68,7 @@
       "deadline_year": 2030,
       "hndl": false,
       "risk_points": 75.0,
-      "rationale": [
-        "RSA relies on factoring/discrete-log: broken by Shor's algorithm"
-      ],
+      "rationale": ["RSA relies on factoring/discrete-log: broken by Shor's algorithm"],
       "id": "3fff20a13888"
     },
     {
@@ -85,9 +79,7 @@
         "curve": "P-256",
         "key_spec": "ECC_NIST_P256",
         "hash": "SHA-256",
-        "signing_algorithms": [
-          "ECDSA_SHA_256"
-        ]
+        "signing_algorithms": ["ECDSA_SHA_256"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -121,9 +113,7 @@
       },
       "evidence": "KMS key alias/device-attestation KeySpec=ECC_NIST_P256 KeyUsage=SIGN_VERIFY (ECDSA_SHA_256)",
       "confidence": 1.0,
-      "flags": [
-        "long-lived"
-      ],
+      "flags": ["long-lived"],
       "quantum_threat": "shor",
       "risk_tier": "critical",
       "classical_status": "acceptable",
@@ -136,9 +126,7 @@
         "standard": "FIPS 204 / FIPS 205",
         "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
@@ -162,9 +150,7 @@
         "key_spec": "RSA_2048",
         "padding": "OAEP",
         "hash": "SHA-256",
-        "encryption_algorithms": [
-          "RSAES_OAEP_SHA_256"
-        ]
+        "encryption_algorithms": ["RSAES_OAEP_SHA_256"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -198,10 +184,7 @@
       },
       "evidence": "KMS key alias/partner-feed-decrypt KeySpec=RSA_2048 KeyUsage=ENCRYPT_DECRYPT (RSAES_OAEP_SHA_256); imported key material expires 2027-11-05: natural migration window",
       "confidence": 1.0,
-      "flags": [
-        "external-key-material",
-        "long-lived"
-      ],
+      "flags": ["external-key-material", "long-lived"],
       "quantum_threat": "shor",
       "risk_tier": "critical",
       "classical_status": "acceptable",
@@ -214,9 +197,7 @@
         "standard": "FIPS 203",
         "how": "Replace RSA encryption with a KEM/DEM construction (e.g. HPKE with ML-KEM) and AES-256-GCM"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): 112-bit quantum-vulnerable public-key crypto (RSA-2048, DH-2048) deprecated after 2030, disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
@@ -239,9 +220,7 @@
         "key_bits": 256,
         "mode": "GCM",
         "key_spec": "SYMMETRIC_DEFAULT",
-        "encryption_algorithms": [
-          "SYMMETRIC_DEFAULT"
-        ]
+        "encryption_algorithms": ["SYMMETRIC_DEFAULT"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -288,9 +267,7 @@
       "deadline_year": null,
       "hndl": false,
       "risk_points": 0.0,
-      "rationale": [
-        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
-      ],
+      "rationale": ["Grover reduces a 256-bit key to ~128-bit post-quantum strength"],
       "id": "394eb88e65dc"
     },
     {
@@ -301,9 +278,7 @@
         "key_bits": 256,
         "mode": "GCM",
         "key_spec": "SYMMETRIC_DEFAULT",
-        "encryption_algorithms": [
-          "SYMMETRIC_DEFAULT"
-        ]
+        "encryption_algorithms": ["SYMMETRIC_DEFAULT"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -336,9 +311,7 @@
       },
       "evidence": "KMS key alias/ebs-volume-encryption KeySpec=SYMMETRIC_DEFAULT KeyUsage=ENCRYPT_DECRYPT (SYMMETRIC_DEFAULT)",
       "confidence": 1.0,
-      "flags": [
-        "rotation-disabled"
-      ],
+      "flags": ["rotation-disabled"],
       "quantum_threat": "grover",
       "risk_tier": "safe",
       "classical_status": "recommended",
@@ -352,9 +325,7 @@
       "deadline_year": null,
       "hndl": false,
       "risk_points": 0.0,
-      "rationale": [
-        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
-      ],
+      "rationale": ["Grover reduces a 256-bit key to ~128-bit post-quantum strength"],
       "id": "e79f96c264db"
     },
     {
@@ -365,9 +336,7 @@
         "curve": "P-384",
         "key_spec": "ECC_NIST_P384",
         "hash": "SHA-384",
-        "signing_algorithms": [
-          "ECDSA_SHA_384"
-        ]
+        "signing_algorithms": ["ECDSA_SHA_384"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -401,10 +370,7 @@
       },
       "evidence": "KMS key alias/internal-ca-root KeySpec=ECC_NIST_P384 KeyUsage=SIGN_VERIFY (ECDSA_SHA_384)",
       "confidence": 1.0,
-      "flags": [
-        "long-lived",
-        "multi-region"
-      ],
+      "flags": ["long-lived", "multi-region"],
       "quantum_threat": "shor",
       "risk_tier": "critical",
       "classical_status": "acceptable",
@@ -417,9 +383,7 @@
         "standard": "FIPS 204 / FIPS 205",
         "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
@@ -442,9 +406,7 @@
         "key_bits": 256,
         "mode": "GCM",
         "key_spec": "SYMMETRIC_DEFAULT",
-        "encryption_algorithms": [
-          "SYMMETRIC_DEFAULT"
-        ]
+        "encryption_algorithms": ["SYMMETRIC_DEFAULT"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -477,11 +439,7 @@
       },
       "evidence": "KMS key alias/legacy-reports-export KeySpec=SYMMETRIC_DEFAULT KeyUsage=ENCRYPT_DECRYPT (SYMMETRIC_DEFAULT); scheduled for deletion on 2026-10-12 (1 days): data still encrypted under it becomes unrecoverable",
       "confidence": 1.0,
-      "flags": [
-        "orphaned-owner",
-        "pending-deletion",
-        "rotation-disabled"
-      ],
+      "flags": ["orphaned-owner", "pending-deletion", "rotation-disabled"],
       "quantum_threat": "grover",
       "risk_tier": "safe",
       "classical_status": "recommended",
@@ -495,9 +453,7 @@
       "deadline_year": null,
       "hndl": false,
       "risk_points": 0.0,
-      "rationale": [
-        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
-      ],
+      "rationale": ["Grover reduces a 256-bit key to ~128-bit post-quantum strength"],
       "id": "bf03896382f6"
     },
     {
@@ -509,9 +465,7 @@
         "key_spec": "RSA_3072",
         "padding": "PKCS1v15",
         "hash": "SHA-384",
-        "signing_algorithms": [
-          "RSASSA_PKCS1_V1_5_SHA_384"
-        ]
+        "signing_algorithms": ["RSASSA_PKCS1_V1_5_SHA_384"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -545,10 +499,7 @@
       },
       "evidence": "KMS key alias/hsm-backed-settlement KeySpec=RSA_3072 KeyUsage=SIGN_VERIFY (RSASSA_PKCS1_V1_5_SHA_384)",
       "confidence": 1.0,
-      "flags": [
-        "hsm-backed",
-        "long-lived"
-      ],
+      "flags": ["hsm-backed", "long-lived"],
       "quantum_threat": "shor",
       "risk_tier": "critical",
       "classical_status": "acceptable",
@@ -561,9 +512,7 @@
         "standard": "FIPS 204 / FIPS 205",
         "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
@@ -587,9 +536,7 @@
         "key_spec": "RSA_4096",
         "padding": "PSS",
         "hash": "SHA-256",
-        "signing_algorithms": [
-          "RSASSA_PSS_SHA_256"
-        ]
+        "signing_algorithms": ["RSASSA_PSS_SHA_256"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -623,9 +570,7 @@
       },
       "evidence": "KMS key alias/release-codesigning KeySpec=RSA_4096 KeyUsage=SIGN_VERIFY (RSASSA_PSS_SHA_256)",
       "confidence": 1.0,
-      "flags": [
-        "long-lived"
-      ],
+      "flags": ["long-lived"],
       "quantum_threat": "shor",
       "risk_tier": "critical",
       "classical_status": "acceptable",
@@ -638,9 +583,7 @@
         "standard": "FIPS 204 / FIPS 205",
         "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
@@ -663,9 +606,7 @@
         "key_bits": 256,
         "mode": "GCM",
         "key_spec": "SYMMETRIC_DEFAULT",
-        "encryption_algorithms": [
-          "SYMMETRIC_DEFAULT"
-        ]
+        "encryption_algorithms": ["SYMMETRIC_DEFAULT"]
       },
       "asset": {
         "kind": "aws-kms-key",
@@ -712,9 +653,7 @@
       "deadline_year": null,
       "hndl": false,
       "risk_points": 0.0,
-      "rationale": [
-        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
-      ],
+      "rationale": ["Grover reduces a 256-bit key to ~128-bit post-quantum strength"],
       "id": "7edec4595db5"
     },
     {
@@ -841,9 +780,7 @@
       "deadline_year": null,
       "hndl": false,
       "risk_points": 0.0,
-      "rationale": [
-        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
-      ],
+      "rationale": ["Grover reduces a 256-bit key to ~128-bit post-quantum strength"],
       "id": "fa70a743965a"
     },
     {
@@ -886,9 +823,7 @@
       "deadline_year": null,
       "hndl": false,
       "risk_points": 0.0,
-      "rationale": [
-        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
-      ],
+      "rationale": ["Grover reduces a 256-bit key to ~128-bit post-quantum strength"],
       "id": "5a4be672e3d6"
     },
     {
@@ -927,9 +862,7 @@
         "standard": "FIPS 204",
         "how": "Migrate signatures to ML-DSA-65 (hybrid/composite during transition)"
       },
-      "cwe": [
-        "CWE-327"
-      ],
+      "cwe": ["CWE-327"],
       "deadlines": [
         "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
         "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; remaining use cases quantum-safe by end-2035",
@@ -938,9 +871,7 @@
       "deadline_year": 2035,
       "hndl": false,
       "risk_points": 75.0,
-      "rationale": [
-        "EdDSA relies on factoring/discrete-log: broken by Shor's algorithm"
-      ],
+      "rationale": ["EdDSA relies on factoring/discrete-log: broken by Shor's algorithm"],
       "id": "cc4bbc13f81d"
     }
   ],
@@ -1145,12 +1076,8 @@
         "replacement": "ML-KEM-768 + AES-256-GCM",
         "standard": "FIPS 203",
         "how": "KMS has no ML-KEM KeySpec for asymmetric encryption: move partner exchange to an ML-KEM/hybrid KEM-DEM scheme and wrap data with a SYMMETRIC_DEFAULT (AES-256-GCM) key",
-        "from_algorithms": [
-          "RSA-2048"
-        ],
-        "assets": [
-          "KMS alias/partner-feed-decrypt"
-        ],
+        "from_algorithms": ["RSA-2048"],
+        "assets": ["KMS alias/partner-feed-decrypt"],
         "asset_count": 1,
         "risk_removed": 100.0,
         "hndl": true,
@@ -1163,12 +1090,7 @@
         "replacement": "ML-DSA-87 or SLH-DSA",
         "standard": "FIPS 204 / FIPS 205",
         "how": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition",
-        "from_algorithms": [
-          "ECDSA-P-256",
-          "ECDSA-P-384",
-          "RSA-3072",
-          "RSA-4096"
-        ],
+        "from_algorithms": ["ECDSA-P-256", "ECDSA-P-384", "RSA-3072", "RSA-4096"],
         "assets": [
           "KMS alias/device-attestation",
           "KMS alias/hsm-backed-settlement",
@@ -1187,12 +1109,8 @@
         "replacement": "ML-DSA-65",
         "standard": "FIPS 204",
         "how": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition",
-        "from_algorithms": [
-          "RSA-2048"
-        ],
-        "assets": [
-          "KMS alias/licensing-jwt-signing"
-        ],
+        "from_algorithms": ["RSA-2048"],
+        "assets": ["KMS alias/licensing-jwt-signing"],
         "asset_count": 1,
         "risk_removed": 75.0,
         "hndl": false,
@@ -1205,12 +1123,8 @@
         "replacement": "ML-DSA-65",
         "standard": "FIPS 204",
         "how": "Migrate signatures to ML-DSA-65 (hybrid/composite during transition)",
-        "from_algorithms": [
-          "Ed25519"
-        ],
-        "assets": [
-          "samples/official/sample-repos/python/webhook_signature.py"
-        ],
+        "from_algorithms": ["Ed25519"],
+        "assets": ["samples/official/sample-repos/python/webhook_signature.py"],
         "asset_count": 1,
         "risk_removed": 75.0,
         "hndl": false,

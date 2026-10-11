@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AccuracyRouteImport } from './routes/accuracy'
 import { Route as ExplainRouteImport } from './routes/explain'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as MigrationRouteImport } from './routes/migration'
@@ -20,11 +19,6 @@ import { Route as ReportsRouteImport } from './routes/reports'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccuracyRoute = AccuracyRouteImport.update({
-  id: '/accuracy',
-  path: '/accuracy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExplainRoute = ExplainRouteImport.update({
@@ -55,7 +49,6 @@ const ReportsRoute = ReportsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/accuracy': typeof AccuracyRoute
   '/explain': typeof ExplainRoute
   '/inventory': typeof InventoryRoute
   '/migration': typeof MigrationRoute
@@ -64,7 +57,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/accuracy': typeof AccuracyRoute
   '/explain': typeof ExplainRoute
   '/inventory': typeof InventoryRoute
   '/migration': typeof MigrationRoute
@@ -74,7 +66,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/accuracy': typeof AccuracyRoute
   '/explain': typeof ExplainRoute
   '/inventory': typeof InventoryRoute
   '/migration': typeof MigrationRoute
@@ -84,26 +75,12 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/accuracy'
-    | '/explain'
-    | '/inventory'
-    | '/migration'
-    | '/probe'
-    | '/reports'
+    '/' | '/explain' | '/inventory' | '/migration' | '/probe' | '/reports'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/accuracy'
-    | '/explain'
-    | '/inventory'
-    | '/migration'
-    | '/probe'
-    | '/reports'
+  to: '/' | '/explain' | '/inventory' | '/migration' | '/probe' | '/reports'
   id:
     | '__root__'
     | '/'
-    | '/accuracy'
     | '/explain'
     | '/inventory'
     | '/migration'
@@ -113,7 +90,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccuracyRoute: typeof AccuracyRoute
   ExplainRoute: typeof ExplainRoute
   InventoryRoute: typeof InventoryRoute
   MigrationRoute: typeof MigrationRoute
@@ -128,13 +104,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accuracy': {
-      id: '/accuracy'
-      path: '/accuracy'
-      fullPath: '/accuracy'
-      preLoaderRoute: typeof AccuracyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explain': {
@@ -177,7 +146,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccuracyRoute: AccuracyRoute,
   ExplainRoute: ExplainRoute,
   InventoryRoute: InventoryRoute,
   MigrationRoute: MigrationRoute,

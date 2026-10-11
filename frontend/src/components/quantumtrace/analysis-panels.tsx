@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDownToLine, CircleCheck, CircleX, Radar } from "lucide-react";
+import { ArrowDownToLine, ChevronDown, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   apiRequest,
-  type AccuracyResult,
   type ExplainResult,
   type ProbeJob,
   type ProbeReport,
@@ -19,7 +18,6 @@ import {
   type Tier,
 } from "@/lib/quantumtrace-data";
 import { classicalText, threatText, tierClass, tierLabel, tierMeaning } from "@/lib/labels";
-import { useReport } from "@/lib/report-context";
 
 // Every number on this page comes from the Python API: the browser only lays it out.
 
@@ -131,7 +129,6 @@ const scenarioLabel: Record<string, string> = {
 };
 
 export function MoscaPanel({ report }: { report: Report }) {
-  const { offlineDemo } = useReport();
   const [data, setData] = useState<Mosca | undefined>(report.summary.mosca);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -182,7 +179,7 @@ export function MoscaPanel({ report }: { report: Report }) {
               key={name}
               size="sm"
               variant={sc.qday_year === qday ? "default" : "outline"}
-              disabled={offlineDemo || pending}
+              disabled={pending}
               aria-pressed={sc.qday_year === qday}
               onClick={() => void choose(sc.qday_year)}
             >
@@ -204,11 +201,7 @@ export function MoscaPanel({ report }: { report: Report }) {
             : ""}
         </span>
       </div>
-      {offlineDemo && (
-        <p className="text-xs mt-3">
-          Switching scenarios needs the scanner API (not the bundled demo).
-        </p>
-      )}
+
       {error && (
         <p role="alert" className="text-xs mt-3 text-critical">
           {error}
@@ -361,114 +354,6 @@ export function WhatIfSummary({ result }: { result: WhatIfResult }) {
         <Change label="Late for Q-Day" from={b.late} to={a.late} better={a.late < b.late} />
       </ul>
     </div>
-  );
-}
-
-// ------------------------------------------------------------------ accuracy
-
-const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
-
-export function AccuracyPanel() {
-  const [data, setData] = useState<AccuracyResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    apiRequest<AccuracyResult>("/api/accuracy", undefined, controller.signal)
-      .then(setData)
-      .catch((e) => {
-        if (!controller.signal.aborted) setError(errorText(e));
-      });
-    return () => controller.abort();
-  }, []);
-  if (error)
-    return (
-      <div role="alert" className="panel p-5 text-critical">
-        {error}
-        <p className="text-xs mt-2 text-muted-foreground">
-          The accuracy check runs the scanner on the bundled official samples, so it needs the
-          Python API.
-        </p>
-      </div>
-    );
-  if (!data)
-    return (
-      <p role="status" className="panel p-5">
-        Scanning the official samples and comparing every result with the answer key…
-      </p>
-    );
-  const off = data.code_by_origin.official;
-  const own = data.code_by_origin.own_fixtures;
-  const cards = [
-    {
-      label: "Code findings · official repositories",
-      value: `${off.correctly_classified}/${off.expected}`,
-      detail: `${off.traps_checked} false-positive traps checked`,
-    },
-    {
-      label: "Network sessions · official capture",
-      value: `${data.network.sessions_correct}/${data.network.expected_sessions}`,
-      detail: "Every TLS/SSH session classified",
-    },
-    {
-      label: "Cloud resources · official exports",
-      value: `${data.cloud.correct}/${data.cloud.expected}`,
-      detail: `${data.cloud.traps_checked} traps checked`,
-    },
-    {
-      label: "Our own fixtures · configs, JWT",
-      value: `${own.correctly_classified}/${own.expected}`,
-      detail: `${own.traps_checked} traps checked · scored separately`,
-    },
-    {
-      label: "Precision · all code",
-      value: percent(data.code.precision),
-      detail: `${data.code.false_positives} false positives`,
-    },
-    {
-      label: "Recall · all code",
-      value: percent(data.code.recall),
-      detail: `${data.code.detected}/${data.code.expected} expected findings found`,
-    },
-  ];
-  return (
-    <>
-      <div className="insight-band p-5 mb-6 flex items-center gap-4">
-        {data.passed ? (
-          <CircleCheck size={24} className="text-safe" />
-        ) : (
-          <CircleX size={24} className="text-critical" />
-        )}
-        <div>
-          <p className="text-sm font-semibold">
-            {data.passed
-              ? "Every expectation passes, including the false-positive traps."
-              : `${data.failures.length} expectations fail.`}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-            Each result is compared with tests/ground_truth.json: the expected classification of
-            every cryptographic use in the official challenge samples, including deliberate traps
-            (Ed25519 is Shor-vulnerable, sha512.Sum384 is SHA-384, an HMAC is not a signature). The
-            same check runs in CI on every change.
-          </p>
-        </div>
-      </div>
-      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {cards.map((c) => (
-          <div className="stat-card" key={c.label}>
-            <p className="text-xs text-muted-foreground">{c.label}</p>
-            <p className="text-[34px] font-medium mt-3">{c.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">{c.detail}</p>
-          </div>
-        ))}
-      </div>
-      {!!data.failures.length && (
-        <ul role="alert" className="panel p-5 mt-6 text-xs text-critical space-y-1 break-all">
-          {data.failures.slice(0, 30).map((f) => (
-            <li key={f}>{f}</li>
-          ))}
-        </ul>
-      )}
-    </>
   );
 }
 
@@ -806,6 +691,7 @@ function ProbeCard({ report: r, findings }: { report: ProbeReport; findings: Fin
 }
 
 export function ProbePanel() {
+  const [showExplanation, setShowExplanation] = useState(false);
   const [targets, setTargets] = useState("127.0.0.1:8443, 127.0.0.1:8446, 127.0.0.1:8445");
   const [deep, setDeep] = useState(false);
   const [job, setJob] = useState<ProbeJob | null>(null);
@@ -834,14 +720,87 @@ export function ProbePanel() {
   return (
     <>
       <section className="panel p-6 mb-6">
-        <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-          Connects to each endpoint the way a browser would, once per key-exchange group, version
-          and cipher, and reports whether a modern client gets post-quantum protection. STARTTLS is
-          used automatically on mail, FTP and Postgres ports. The Docker image runs a small lab:
-          8443 post-quantum, 8444 classical, 8445 legacy, 8446 post-quantum with a classical
-          fallback, 8447 post-quantum only, 2525 SMTP, 5433 Postgres. Public sites work too when
-          online.
-        </p>
+        <Button
+          type="button"
+          variant="outline"
+          aria-expanded={showExplanation}
+          aria-controls="probe-process-explanation"
+          onClick={() => setShowExplanation((shown) => !shown)}
+        >
+          {showExplanation ? "Hide probe explanation" : "Understand probe process"}
+          <ChevronDown aria-hidden="true" className={showExplanation ? "rotate-180" : ""} />
+        </Button>
+        <div id="probe-process-explanation" hidden={!showExplanation} className="mt-5">
+          <h2 className="text-sm font-semibold">
+            Is this server's connection ready for quantum threats?
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mt-2 max-w-3xl">
+            Enter a server address. QuantumTrace connects to it and checks how it establishes an
+            encrypted connection: does a modern client get post-quantum key exchange, or could its
+            traffic be recorded today and decrypted by a future quantum computer?
+          </p>
+          <div className="grid md:grid-cols-3 gap-4 mt-5 text-xs leading-relaxed">
+            <div>
+              <h3 className="font-semibold mb-2">1. Choose a server</h3>
+              <p className="text-muted-foreground">
+                An endpoint is a hostname or IP address, optionally followed by a port:
+                <code> example.com:443</code> or <code>127.0.0.1:8443</code>. Separate multiple
+                addresses with commas. Without a port, we use 443. Enter addresses, without
+                <code> https://</code> or page paths.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">2. Check its encryption</h3>
+              <p className="text-muted-foreground">
+                The probe makes several TLS handshake attempts to check supported protocol versions,
+                key-exchange methods and ciphers. It also checks which method the server actually
+                chooses for a modern client. TLS 1.3 alone does not guarantee post-quantum
+                protection.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">3. Understand the result</h3>
+              <ul className="space-y-2">
+                <li>
+                  <span className="risk-badge risk-safe">PQ-protected</span> Modern-client key
+                  exchange uses a post-quantum method.
+                </li>
+                <li>
+                  <span className="risk-badge risk-critical">HNDL-exposed</span> The connection uses
+                  classical key exchange: “harvest now, decrypt later” is a risk.
+                </li>
+                <li>
+                  <span className="risk-badge bg-muted text-muted-foreground">Inconclusive</span>{" "}
+                  The server could not be reached or a TLS handshake could not be established.
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed mt-4">
+            This tests the connection, not the whole application. A green result does not mean every
+            certificate, signature or older-client connection is quantum-safe. Read the fallback and
+            certificate details below. The probe does not send application content or scan server
+            files.
+          </p>
+          <details className="mt-4 text-xs leading-relaxed">
+            <summary className="cursor-pointer font-medium">
+              Try the local lab · advanced checks
+            </summary>
+            <p className="mt-2 text-muted-foreground">
+              The Docker lab provides real servers with known configurations. Use “Whole lab” to
+              fill in their addresses, then click “Probe”: 8443 post-quantum, 8444 classical, 8445
+              legacy, 8446 post-quantum with classical fallback, 8447 post-quantum only, 2525 SMTP
+              and 5433 Postgres. These lab servers must be running; public servers need network
+              access.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              STARTTLS automatically upgrades the connection to TLS on recognized mail, FTP and
+              Postgres ports. “Also test signature schemes” makes extra handshake attempts to check
+              how the server can authenticate itself, including post-quantum signatures; it takes
+              longer.
+            </p>
+          </details>
+        </div>
         <form
           className="flex flex-wrap gap-3 items-center mt-5"
           onSubmit={(e) => {
