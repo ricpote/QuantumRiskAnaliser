@@ -1,10 +1,11 @@
 # QuantumTrace
 
-**Cryptographic inventory (CBOM) and post-quantum readiness scanner.** It reads network captures,
-source code (Python, Java, Go), config files (nginx, Apache, OpenSSH, Terraform) and AWS cloud exports. It classifies every primitive as
-**Shor-vulnerable / Grover-weakened / quantum-safe** and exports a **CycloneDX 1.6 CBOM** that
-validates against the official schema. Each finding maps to its NIST replacement:
-FIPS 203 (ML-KEM), FIPS 204 (ML-DSA) or FIPS 205 (SLH-DSA).
+**Find every cryptographic primitive in your network traffic, code, configs and cloud, rate it against
+quantum attacks, and export a CycloneDX 1.6 CBOM.**
+
+QuantumTrace separates what **Shor's algorithm breaks** (RSA, ECC, DH) from what **Grover's algorithm
+weakens** (AES-128, 3DES, SHA-1), flags traffic that can be *harvested now and decrypted later*, and maps
+every finding to its NIST replacement: **FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA)**.
 
 ## Quick start
 
@@ -16,327 +17,179 @@ docker build -t quantumtrace .
 docker run --rm -p 127.0.0.1:8501:8501 quantumtrace
 ```
 
-Open http://localhost:8501 and click **Scan official samples**. Everything below is available from
-the dashboard: the scan, the live TLS probe (the offline TLS lab already runs inside the container),
-the accuracy check and the CBOM / SARIF / JSON / CSV downloads.
+Open **http://localhost:8501** and click **Analyze reference dataset** (the official challenge samples),
+or **New scan** to upload your own files. The image pins every Python dependency (`constraints.txt`) and
+bundles tshark and an offline TLS lab for the live probe.
 
-The image pins every Python dependency (`constraints.txt`) and bundles tshark and the TLS lab.
+> The dashboard has no authentication and the live probe connects to whatever host you type: keep the
+> port on 127.0.0.1 as above, or on a trusted network.
 
-## Dashboard
+## What it reads
 
-It is a React (TanStack Start) app in `frontend/`, rendered by Node, on top of a small Python
-API (`quantumtrace/web.py`) that runs the same scanner, scorer and exporters as the CLI: the
-browser never computes a risk, a score or a priority. The API listens on 127.0.0.1:8502 inside
-the container. There is no authentication and the live probe connects to whatever host you type,
-so keep the port on 127.0.0.1 as above (or on a trusted network).
-
-| Page | What it shows |
+| Input | What QuantumTrace extracts |
 |---|---|
-| Overview | Readiness score, systems late for Q-Day, HNDL and cleartext exposure, highest-risk systems |
-| Crypto inventory | Every finding with its evidence, the reasoning, the replacement standard and the deadlines |
-| Migration plan | Mosca timeline per system with Q-Day scenarios (2030 / 2033 / 2035), prioritised actions, and a what-if that re-scores the report as if the ticked actions were done |
-| Live probe | Post-quantum check of any TLS endpoint; the image runs the offline lab on 127.0.0.1 |
-| Explain | How any algorithm is classified in a given role, and why |
-| Reports | JSON, CSV, CycloneDX 1.6 CBOM and SARIF downloads |
+| **Network captures** (PCAP/PCAPNG) | TLS 1.0–1.3 Client/Server Hello: offered vs negotiated groups, cipher suites and signature schemes, ML-KEM hybrids (key-share sizes checked against FIPS 203), certificates; SSH key exchange; STARTTLS; cleartext sessions |
+| **Live TLS endpoints** | A probe that builds its own handshakes (see [Live TLS probe](#live-tls-probe)) |
+| **Source code** (Python, Java, Go, JS/TS) | Crypto API calls with resolved key sizes, modes, IVs, salts and iteration counts; hard-coded keys; weak randomness; JWT algorithms; TLS settings in code |
+| **Server configs** | nginx, Apache, OpenSSH (`sshd_config`), Terraform |
+| **Cloud exports** (AWS JSON) | KMS key specs, load balancer TLS policies (incl. the 2025 PQ policies), ACM certificates |
+| **Certificates and keys** | PEM, DER, OpenSSH, PKCS#12 |
 
-Where the data comes from (toolbar and **New scan**):
+Uploads accept single files or a ZIP (32 MiB, 2,000 files). One unreadable file never stops a scan: it is
+skipped and listed as a warning.
 
-- **Analyze files**: select PCAP/PCAPNG, Python/Java/Go/JS/TS, supported config files, AWS JSON
-  exports or a ZIP. The dialog lists filenames, sizes and validation errors; only files marked
-  **Ready** are sent. The limit is **32 MiB total uploaded bytes**, 2,000 files and 128 MiB expanded.
-  The service validates content and syntax and rejects unsafe ZIP paths, symlinks and encrypted
-  archives. Unsupported repository entries are ignored with report warnings; nested ZIPs are
-  not expanded. Progress stays visible until the dashboard updates automatically. A failed scan
-  keeps the previous valid results and lets you retry. Temporary uploads are deleted after the
-  scan; successful upload reports (including zero findings) are saved atomically to
-  `QT_RESULTS_DIR/uploaded-report.json` (default `out/`). Inventory
-  source filters and every report export use the current scan.
-- **Analyze official samples (demo)**: the real scanner on the bundled challenge data, labelled
-  *sample data*.
-- **Load saved scan results**: restores the most recent uploaded report or CLI `findings.json`
-  in `QT_RESULTS_DIR`, whichever was saved later. Reference dataset scans do not overwrite the
-  saved upload. An empty findings list is a valid saved scan, not missing results.
-- **Analyze reference dataset**: runs the Python scanner on `samples/official/`. Official
-  sample attribution remains visible with the report. No offline or automatic dataset fallback
-  is loaded. Accuracy evaluation remains available through `make eval` and CI.
-
-## Command line (optional)
-
-The same image runs the CLI. Scan a folder and write the CBOM, findings, SARIF and summary to `./out`,
-or probe a live TLS endpoint:
-
-```bash
-docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
-<<<<<<< HEAD
-docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace
-```
-
-Mount a writable results directory as above to retain uploads after removing the container.
-Without a volume, saved uploads last only for that container's lifetime.
-
-### Dashboard development
-
-Needs Python >= 3.10, Node 24, tshark, and Go >= 1.24 for the lab tests.
-
-```bash
-pip install -e ".[dev]"
-npm --prefix frontend ci
-make ui                      # Python API + Vite dev server on http://localhost:8501 (or: python scripts/ui.py)
-```
-
-The same checks CI runs:
-
-```bash
-npm --prefix frontend run typecheck && npm --prefix frontend run lint
-npm --prefix frontend test && npm --prefix frontend run build
-make test && make eval
-python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
-```
-=======
-docker run --rm quantumtrace qtrace probe example.com --deep
-```
-
-> Linux with SELinux (Fedora/RHEL): add `:Z` to the volume, `-v "$PWD:/data:Z"`.
-> Windows PowerShell: use `-v "${PWD}:/data"`.
->>>>>>> c56242c (Simplify README)
-
-## Results on the official challenge data
-
-These numbers come from `python -m quantumtrace.evaluate`, which compares the scan
-against `tests/ground_truth.json`.
-
-| Source | Input | Result |
-|---|---|---|
-| Network | `network.pcap`: 2000 packets, 135 TCP sessions | 135/135 sessions classified correctly. Only **7/135 (5%)** use hybrid X25519MLKEM768. **114** are exposed to Harvest-Now-Decrypt-Later and **14** are cleartext HTTP |
-| Code | 24 files: 8 patterns × Python/Java/Go | 36/36 expected findings, **100% precision and recall**, 10 false-positive traps checked |
-| Cloud | KMS (10 keys), ELB (6 load balancers), ACM (5 certs) | 23/23 expectations, 3 traps checked |
-
-These are the only numbers measured on data we did not write. Our own fixtures are scored
-separately (`code_by_origin` in the report) so they never inflate the official result:
-
-| Our fixtures (`samples/extra/code/`) | Result |
-|---|---|
-| nginx, Apache, sshd_config, Terraform, JWT in Python/Java/Go | 60/60 expectations, 5 traps checked |
-
-The synthetic data contains traps on purpose. QuantumTrace handles each of them:
-
-- Ed25519 is "modern" but **Shor-vulnerable**, so it is classified Critical.
-- AES key sizes hidden behind constants are resolved: `KEY_LEN = 32`, `KEY_BITS = 256`,
-  and `exportKey = []byte("0123456789ABCDEF")` (16 bytes, so AES-128).
-- Hand-rolled constructions in Go are recognised by their semantics:
-  - **ECB**: a `block.Encrypt` loop with no "ECB" string anywhere;
-  - **PBKDF2**: HMAC in a loop with XOR accumulation, 600,000 iterations resolved from the call site.
-- `sha512.Sum384` is SHA-384, not SHA-512.
-- `signing_tag()` is an HMAC, not a digital signature.
-- `rand.Read` resolves to **math/rand** or crypto/rand through the import table.
-- Hard-coded keys in demo `main()` code are separated from production constants.
-- **tshark 4.2 prints X25519MLKEM768 (0x11EC) as "Unknown".** QuantumTrace reads raw
-  codepoints and maps them with its own IANA table.
-- TLS 1.3 certificates are encrypted on the wire. Authentication is inferred from the client's
-  `signature_algorithms`: only classical schemes were offered, so the server signature is
-  necessarily Shor-vulnerable.
-- Each key_share length is validated against FIPS 203 sizes (1216/1120 bytes for X25519MLKEM768).
-- Offered and negotiated values are kept apart. For example, the client offered AES-256 but the
-  server picked AES-128. SSH negotiation follows RFC 4253 §7.1.
-- AWS `SslPolicy` is mapped to protocols and ciphers from the official AWS table.
-  `ELBSecurityPolicy-2016-08` still allows TLS 1.0 and RSA key transport.
-- KMS `SYMMETRIC_DEFAULT` is AES-256-GCM, so it is safe.
-- The legacy NLB certificate is **SHA1WITHRSA and expired**.
-- The KMS key `legacy-reports-export` is **scheduled for deletion on 2026-10-12**.
-
-## Live TLS probe
-
-Use the **Live probe** page, or `qtrace probe <host[:port]> ... [--deep]` from the CLI.
-The probe builds its ClientHellos by hand, so it does not depend on the local OpenSSL supporting PQ.
-For each endpoint it measures:
-
-- **What a modern client gets.** A Chrome-like hello offers X25519MLKEM768 and X25519 key shares.
-  QuantumTrace then **decrypts its own TLS 1.3 handshake** (ML-KEM decapsulation plus the RFC 8446
-  key schedule). That reveals the certificate chain and the real `CertificateVerify` signature scheme,
-  even on PQ-only servers that classical clients cannot reach.
-- **Each key-exchange group, one hello per group with a real key share:**
-  - X25519MLKEM768, SecP256r1MLKEM768, SecP384r1MLKEM1024;
-  - pure ML-KEM-512/768/1024;
-  - pre-standard Kyber;
-  - X25519/X448, P-256/384/521;
-  - FFDHE.
-- **Protocol versions** from SSL 3.0 to TLS 1.3. **TLS 1.3 ciphers.** **TLS 1.2 ciphers** in server
-  preference order (offer all, then remove the chosen one), with the ECDHE curve or DH size taken from
-  ServerKeyExchange.
-- **With `--deep`**, the signature families the server can authenticate with, including **ML-DSA**
-  certificates.
-- **STARTTLS** is used automatically on ports 25, 587, 143, 110 and 21. Postgres `SSLRequest` is used on 5432.
-- **TLS-interception detection.** If the chain is issued by a proxy or egress CA, the result describes
-  the middlebox, which may be stripping PQ.
-
-Every result becomes a normal `Finding` with source `probe`, so it lands in the same score and CBOM.
-Classical groups that a PQ server still accepts are reported as *fallback for legacy clients*.
-They are real exposure, but client-dependent, so they score 60 instead of 100.
-
-### Offline TLS lab (demo sandbox, also used by the tests)
-
-The lab has two halves in `samples/extra/tls-lab/`: `modern/` (Go ≥ 1.24, which has X25519MLKEM768
-in `crypto/tls`) and `legacy/` (port 8445, built with Go 1.21 defaults so TLS 1.0, 3DES and RSA key
-transport still work). The Docker image builds both with Go 1.24 and `tlslab` starts them together.
-The dashboard container starts it, so any of these endpoints can be typed in the **Live probe** page.
-`make lab` and the tests run the same code.
-
-| Endpoint | Profile |
-|---|---|
-| 127.0.0.1:8443 | TLS 1.3 only, X25519MLKEM768 preferred, ECDSA P-256 |
-| 127.0.0.1:8444 | Classical TLS 1.2/1.3 (X25519, P-256 only) |
-| 127.0.0.1:8445 | Legacy: TLS 1.0–1.2, RSA key transport, CBC, 3DES, **RSA-2048 SHA-1 expired** certificate |
-| 127.0.0.1:8446 | PQ for modern clients + classical TLS 1.2 ECDHE fallback, RSA certificate (typical migration state) |
-| 127.0.0.1:8447 | **PQ-only**: classical clients are rejected |
-| 127.0.0.1:2525 | SMTP + STARTTLS |
-| 127.0.0.1:5433 | Postgres SSLRequest + hybrid PQ |
-
-### Real reference captures (`samples/extra/pcap/`)
-
-The pcap ingestor is also validated on **real** traffic. `record.py` and `record_ssh.py` regenerate these files.
-
-**`lab-handshakes.pcapng`**: Go 1.24 and OpenSSL clients against the lab:
-- hybrid PQ;
-- PQ offered but not negotiated;
-- classical client to a PQ server;
-- TLS 1.2 certificates in clear;
-- TLS 1.0 with 3DES;
-- **HelloRetryRequest**;
-- SMTP STARTTLS on a **non-standard port**;
-- Postgres SSLRequest.
-
-**`lab-ssh.pcapng`**: OpenSSH 9.6 on port 2222:
-- default `sntrup761x25519` (PQ hybrid);
-- curve25519 with PQ disabled;
-- legacy group14-sha1, ssh-rsa, aes128-cbc and hmac-sha1.
-
-Two lessons came from these real captures:
-- **Protocols are identified by payload, not port.** SSH or SMTP on any port is recognised from its
-  banner, and Postgres from its SSLRequest.
-- **Unidentified streams are never called "cleartext".** QuantumTrace only reports cleartext when it
-  has positive evidence.
-
-## Config files, JWT and TLS settings in code
-
-Most production crypto is chosen in config, not in code. The code scanner also reads:
-
-| Format | What is checked |
-|---|---|
-| nginx / Apache | `ssl_protocols`, cipher strings (expanded like OpenSSL, `!`/`-` exclusions applied), `ssl_ecdh_curve` / `Groups`, `ssl_dhparam` size, and `server{}` blocks that answer plain HTTP without a redirect |
-| sshd_config / ssh_config | `KexAlgorithms`, `Ciphers`, `MACs`, host-key and pubkey algorithms, `HostKey`. The `+` `-` `^` prefixes modify OpenSSH's default list, so they are resolved against it (`sshd -T`, OpenSSH 9.6): `+diffie-hellman-group1-sha1` keeps the default PQ hybrid in front, `-sntrup761x25519-sha512@openssh.com` removes it. Files are recognised by content too (`sshd_config_hardened`, `server.conf`) |
-| Terraform | `aws_lb_listener` SslPolicy, `aws_kms_key` KeySpec, `tls_private_key`, ACM resources |
-| JWT | PyJWT / python-jose, jjwt / auth0, golang-jwt: `alg`, `none`, disabled verification, HMAC key size |
-| TLS settings in code | Go `tls.Config`: `MinVersion`/`MaxVersion`, `CipherSuites`, `CurvePreferences` (a list without X25519MLKEM768 turns off Go's default PQ hybrid), `InsecureSkipVerify`. Python: `ssl._create_unverified_context()`, `verify_mode = CERT_NONE`, `requests`/`httpx` with `verify=False` |
-
-A setting that is not written is not reported: the product default depends on a version the
-scanner cannot see. OpenSSH's `+`/`-`/`^` are the exception, because they only make sense
-against the default list.
-
-## Deadlines
-
-Every finding carries the regulatory dates that apply to it and the earliest binding year:
-
-- **NIST IR 8547** (initial public draft, so the dates are proposed): 112-bit quantum-vulnerable
-  public-key crypto deprecated after 2030, all of it disallowed after 2035.
-- **EU PQC Roadmap** (NIS Cooperation Group, June 2025): inventory by end-2026, high-risk uses
-  (HNDL-exposed data, long-lived signatures) by end-2030, the rest by end-2035.
-- **NSA CNSA 2.0**: cited for context only, since it binds US National Security Systems.
-- Classical retirements: SHA-1 by 2030, 3DES since 2023, TLS 1.0/1.1 (RFC 8996).
-
-## Classification model
+## How it rates risk
 
 | Tier | Rule | Examples |
 |---|---|---|
-| **Critical** | Shor breaks it | RSA (any size), DSA, DH, ECDH/X25519, ECDSA, Ed25519 |
-| **Medium** | Grover leaves under 128-bit post-quantum strength | AES-128, 3DES, SHA-1, MD5, HMAC-SHA1 |
-| **Safe** | ≥128-bit post-quantum strength, or a PQC/hybrid scheme | AES-256, ChaCha20, SHA-384, ML-KEM, ML-DSA, X25519MLKEM768 |
-| **Unencrypted** | No cryptography at all | Cleartext HTTP, HTTP listeners |
+| **Critical** | Broken by Shor's algorithm | RSA, DSA, DH, ECDH, X25519, ECDSA, Ed25519 |
+| **Medium** | Weakened by Grover's algorithm below 128-bit post-quantum strength | AES-128, 3DES, SHA-1, HMAC-SHA1 |
+| **Quantum-resilient** | 128-bit post-quantum strength or more, or a PQC / hybrid scheme | AES-256, ChaCha20, SHA-384, ML-KEM, ML-DSA, X25519MLKEM768 |
+| **Unencrypted** | No cryptography at all | Cleartext HTTP |
 
-Classical problems are reported **separately** (`classical_status`, flags, CWE): MD5 collisions,
-ECB, non-CSPRNG, RSA-1024, expired certificates. A classical issue is never labelled as a
-quantum one.
+Classical weaknesses (MD5, ECB, RSA-1024, expired certificates...) are reported separately and never
+labelled as quantum ones.
 
-**Urgency and score.** Each finding gets risk points:
+- **Quantum Readiness Score (0–100, grades A–F):** for each source, 100 minus the average risk of its
+  assets, then averaged over sources. Risk points per finding: 100 for Shor-vulnerable traffic that can be
+  recorded today (or cleartext), 90 for long-lived signatures, 75 for other Shor uses, 60 when only the
+  fallback for legacy clients is classical, 40 for Grover, 0 if safe.
+- **Migration timeline (Mosca's rule):** for each Shor-vulnerable system, *years the data must stay secret +
+  years to migrate > years to Q-Day* means it is already late. Every assumption has a source (NIST, EU, UK NCSC,
+  CA/Browser Forum, retention law), listed on the dashboard's **Migration plan → Sources** page.
+- **Migration plan:** findings grouped into actions, prioritised P0 (data recordable or readable today) →
+  P1 (other Shor uses and broken crypto) → P2, with a what-if that re-scores the report as if the selected
+  actions were done.
+- **Deadlines:** every finding carries the regulatory dates that apply to it: NIST IR 8547 (proposed:
+  112-bit RSA/ECC deprecated after 2030, all quantum-vulnerable public-key crypto disallowed after 2035),
+  the EU PQC roadmap (high-risk uses by the end of 2030) and NSA CNSA 2.0.
 
-| Points | Meaning |
+## Accuracy
+
+On the official challenge data (`python -m quantumtrace.evaluate`, against `tests/ground_truth.json`):
+
+| Source | Result |
 |---|---|
-| 100 | Shor + HNDL (key exchange or encryption), or cleartext |
-| 90 | Shor on a long-lived signature (root CA, code signing, attestation) |
-| 75 | Other Shor use |
-| 40 | Grover-weakened |
-| 0 | Quantum-safe |
+| Network (`network.pcap`, 135 TCP sessions) | **135/135** sessions classified correctly: only 7 use hybrid X25519MLKEM768, 114 can be recorded now and decrypted later, 14 are cleartext HTTP |
+| Code (24 files, Python / Java / Go) | **36/36** findings, 100% precision and recall, 10 false-positive traps passed |
+| Cloud (KMS, load balancers, ACM) | **23/23**, 3 traps passed |
 
-The **Quantum Readiness Score** is the mean over sources of (100 − mean asset risk).
+Our own fixtures (181 findings, 18 traps) are scored separately, so they never inflate these numbers.
+
+The official data contains traps on purpose. QuantumTrace handles each of them:
+
+- Ed25519 is "modern" but **Shor-vulnerable**, so it is Critical.
+- AES key sizes hidden behind constants are resolved: `KEY_LEN = 32`, `KEY_BITS = 256`, and
+  `[]byte("0123456789ABCDEF")` (16 bytes, so AES-128).
+- Hand-rolled Go constructions are recognised by what they do: **ECB** (a `block.Encrypt` loop, no "ECB"
+  anywhere) and **PBKDF2** (HMAC in a loop with XOR, 600,000 iterations resolved from the call site).
+- `sha512.Sum384` is SHA-384; `signing_tag()` is an HMAC, not a signature; `rand.Read` is resolved to
+  `math/rand` or `crypto/rand` through the imports.
+- **tshark 4.2 prints X25519MLKEM768 (0x11EC) as "Unknown"**: QuantumTrace reads the raw codepoints with its
+  own IANA table and checks key-share sizes against FIPS 203 (1216/1120 bytes).
+- TLS 1.3 certificates are encrypted on the wire: the server signature is inferred from the client's
+  `signature_algorithms`. Offered and negotiated values are kept apart (AES-256 offered, AES-128 chosen).
+- AWS: `ELBSecurityPolicy-2016-08` still allows TLS 1.0 and RSA key transport; KMS `SYMMETRIC_DEFAULT` is
+  AES-256-GCM (safe); the legacy NLB certificate is SHA-1 and expired; one KMS key is scheduled for deletion.
+
+On public third-party benchmarks (`scripts/run_benchmarks.sh` rebuilds and runs them all):
+
+| Benchmark | Precision | Recall |
+|---|---|---|
+| OWASP Benchmark (Java crypto, hash, weak random) | 100% | 100% |
+| CryptoAPI-Bench | 100% | 91.4% |
+| Semgrep crypto rules (Python, Java, Go, JS) | 100% | 91.9% |
+| SonarSource rule samples | 100% | 91.2% |
+| CodeQL crypto query tests | 100% | 95.9% |
+| Bandit examples | 100% | 100% |
+| gosec samples | 98.7% | 100% |
+| ApacheCryptoAPI-Bench (real Apache projects) | 97.9% | 88.7% |
+| NIST Juliet Test Suite, Java crypto CWEs (held-out, first run) | 88.2% | 90.8% |
 
 ## Outputs
 
 | File | Content |
 |---|---|
-| `out/cbom.cdx.json` | CycloneDX 1.6 CBOM, described below |
-| `out/findings.json` | Normalised findings, with evidence pointing to file:line, pcap stream/frame or ARN |
-| `out/results.sarif` | Code findings for GitHub code scanning |
-| `out/summary.json` | Score, tiers, HNDL exposure and the prioritised migration plan |
+| `cbom.cdx.json` | **CycloneDX 1.6 CBOM**, validated against the official schema: algorithms (OID, NIST quantum level), TLS/SSH protocols, certificates, keys, libraries, and vulnerabilities with the FIPS 203/204/205 replacement |
+| `findings.json` | Every finding with its evidence (file:line, capture stream, ARN), risk tier, replacement and regulatory deadlines |
+| `summary.json` | Score, tiers, harvest-now-decrypt-later exposure, migration plan |
+| `results.sarif` | Code findings for GitHub code scanning |
 
-The CBOM contains these CycloneDX objects:
+The dashboard's **Reports** page downloads the CBOM, the SARIF, the full JSON report and a CSV inventory.
 
-- algorithms with OID, primitive, NIST quantum level and occurrences;
-- TLS/SSH protocol components with their cipher suites;
-- certificates;
-- keys (related-crypto-material);
-- libraries;
-- `vulnerabilities` entries with CWE and the FIPS 203/204/205 recommendation.
+## Dashboard
 
-## Architecture
-
-```
-ingest/pcap.py   (tshark, numeric fields)   ┐
-ingest/code/*    (ast + tree-sitter)        ├─> Finding (schema.py) ─> classify.py (kb/*) ─> score.py ─> export/{cyclonedx,sarif}
-ingest/cloud.py  (AWS KMS / ELB / ACM)      ┘                                              └─> web.py (API) ─> frontend/ (React)
-```
-
-The knowledge base in `quantumtrace/kb/` is the only place where classification rules live:
-
-| File | Content |
+| Page | Shows |
 |---|---|
-| `algorithms.py` | Algorithm catalog, OIDs, NIST levels |
-| `tls.py` | IANA cipher suites, groups (incl. ML-KEM hybrids, GREASE, HRR), signature schemes |
-| `ssh.py` | SSH algorithm registry |
-| `aws.py` | SslPolicy tables, incl. the 2025-09 PQ policies |
+| Overview | Readiness score, findings per tier, systems late for Q-Day, network exposure, riskiest systems |
+| Migration plan | Q-Day scenarios or any custom year, timeline per system, prioritised actions with what-if, sources |
+| Crypto inventory | Every finding with evidence, reasoning, replacement, line-level fix and deadlines |
+| Live probe | Post-quantum check of any TLS endpoint |
+| Explain | How any algorithm is classified in a given role, and why |
+| Reports | JSON, CSV, CBOM and SARIF downloads |
 
-## Bad input
+The browser never computes a risk, a score or a priority: a small Python API (`quantumtrace/web.py`) runs the
+same scanner, scorer and exporters as the CLI.
 
-One file that cannot be read never stops the scan. It is skipped, reported on stderr as
-`[!] skipped <path>: <reason>` and listed under `warnings` in `summary.json`: corrupt captures,
-truncated or non-AWS JSON, `kms list-keys` output without key specs, missing paths. An ELB
-policy outside the AWS table is derived from its name and marked `policy-derived-from-name`;
-a name that cannot be parsed is assumed to be classical ECDHE, never safe.
+## Live TLS probe
 
-| Exit code | Meaning |
-|---|---|
-| 0 | Scan done (warnings, if any, are in `summary.json`) |
-| 1 | `probe`: no target answered a TLS handshake |
-| 2 | The CBOM failed CycloneDX 1.6 validation |
-| 3 | Nothing could be analysed |
+The probe builds its ClientHellos by hand, so it does not depend on the local OpenSSL supporting PQ:
 
-## Development and tests
+- **What a modern client gets.** A Chrome-like hello offers X25519MLKEM768 and X25519. QuantumTrace then
+  **decrypts its own TLS 1.3 handshake** (ML-KEM decapsulation and the RFC 8446 key schedule) to read the
+  certificate chain and the real `CertificateVerify` signature, even on PQ-only servers.
+- **Every key-exchange group**, one hello each: the ML-KEM hybrids, pure ML-KEM-512/768/1024, pre-standard
+  Kyber, X25519/X448, P-256/384/521 and FFDHE. Classical groups a PQ server still accepts are reported as a
+  fallback for legacy clients.
+- **Protocol versions** from SSL 3.0 to TLS 1.3, TLS 1.3 ciphers and TLS 1.2 ciphers in server preference order;
+  with `--deep`, the signature schemes the server can use, including **ML-DSA**.
+- **STARTTLS** on ports 25, 587, 143, 110 and 21, Postgres on 5432, and detection of TLS-intercepting proxies.
 
-Not needed to run QuantumTrace. CI runs all of this, plus the Docker image, on every pull request.
+The offline lab inside the image can be probed at `127.0.0.1`: **8443** PQ, **8444** classical, **8445** legacy
+(TLS 1.0, 3DES, expired SHA-1 certificate), **8446** PQ with classical fallback, **8447** PQ only, **2525** SMTP
+STARTTLS, **5433** Postgres.
 
-<details>
-<summary>Local setup (Python ≥ 3.10, Node 24, tshark, Go ≥ 1.24)</summary>
+## Command line
+
+The same image runs the CLI:
 
 ```bash
-pip install -e ".[dev]"
-npm --prefix frontend ci
-make ui      # Python API + Vite dev server on http://localhost:8501
-make test    # unit tests + ground truth (QT_NOW=2026-10-10)
-make eval    # accuracy report vs tests/ground_truth.json
+docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
+docker run --rm quantumtrace qtrace probe google.com --deep
+docker run --rm quantumtrace qtrace explain AES key_bits=128 mode=ECB category=encryption
+```
+
+To open CLI results in the dashboard, and keep uploaded scans after the container is removed, mount a results
+folder: `docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace`.
+
+On SELinux systems (Fedora, RHEL) add `:Z` to the volume (`-v "$PWD:/data:Z"`); in Windows PowerShell use
+`${PWD}` instead of `$PWD`.
+
+## Development
+
+Not needed to run QuantumTrace. CI runs all of this, and builds and tests the Docker image, on every pull request.
+
+<details>
+<summary>Run locally without Docker (Python ≥ 3.10, Node 24, tshark, Go ≥ 1.24 for the TLS lab)</summary>
+
+```bash
+pip install -e ".[dev]" && npm --prefix frontend ci
+make ui       # Python API + dashboard with hot reload on http://localhost:8501
+make test     # unit and ground-truth tests
+make eval     # accuracy report on the official samples
 npm --prefix frontend run typecheck && npm --prefix frontend run lint
 npm --prefix frontend test && npm --prefix frontend run build
-python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
+python scripts/smoke_ui.py http://localhost:8501   # against a running UI: routes, API, upload scan, exports
+scripts/run_benchmarks.sh                          # the third-party benchmarks above
 ```
 
 </details>
 
-Official samples are in `samples/official/`, copied from the upstream repo at commit `39e8f18`.
-Put new fixtures in `samples/extra/`.
+```
+ingest/pcap.py · ingest/code/* · ingest/cloud.py ─> Finding ─> classify.py (kb/) ─> score.py ─> export/ (CycloneDX, SARIF)
+                                                                                           └─> web.py (API) ─> frontend/ (React)
+```
+
+The knowledge base (algorithm catalog and OIDs, TLS/SSH registries, AWS policies, Mosca assumptions and their
+sources) is in `quantumtrace/kb/`. The official samples are in `samples/official/` (upstream commit `39e8f18`);
+our own fixtures are in `samples/extra/`.
