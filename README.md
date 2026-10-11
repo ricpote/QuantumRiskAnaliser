@@ -13,7 +13,7 @@ git clone https://github.com/ricpote/QuantumRiskAnaliser.git && cd QuantumRiskAn
 docker build -t quantumtrace .
 
 # 1. Dashboard -> open http://localhost:8501
-docker run --rm -p 8501:8501 quantumtrace
+docker run --rm -p 127.0.0.1:8501:8501 quantumtrace
 
 # 2. CLI scan of the official samples -> CBOM, findings, SARIF, summary in ./out
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
@@ -27,6 +27,62 @@ docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace pro
 
 The image pins every Python dependency (`constraints.txt`) and bundles tshark and the TLS lab.
 CI builds it and runs the three commands above on every pull request.
+
+## Dashboard
+
+`docker run --rm -p 127.0.0.1:8501:8501 quantumtrace` serves the dashboard on http://localhost:8501.
+It is a React (TanStack Start) app in `frontend/`, rendered by Node, on top of a small Python
+API (`quantumtrace/web.py`) that runs the same scanner, scorer and exporters as the CLI: the
+browser never computes a risk, a score or a priority. The API listens on 127.0.0.1:8502 inside
+the container. There is no authentication and the live probe connects to whatever host you type,
+so keep the port on 127.0.0.1 as above (or on a trusted network).
+
+| Page | What it shows |
+|---|---|
+| Overview | Readiness score, systems late for Q-Day, HNDL and cleartext exposure, highest-risk systems |
+| Crypto inventory | Every finding with its evidence, the reasoning, the replacement standard and the deadlines |
+| Migration plan | Mosca timeline per system with Q-Day scenarios (2030 / 2033 / 2035), prioritised actions, and a what-if that re-scores the report as if the ticked actions were done |
+| Live probe | Post-quantum check of any TLS endpoint; the image runs the offline lab on 127.0.0.1 |
+| Accuracy | Results compared with `tests/ground_truth.json` (the same check CI runs) |
+| Explain | How any algorithm is classified in a given role, and why |
+| Reports | JSON, CSV, CycloneDX 1.6 CBOM and SARIF downloads |
+
+Where the data comes from (toolbar and **New scan**):
+
+- **Scan uploaded files**: PCAP/PCAPNG, Python/Java/Go/JS, config files, AWS JSON exports or a
+  ZIP (max 32 MiB, 2,000 files, 128 MiB expanded). Uploads are deleted after the scan; results
+  stay in memory until replaced, so download the report to keep them.
+- **Scan official samples (demo)**: the real scanner on the bundled challenge data, labelled
+  *sample data*.
+- **Reload CLI results**: reads `findings.json` from `QT_RESULTS_DIR` (default `out/`).
+- **Use bundled demo**: a small checked-in report (`frontend/public/demo-report.json`, rebuilt
+  with `python scripts/generate_demo.py`). It works even without the API.
+
+Show results produced by the CLI:
+
+```bash
+docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
+docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results:ro" -e QT_RESULTS_DIR=/results quantumtrace
+```
+
+### Dashboard development
+
+Needs Python >= 3.10, Node 24, tshark, and Go >= 1.24 for the lab tests.
+
+```bash
+pip install -e ".[dev]"
+npm --prefix frontend ci
+make ui                      # Python API + Vite dev server on http://localhost:8501 (or: python scripts/ui.py)
+```
+
+The same checks CI runs:
+
+```bash
+npm --prefix frontend run typecheck && npm --prefix frontend run lint
+npm --prefix frontend test && npm --prefix frontend run build
+make test && make eval
+python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
+```
 
 ## Results on the official challenge data
 
@@ -225,7 +281,7 @@ The CBOM contains these CycloneDX objects:
 ```
 ingest/pcap.py   (tshark, numeric fields)   ┐
 ingest/code/*    (ast + tree-sitter)        ├─> Finding (schema.py) ─> classify.py (kb/*) ─> score.py ─> export/{cyclonedx,sarif}
-ingest/cloud.py  (AWS KMS / ELB / ACM)      ┘                                              └─> app/streamlit_app.py
+ingest/cloud.py  (AWS KMS / ELB / ACM)      ┘                                              └─> web.py (API) ─> frontend/ (React)
 ```
 
 The knowledge base in `quantumtrace/kb/` is the only place where classification rules live:
@@ -263,7 +319,7 @@ docker run --rm quantumtrace python -m quantumtrace.evaluate   # accuracy vs tes
 For development (needs Python ≥ 3.10, tshark and Go ≥ 1.24 installed locally):
 
 ```
-pip install -e ".[ui,dev]"
+pip install -e ".[dev]"
 make test   # unit tests + ground truth (QT_NOW=2026-10-10)
 make eval   # accuracy report
 ```

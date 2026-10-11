@@ -245,8 +245,8 @@ def cmd_explain(a):
 
 
 def cmd_serve(a):
-    app = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "streamlit_app.py")
-    os.execvp(sys.executable, [sys.executable, "-m", "streamlit", "run", app, "--server.port", str(a.port), "--", "--data", a.data])
+    launcher = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "ui.py")
+    os.execvp(sys.executable, [sys.executable, launcher, "--production", "--port", str(a.port), "--results", a.data])
 
 
 def main(argv=None):
@@ -273,7 +273,7 @@ def main(argv=None):
     e.add_argument("algorithm")
     e.add_argument("params", nargs="*")
     e.set_defaults(fn=cmd_explain)
-    w = sub.add_parser("serve", help="launch the Streamlit dashboard")
+    w = sub.add_parser("serve", help="launch the React dashboard (build frontend first)")
     w.add_argument("--data", default="out")
     w.add_argument("--port", default=8501, type=int)
     w.set_defaults(fn=cmd_serve)

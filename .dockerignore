@@ -8,15 +8,19 @@
 !constraints.txt
 !README.md
 !quantumtrace/
-!app/
-!.streamlit/
 !samples/
 !tests/
+!frontend/
+!scripts/
 
 # junk that can live inside the allowed folders
 **/__pycache__
 **/*.pyc
 **/*.egg-info
 **/.pytest_cache
+frontend/node_modules
+frontend/.output
+frontend/dist
+frontend/.tanstack
 samples/extra/tls-lab/modern/tlslab-modern-test
 samples/extra/tls-lab/legacy/tlslab-legacy-test

@@ -1,8 +1,0 @@
-[theme]
-primaryColor = "#D7263D"
-base = "light"
-font = "sans serif"
-
-[server]
-headless = true
-maxUploadSize = 200

@@ -2,6 +2,20 @@ name: ci
 on: [push, pull_request]
 
 jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "24", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
   test:
     runs-on: ubuntu-latest
     steps:
@@ -20,6 +34,8 @@ jobs:
         env:
           QT_NOW: "2026-10-10T12:00:00Z"
         run: pytest -q
+      - name: Ground-truth evaluation
+        run: python -m quantumtrace.evaluate
       - name: CBOM must validate against the CycloneDX 1.6 schema
         run: |
           qtrace scan samples/official --out out
@@ -45,6 +61,8 @@ jobs:
           grep -q "✓ TLS 1.0" probe.txt && grep -q "3DES" probe.txt   # legacy half really serves obsolete crypto
       - name: Dashboard answers on :8501
         run: |
-          docker run -d --name ui -p 8501:8501 quantumtrace
-          for i in $(seq 1 30); do curl -sf http://localhost:8501/_stcore/health && exit 0; sleep 1; done
-          docker logs ui; exit 1
+          docker run -d --name ui -p 127.0.0.1:8501:8501 quantumtrace
+          python3 scripts/smoke_ui.py || { docker logs ui; exit 1; }
+      - name: Dashboard logs
+        if: always()
+        run: docker logs ui || true
