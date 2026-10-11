@@ -6,31 +6,24 @@ source code (Python, Java, Go), config files (nginx, Apache, OpenSSH, Terraform)
 validates against the official schema. Each finding maps to its NIST replacement:
 FIPS 203 (ML-KEM), FIPS 204 (ML-DSA) or FIPS 205 (SLH-DSA).
 
-## Quick start (Docker only, nothing else to install)
+## Quick start
+
+Only Docker is needed.
 
 ```bash
 git clone https://github.com/ricpote/QuantumRiskAnaliser.git && cd QuantumRiskAnaliser
 docker build -t quantumtrace .
-
-# 1. Dashboard -> open http://localhost:8501
 docker run --rm -p 127.0.0.1:8501:8501 quantumtrace
-
-# 2. CLI scan of the official samples -> CBOM, findings, SARIF, summary in ./out
-docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
-
-# 3. Live TLS probe against the bundled offline lab (PQ vs legacy endpoint)
-docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8445"
 ```
 
-> Linux with SELinux (Fedora/RHEL): add `:Z` to the volume, `-v "$PWD:/data:Z"`.
-> Windows PowerShell: use `-v "${PWD}:/data"`.
+Open http://localhost:8501 and click **Scan official samples**. Everything below is available from
+the dashboard: the scan, the live TLS probe (the offline TLS lab already runs inside the container),
+the accuracy check and the CBOM / SARIF / JSON / CSV downloads.
 
 The image pins every Python dependency (`constraints.txt`) and bundles tshark and the TLS lab.
-CI builds it and runs the three commands above on every pull request.
 
 ## Dashboard
 
-`docker run --rm -p 127.0.0.1:8501:8501 quantumtrace` serves the dashboard on http://localhost:8501.
 It is a React (TanStack Start) app in `frontend/`, rendered by Node, on top of a small Python
 API (`quantumtrace/web.py`) that runs the same scanner, scorer and exporters as the CLI: the
 browser never computes a risk, a score or a priority. The API listens on 127.0.0.1:8502 inside
@@ -67,10 +60,14 @@ Where the data comes from (toolbar and **New scan**):
   sample attribution remains visible with the report. No offline or automatic dataset fallback
   is loaded. Accuracy evaluation remains available through `make eval` and CI.
 
-Show results produced by the CLI:
+## Command line (optional)
+
+The same image runs the CLI. Scan a folder and write the CBOM, findings, SARIF and summary to `./out`,
+or probe a live TLS endpoint:
 
 ```bash
 docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
+<<<<<<< HEAD
 docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace
 ```
 
@@ -95,6 +92,13 @@ npm --prefix frontend test && npm --prefix frontend run build
 make test && make eval
 python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
 ```
+=======
+docker run --rm quantumtrace qtrace probe example.com --deep
+```
+
+> Linux with SELinux (Fedora/RHEL): add `:Z` to the volume, `-v "$PWD:/data:Z"`.
+> Windows PowerShell: use `-v "${PWD}:/data"`.
+>>>>>>> c56242c (Simplify README)
 
 ## Results on the official challenge data
 
@@ -142,10 +146,7 @@ The synthetic data contains traps on purpose. QuantumTrace handles each of them:
 
 ## Live TLS probe
 
-```bash
-docker run --rm -v "$PWD:/data" quantumtrace qtrace probe example.com mail.example.com:587 db.internal:5432 --deep --out /data/out
-```
-
+Use the **Live probe** page, or `qtrace probe <host[:port]> ... [--deep]` from the CLI.
 The probe builds its ClientHellos by hand, so it does not depend on the local OpenSSL supporting PQ.
 For each endpoint it measures:
 
@@ -177,11 +178,8 @@ They are real exposure, but client-dependent, so they score 60 instead of 100.
 The lab has two halves in `samples/extra/tls-lab/`: `modern/` (Go ≥ 1.24, which has X25519MLKEM768
 in `crypto/tls`) and `legacy/` (port 8445, built with Go 1.21 defaults so TLS 1.0, 3DES and RSA key
 transport still work). The Docker image builds both with Go 1.24 and `tlslab` starts them together.
-`make lab` and the tests run the same code. Probe every endpoint in one container:
-
-```bash
-docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8444 127.0.0.1:8445 127.0.0.1:8446 127.0.0.1:8447 127.0.0.1:2525 127.0.0.1:5433"
-```
+The dashboard container starts it, so any of these endpoints can be typed in the **Live probe** page.
+`make lab` and the tests run the same code.
 
 | Endpoint | Profile |
 |---|---|
@@ -320,21 +318,25 @@ a name that cannot be parsed is assumed to be classical ECDHE, never safe.
 | 2 | The CBOM failed CycloneDX 1.6 validation |
 | 3 | Nothing could be analysed |
 
-## Tests
+## Development and tests
 
-The accuracy report also runs inside the image:
+Not needed to run QuantumTrace. CI runs all of this, plus the Docker image, on every pull request.
+
+<details>
+<summary>Local setup (Python ≥ 3.10, Node 24, tshark, Go ≥ 1.24)</summary>
 
 ```bash
-docker run --rm quantumtrace python -m quantumtrace.evaluate   # accuracy vs tests/ground_truth.json
-```
-
-For development (needs Python ≥ 3.10, tshark and Go ≥ 1.24 installed locally):
-
-```
 pip install -e ".[dev]"
-make test   # unit tests + ground truth (QT_NOW=2026-10-10)
-make eval   # accuracy report
+npm --prefix frontend ci
+make ui      # Python API + Vite dev server on http://localhost:8501
+make test    # unit tests + ground truth (QT_NOW=2026-10-10)
+make eval    # accuracy report vs tests/ground_truth.json
+npm --prefix frontend run typecheck && npm --prefix frontend run lint
+npm --prefix frontend test && npm --prefix frontend run build
+python scripts/smoke_ui.py http://localhost:8501   # against a running UI (routes, API, upload scan, exports)
 ```
+
+</details>
 
 Official samples are in `samples/official/`, copied from the upstream repo at commit `39e8f18`.
 Put new fixtures in `samples/extra/`.
