@@ -167,8 +167,9 @@ docker run --rm quantumtrace qtrace explain AES key_bits=128 mode=ECB category=e
 To open CLI results in the dashboard, and keep uploaded scans after the container is removed, mount a results
 folder: `docker run --rm -p 127.0.0.1:8501:8501 -v "$PWD/out:/results" -e QT_RESULTS_DIR=/results quantumtrace`.
 
-On SELinux systems (Fedora, RHEL) add `:Z` to the volume (`-v "$PWD:/data:Z"`); in Windows PowerShell use
-`${PWD}` instead of `$PWD`.
+- **Linux and macOS:** the commands work as written. If the container cannot read the mounted folder, add `:Z`
+  to the volume: `-v "$PWD:/data:Z"`.
+- **Windows:** in PowerShell use `${PWD}` instead of `$PWD`; in Command Prompt use `%cd%`.
 
 ## Development
 
