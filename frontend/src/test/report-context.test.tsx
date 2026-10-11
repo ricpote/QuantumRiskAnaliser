@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReportProvider, useReport } from "@/lib/report-context";
-import demo from "../../public/demo-report.json";
+import demo from "./fixtures/scanner-report.json";
 
 function View() {
   const state = useReport();
@@ -9,7 +9,7 @@ function View() {
     <>
       <span>{state.report?.origin ?? "empty"}</span>
       {state.error && <p role="alert">{state.error}</p>}
-      <button disabled={state.busy} onClick={() => void state.demo()}>
+      <button disabled={state.busy} onClick={() => void state.scan([], true)}>
         Demo
       </button>
       <button disabled={state.busy} onClick={() => void state.reload()}>
@@ -23,10 +23,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("report lifecycle", () => {
+  it("does not substitute results when the scanner is unavailable", async () => {
+    const fetch = vi.fn().mockRejectedValue(new Error("offline"));
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <ReportProvider>
+        <View />
+      </ReportProvider>,
+    );
+    await screen.findByRole("alert");
+    expect(screen.getByText("empty")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
   it("keeps an empty workspace empty until demo is explicitly requested", async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ state: "running" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ state: "complete" }) })
       .mockResolvedValueOnce({ ok: true, json: async () => demo });
     vi.stubGlobal("fetch", fetch);
     render(

@@ -54,29 +54,6 @@ export interface WhatIfResult {
   after: Headline;
 }
 
-interface OriginScore {
-  expected: number;
-  detected: number;
-  correctly_classified: number;
-  traps_checked: number;
-}
-export interface AccuracyResult {
-  code: {
-    expected: number;
-    detected: number;
-    correctly_classified: number;
-    recall: number;
-    precision: number;
-    false_positives: number;
-    traps_checked: number;
-  };
-  code_by_origin: { official: OriginScore; own_fixtures: OriginScore };
-  network: { expected_sessions: number; sessions_correct: number; accuracy: number };
-  cloud: { expected: number; correct: number; accuracy: number; traps_checked: number };
-  failures: string[];
-  passed: boolean;
-}
-
 export type ExplainedFinding = Finding & {
   classical_bits?: number | null;
   nist_quantum_level?: number | null;

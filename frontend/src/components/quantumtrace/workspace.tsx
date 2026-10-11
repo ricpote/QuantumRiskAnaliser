@@ -1,15 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Activity,
   ArrowDownToLine,
   ArrowRight,
-  BadgeCheck,
   Box,
   Check,
-  CheckCheck,
-  ChevronDown,
   ChevronRight,
+  ChevronDown,
   CircleHelp,
   Code2,
   FileText,
@@ -40,20 +38,19 @@ import {
 import { ScanDialog } from "./scan-dialog";
 import { useReport } from "@/lib/report-context";
 import { Overview, Migration, Reports } from "./report-panels";
-import { AccuracyPanel, ExplainPanel, ProbePanel } from "./analysis-panels";
+import { ExplainPanel, ProbePanel } from "./analysis-panels";
 import { classicalText, tierMeaning } from "@/lib/labels";
 
-type View = "overview" | "inventory" | "migration" | "reports" | "probe" | "accuracy" | "explain";
+type View = "overview" | "inventory" | "migration" | "reports" | "probe" | "explain";
 const nav = [
   { view: "overview", label: "Overview", icon: LayoutDashboard, to: "/" },
   { view: "inventory", label: "Crypto inventory", icon: Layers, to: "/inventory" },
   { view: "migration", label: "Migration plan", icon: ShieldCheck, to: "/migration" },
   { view: "probe", label: "Live probe", icon: Radar, to: "/probe" },
-  { view: "accuracy", label: "Accuracy", icon: BadgeCheck, to: "/accuracy" },
   { view: "explain", label: "Explain", icon: Lightbulb, to: "/explain" },
   { view: "reports", label: "Reports", icon: FileText, to: "/reports" },
 ] as const;
-// Pages about the loaded report; probe, accuracy and explain are tools that work without one.
+// Pages about the loaded report; probe and explain are tools that work without one.
 const reportViews: readonly View[] = ["overview", "inventory", "migration", "reports"];
 const riskClass = (risk: Risk) =>
   risk === "Critical" || risk === "Unencrypted"
@@ -86,7 +83,6 @@ export function Workspace({ view }: { view: View }) {
   const [menu, setMenu] = useState(false);
   const [scan, setScan] = useState(false);
   const [help, setHelp] = useState(false);
-  const [notification, setNotification] = useState(false);
   const data = useReport();
   const { report, busy, error } = data;
   const assets = report ? adaptFindings(report) : [];
@@ -94,12 +90,28 @@ export function Workspace({ view }: { view: View }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const label =
     report?.origin === "sample"
-      ? "Demo · sample data"
+      ? "Official reference samples"
       : report?.origin === "upload"
         ? "Uploaded scan results"
         : report
           ? "Loaded CLI results"
           : "No results loaded";
+  const dataset =
+    report?.origin === "sample"
+      ? "samples/official/"
+      : report
+        ? Array.from(
+            new Set(
+              report.findings.flatMap((f) =>
+                [f.location["file"], f.location["pcap"], f.location["json"]].filter(
+                  (v): v is string => typeof v === "string",
+                ),
+              ),
+            ),
+          )
+            .slice(0, 3)
+            .join(", ") || label
+        : "";
   const generated = report
     ? new Date(report.generated_at).toLocaleString("en-GB", { timeZone: "UTC" }) + " UTC"
     : "";
@@ -107,6 +119,13 @@ export function Workspace({ view }: { view: View }) {
   const [query, setQuery] = useState("");
   const [risk, setRisk] = useState("All risks");
   const [source, setSource] = useState("All sources");
+  useEffect(() => {
+    setPage(0);
+    setQuery("");
+    setRisk("All risks");
+    setSource("All sources");
+    setSelected(null);
+  }, [report]);
   const filtered = filterAssets(assets, query, risk, source);
   const title = nav.find((n) => n.view === view)?.label ?? "Overview";
   const reportView = reportViews.includes(view);
@@ -223,27 +242,11 @@ export function Workspace({ view }: { view: View }) {
             >
               <Menu />
             </Button>
-            <span className="text-xs text-muted-foreground">Workspace</span>
-            <ChevronRight size={13} className="text-muted-foreground" />
-            <span className="text-xs font-medium">{title}</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <span className="hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="w-1.5 h-1.5 bg-safe rounded-full" />
-              {label}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Report status"
-              onClick={() => setNotification(true)}
-            >
-              <Activity size={17} />
-            </Button>
+            <span className="text-sm font-medium">{title}</span>
           </div>
         </header>
         <main className="page-content">
-          <div className="flex flex-wrap gap-5 items-end justify-between mb-7">
+          <div className="flex flex-wrap gap-4 items-end justify-between mb-4">
             <div>
               <p className="text-[10px] uppercase text-muted-foreground mb-2">
                 Cryptographic posture
@@ -260,11 +263,9 @@ export function Workspace({ view }: { view: View }) {
                       ? "A practical path from discovery to quantum resilience."
                       : view === "probe"
                         ? "Does a live server already protect its traffic against quantum computers?"
-                        : view === "accuracy"
-                          ? "Every result checked against the labelled answers for the challenge data."
-                          : view === "explain"
-                            ? "How QuantumTrace rates any algorithm, and why."
-                            : "Your cryptographic findings, ready to share."}
+                        : view === "explain"
+                          ? "How QuantumTrace rates any algorithm, and why."
+                          : "Your cryptographic findings, ready to share."}
               </p>
             </div>
             <div className="flex gap-2">
@@ -293,10 +294,18 @@ export function Workspace({ view }: { view: View }) {
               >
                 Reload CLI results
               </Button>
-              <Button variant="ghost" size="sm" disabled={busy} onClick={() => void data.demo()}>
-                Use bundled demo
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => void data.scan([], true)}
+              >
+                Analyze reference dataset
               </Button>
-              <span className="text-xs text-muted-foreground">{generated}</span>
+              <span className="text-xs text-muted-foreground break-all">
+                {dataset}
+                {generated && ` · ${generated}`}
+              </span>
             </div>
           )}
           {reportView && busy && (
@@ -307,18 +316,15 @@ export function Workspace({ view }: { view: View }) {
           {reportView && error && (
             <div role="alert" className="panel p-5 mb-5 text-critical">
               {error}
-              <p className="text-xs mt-2">
-                Check the inputs or backend service, then retry. You can also use the explicitly
-                labelled bundled demo.
-              </p>
+              <p className="text-xs mt-2">Check the inputs or backend service, then retry.</p>
             </div>
           )}
           {reportView && !report && !busy && (
             <div className="panel p-8 mb-5">
-              <h2 className="font-semibold">Start with a scan or saved results</h2>
+              <h2 className="font-semibold">No scan results available</h2>
               <p className="mt-2 text-sm">
-                Upload captures, source files, AWS JSON exports or a ZIP using New scan. Reload CLI
-                results after running qtrace scan with the configured output directory.
+                Upload files or analyze the reference dataset to discover your cryptographic
+                exposure.
               </p>
             </div>
           )}
@@ -336,7 +342,7 @@ export function Workspace({ view }: { view: View }) {
               </ul>
             </details>
           )}
-          {view === "overview" && report && <Overview report={report} />}
+          {view === "overview" && report && <Overview key={report.generated_at} report={report} />}
           {report && (view === "overview" || view === "inventory") && (
             <section className="panel overflow-hidden">
               <div className="px-6 py-5 flex flex-wrap gap-3 justify-between items-center">
@@ -521,10 +527,11 @@ export function Workspace({ view }: { view: View }) {
               </Button>
             </div>
           )}
-          {view === "migration" && report && <Migration report={report} />}
-          {view === "reports" && report && <Reports report={report} />}
+          {view === "migration" && report && (
+            <Migration key={report.generated_at} report={report} />
+          )}
+          {view === "reports" && report && <Reports key={report.generated_at} report={report} />}
           {view === "probe" && <ProbePanel />}
-          {view === "accuracy" && <AccuracyPanel />}
           {view === "explain" && <ExplainPanel />}
           <footer className="flex flex-wrap gap-3 justify-between mt-6 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
@@ -671,23 +678,6 @@ export function Workspace({ view }: { view: View }) {
             NIST post-quantum standards
             <ArrowRight />
           </a>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={notification} onOpenChange={setNotification}>
-        <DialogContent>
-          <DialogTitle>Report status</DialogTitle>
-          <DialogDescription>Current report status</DialogDescription>
-          <div className="flex gap-3 py-4">
-            <CheckCheck size={20} className="text-safe" />
-            <div>
-              <p className="text-sm font-medium">
-                {busy ? "Scan in progress" : error ? "Attention required" : "Report status"}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {error ?? `${report?.summary.assets ?? 0} assets. ${label}.`}
-              </p>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

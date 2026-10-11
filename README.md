@@ -43,7 +43,6 @@ so keep the port on 127.0.0.1 as above (or on a trusted network).
 | Crypto inventory | Every finding with its evidence, the reasoning, the replacement standard and the deadlines |
 | Migration plan | Mosca timeline per system with Q-Day scenarios (2030 / 2033 / 2035), prioritised actions, and a what-if that re-scores the report as if the ticked actions were done |
 | Live probe | Post-quantum check of any TLS endpoint; the image runs the offline lab on 127.0.0.1 |
-| Accuracy | Results compared with `tests/ground_truth.json` (the same check CI runs) |
 | Explain | How any algorithm is classified in a given role, and why |
 | Reports | JSON, CSV, CycloneDX 1.6 CBOM and SARIF downloads |
 
@@ -61,8 +60,9 @@ Where the data comes from (toolbar and **New scan**):
 - **Analyze official samples (demo)**: the real scanner on the bundled challenge data, labelled
   *sample data*.
 - **Reload CLI results**: reads `findings.json` from `QT_RESULTS_DIR` (default `out/`).
-- **Use bundled demo**: a small checked-in report (`frontend/public/demo-report.json`, rebuilt
-  with `python scripts/generate_demo.py`). It works even without the API.
+- **Analyze reference dataset**: runs the Python scanner on `samples/official/`. Official
+  sample attribution remains visible with the report. No offline or automatic dataset fallback
+  is loaded. Accuracy evaluation remains available through `make eval` and CI.
 
 Show results produced by the CLI:
 

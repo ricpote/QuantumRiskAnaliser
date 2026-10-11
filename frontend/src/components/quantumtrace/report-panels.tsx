@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { ArrowDownToLine, ArrowRight, Shield, FileText } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { apiRequest, type WhatIfResult } from "@/lib/api";
-import { useReport } from "@/lib/report-context";
 import { downloadReport, saveDownload, sourceLabels, type Report } from "@/lib/quantumtrace-data";
 import { ExposureStrip, MoscaPanel, TopAssets, WhatIfSummary } from "./analysis-panels";
 
@@ -18,7 +17,7 @@ export function Overview({ report }: { report: Report }) {
   let offset = 0;
   return (
     <>
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {[
           {
             label: "Cryptographic assets",
@@ -35,19 +34,13 @@ export function Overview({ report }: { report: Report }) {
             value: s.quantum_readiness_score ?? "—",
             detail: `Out of 100 · grade ${s.grade}`,
           },
-          s.mosca
-            ? {
-                label: `Late for Q-Day ${s.mosca.qday_year}`,
-                value: s.mosca.status["late"] ?? 0,
-                detail: `of ${s.mosca.evaluated} quantum-vulnerable systems · see Migration plan`,
-              }
-            : {
-                label: "Discovery sources",
-                value: Object.keys(s.sources).length,
-                detail: "Sources represented in this report",
-              },
+          {
+            label: "Discovery sources",
+            value: Object.keys(s.sources).length,
+            detail: "Sources represented in this report",
+          },
         ].map((item) => (
-          <div className="stat-card" key={item.label}>
+          <div className="stat-card min-h-36" key={item.label}>
             <p className="text-xs text-muted-foreground">{item.label}</p>
             <p className="text-[34px] font-medium mt-3">{item.value}</p>
             <p className="text-[10px] text-muted-foreground mt-1">{item.detail}</p>
@@ -161,7 +154,6 @@ export function Overview({ report }: { report: Report }) {
 const priorityClass = { P0: "risk-critical", P1: "risk-medium", P2: "risk-safe" } as const;
 
 export function Migration({ report }: { report: Report }) {
-  const { offlineDemo } = useReport();
   const [chosen, setChosen] = useState<number[]>([]);
   const [result, setResult] = useState<WhatIfResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -206,11 +198,7 @@ export function Migration({ report }: { report: Report }) {
       {result ? (
         <WhatIfSummary result={result} />
       ) : (
-        <p className="text-xs mb-5">
-          {offlineDemo
-            ? "The what-if simulation needs the scanner API (not available for the bundled demo)."
-            : "Tick one or more actions to simulate them."}
-        </p>
+        <p className="text-xs mb-5">Tick one or more actions to simulate them.</p>
       )}
       {error && (
         <p role="alert" className="text-xs mb-5 text-critical">
@@ -226,7 +214,7 @@ export function Migration({ report }: { report: Report }) {
                 className="h-4 w-4"
                 aria-label={`Simulate: ${action.action}`}
                 checked={chosen.includes(i)}
-                disabled={offlineDemo}
+                disabled={false}
                 onChange={() => void toggle(i)}
               />
               <span className={`risk-badge ${priorityClass[action.priority]}`}>
@@ -260,7 +248,6 @@ export function Migration({ report }: { report: Report }) {
   );
 }
 export function Reports({ report }: { report: Report }) {
-  const { offlineDemo } = useReport();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   async function exportBackend(kind: "cbom" | "sarif") {
@@ -310,9 +297,7 @@ export function Reports({ report }: { report: Report }) {
             </p>
             <Button
               variant="outline"
-              disabled={
-                pending !== null || (offlineDemo && (format === "cbom" || format === "sarif"))
-              }
+              disabled={pending !== null}
               onClick={() =>
                 format === "json" || format === "csv"
                   ? downloadReport(report, format)
@@ -325,12 +310,7 @@ export function Reports({ report }: { report: Report }) {
           </div>
         ))}
       </div>
-      {offlineDemo && (
-        <p className="text-xs mt-4">
-          Bundled demo: JSON and CSV are available. Run a backend scan for validated CBOM and SARIF
-          exports.
-        </p>
-      )}
+
       {error && (
         <p role="alert" className="mt-4 text-critical">
           {error}

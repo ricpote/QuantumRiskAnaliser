@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDownToLine, CircleCheck, CircleX, Radar } from "lucide-react";
+import { ArrowDownToLine, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   apiRequest,
-  type AccuracyResult,
   type ExplainResult,
   type ProbeJob,
   type ProbeReport,
@@ -19,7 +18,6 @@ import {
   type Tier,
 } from "@/lib/quantumtrace-data";
 import { classicalText, threatText, tierClass, tierLabel, tierMeaning } from "@/lib/labels";
-import { useReport } from "@/lib/report-context";
 
 // Every number on this page comes from the Python API: the browser only lays it out.
 
@@ -131,7 +129,6 @@ const scenarioLabel: Record<string, string> = {
 };
 
 export function MoscaPanel({ report }: { report: Report }) {
-  const { offlineDemo } = useReport();
   const [data, setData] = useState<Mosca | undefined>(report.summary.mosca);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -182,7 +179,7 @@ export function MoscaPanel({ report }: { report: Report }) {
               key={name}
               size="sm"
               variant={sc.qday_year === qday ? "default" : "outline"}
-              disabled={offlineDemo || pending}
+              disabled={pending}
               aria-pressed={sc.qday_year === qday}
               onClick={() => void choose(sc.qday_year)}
             >
@@ -204,11 +201,7 @@ export function MoscaPanel({ report }: { report: Report }) {
             : ""}
         </span>
       </div>
-      {offlineDemo && (
-        <p className="text-xs mt-3">
-          Switching scenarios needs the scanner API (not the bundled demo).
-        </p>
-      )}
+
       {error && (
         <p role="alert" className="text-xs mt-3 text-critical">
           {error}
@@ -361,114 +354,6 @@ export function WhatIfSummary({ result }: { result: WhatIfResult }) {
         <Change label="Late for Q-Day" from={b.late} to={a.late} better={a.late < b.late} />
       </ul>
     </div>
-  );
-}
-
-// ------------------------------------------------------------------ accuracy
-
-const percent = (x: number) => `${Math.round(x * 1000) / 10}%`;
-
-export function AccuracyPanel() {
-  const [data, setData] = useState<AccuracyResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    apiRequest<AccuracyResult>("/api/accuracy", undefined, controller.signal)
-      .then(setData)
-      .catch((e) => {
-        if (!controller.signal.aborted) setError(errorText(e));
-      });
-    return () => controller.abort();
-  }, []);
-  if (error)
-    return (
-      <div role="alert" className="panel p-5 text-critical">
-        {error}
-        <p className="text-xs mt-2 text-muted-foreground">
-          The accuracy check runs the scanner on the bundled official samples, so it needs the
-          Python API.
-        </p>
-      </div>
-    );
-  if (!data)
-    return (
-      <p role="status" className="panel p-5">
-        Scanning the official samples and comparing every result with the answer key…
-      </p>
-    );
-  const off = data.code_by_origin.official;
-  const own = data.code_by_origin.own_fixtures;
-  const cards = [
-    {
-      label: "Code findings · official repositories",
-      value: `${off.correctly_classified}/${off.expected}`,
-      detail: `${off.traps_checked} false-positive traps checked`,
-    },
-    {
-      label: "Network sessions · official capture",
-      value: `${data.network.sessions_correct}/${data.network.expected_sessions}`,
-      detail: "Every TLS/SSH session classified",
-    },
-    {
-      label: "Cloud resources · official exports",
-      value: `${data.cloud.correct}/${data.cloud.expected}`,
-      detail: `${data.cloud.traps_checked} traps checked`,
-    },
-    {
-      label: "Our own fixtures · configs, JWT",
-      value: `${own.correctly_classified}/${own.expected}`,
-      detail: `${own.traps_checked} traps checked · scored separately`,
-    },
-    {
-      label: "Precision · all code",
-      value: percent(data.code.precision),
-      detail: `${data.code.false_positives} false positives`,
-    },
-    {
-      label: "Recall · all code",
-      value: percent(data.code.recall),
-      detail: `${data.code.detected}/${data.code.expected} expected findings found`,
-    },
-  ];
-  return (
-    <>
-      <div className="insight-band p-5 mb-6 flex items-center gap-4">
-        {data.passed ? (
-          <CircleCheck size={24} className="text-safe" />
-        ) : (
-          <CircleX size={24} className="text-critical" />
-        )}
-        <div>
-          <p className="text-sm font-semibold">
-            {data.passed
-              ? "Every expectation passes, including the false-positive traps."
-              : `${data.failures.length} expectations fail.`}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-            Each result is compared with tests/ground_truth.json: the expected classification of
-            every cryptographic use in the official challenge samples, including deliberate traps
-            (Ed25519 is Shor-vulnerable, sha512.Sum384 is SHA-384, an HMAC is not a signature). The
-            same check runs in CI on every change.
-          </p>
-        </div>
-      </div>
-      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {cards.map((c) => (
-          <div className="stat-card" key={c.label}>
-            <p className="text-xs text-muted-foreground">{c.label}</p>
-            <p className="text-[34px] font-medium mt-3">{c.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">{c.detail}</p>
-          </div>
-        ))}
-      </div>
-      {!!data.failures.length && (
-        <ul role="alert" className="panel p-5 mt-6 text-xs text-critical space-y-1 break-all">
-          {data.failures.slice(0, 30).map((f) => (
-            <li key={f}>{f}</li>
-          ))}
-        </ul>
-      )}
-    </>
   );
 }
 

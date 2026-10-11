@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, expect, it, vi } from "vitest";
 import { ScanDialog } from "@/components/quantumtrace/scan-dialog";
 import { ReportProvider, useReport } from "@/lib/report-context";
-import demo from "../../public/demo-report.json";
+import demo from "./fixtures/scanner-report.json";
 
 function Workspace() {
   const [open, setOpen] = useState(true);

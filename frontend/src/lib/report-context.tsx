@@ -6,7 +6,6 @@ function useReportState() {
   const [report, setReport] = useState<Report | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [offlineDemo, setOfflineDemo] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState("");
   const active = useRef<AbortController | null>(null);
@@ -29,7 +28,7 @@ function useReportState() {
       active.current?.abort();
     };
   }, []);
-  async function run(operation: (signal: AbortSignal) => Promise<Report | null>, demo = false) {
+  async function run(operation: (signal: AbortSignal) => Promise<Report | null>) {
     if (running.current) return false;
     running.current = true;
     active.current?.abort();
@@ -41,7 +40,6 @@ function useReportState() {
       const value = await operation(controller.signal);
       if (!controller.signal.aborted) {
         setReport(value);
-        setOfflineDemo(demo);
         return true;
       }
     } catch (e) {
@@ -56,11 +54,6 @@ function useReportState() {
   }
   const reload = () =>
     run(async (signal) => reportSchema.parse(await request("/api/refresh", {}, signal)));
-  const demo = () =>
-    run(
-      async (signal) => reportSchema.parse(await request("/demo-report.json", undefined, signal)),
-      true,
-    );
   const scan = (files: File[], sample = false) =>
     run(async (signal) => {
       setScanning(true);
@@ -107,7 +100,7 @@ function useReportState() {
       }
       return null;
     });
-  return { report, busy, error, offlineDemo, reload, demo, scan, scanning, progress };
+  return { report, busy, error, reload, scan, scanning, progress };
 }
 const Context = createContext<ReturnType<typeof useReportState> | null>(null);
 export function ReportProvider({ children }: { children: ReactNode }) {
