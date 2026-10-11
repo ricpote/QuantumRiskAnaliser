@@ -5,7 +5,7 @@ import os
 import re
 
 from ...schema import Finding
-from . import config, fixes, python_ast
+from . import config, fixes, keys, python_ast
 from .common import is_test_path
 
 try:
@@ -18,11 +18,14 @@ EXT = {".py": "python", ".java": "java", ".go": "go"}
 JS_EXT = (".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx")
 
 
-def scan(root: str, base: str | None = None) -> list[Finding]:
+def scan(root: str, base: str | None = None, problems: list | None = None) -> list[Finding]:
+    """Scan one file or a tree. Files nothing can read are reported in `problems`:
+    key stores and binaries one by one, other unsupported files once per tree when nothing was analysed."""
     base = base or os.getcwd()
     files = [root] if os.path.isfile(root) else [
         os.path.join(d, f) for d, ds, fs in os.walk(root) if not ds.__setitem__(slice(None), [x for x in ds if x not in SKIP_DIRS]) for f in fs]
     out: list[Finding] = []
+    handled, ignored = 0, []
     for path in sorted(files):
         rel = os.path.relpath(path, base)
         ext = os.path.splitext(path)[1]
@@ -38,8 +41,16 @@ def scan(root: str, base: str | None = None) -> list[Finding]:
                 out += treesitter.scan_js(path, rel)
             elif os.path.basename(path) in ("requirements.txt", "go.mod", "pom.xml", "build.gradle", "package.json"):
                 out += _deps(path, rel)
+            elif keys.kind(path):
+                out += keys.scan(path, rel, problems)
             elif config.kind(path):
                 out += config.scan(path, rel)
+            elif keys.sniff(path):  # e.g. a .txt / .env / .yaml that embeds a PEM certificate or key
+                out += keys.scan(path, rel, problems)
+            else:
+                ignored.append(rel)
+                continue
+            handled += 1
             fixes.annotate(out[start:], path)
             if is_test_path(rel):  # tests / specs: inventoried, but not production risk
                 for f in out[start:]:
@@ -48,6 +59,9 @@ def scan(root: str, base: str | None = None) -> list[Finding]:
         except Exception as e:  # never let one file kill the scan
             out.append(Finding(source="code", category="protocol", algorithm="SCAN-ERROR", asset=dict(kind="source-file", path=rel),
                                location=dict(file=rel, line=1), evidence=f"scanner error: {e}", confidence=0.0))
+    if ignored and not handled and problems is not None:
+        exts = sorted({os.path.splitext(x)[1].lower() or os.path.basename(x) for x in ignored})
+        problems.append(dict(path=os.path.relpath(root, base), reason=f"{len(ignored)} file(s) in no supported format were ignored ({', '.join(exts[:8])})"))
     return out
 
 

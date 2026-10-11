@@ -11,7 +11,7 @@ import re
 from zipfile import ZipFile, BadZipFile
 
 from .ingest import cloud
-from .ingest.code import config
+from .ingest.code import config, keys
 
 MAX_UPLOAD = 32 * 1024 * 1024
 MAX_FILES = 2000
@@ -33,6 +33,12 @@ def validate_content(path: Path, data: bytes) -> bool:
                 (data[:4] == b'\x0a\x0d\x0d\x0a' and len(data) >= 28 and data[8:12] in (b'\x4d\x3c\x2b\x1a', b'\x1a\x2b\x3c\x4d'))):
             raise ValueError(f'{path.name}: not a valid PCAP/PCAPNG capture header')
         return True  # tshark performs complete packet validation
+    if keys.kind(str(path)) == 'keys':
+        if not data:
+            raise ValueError(f'{path.name}: file is empty')
+        return True  # certificates and keys (PEM, DER, OpenSSH, PKCS#12): the scanner parses and warns per block
+    if suffix not in SOURCE_PARSERS and suffix != '.py' and b'-----BEGIN ' in data[:262144] and len(data) <= 262144:
+        return True  # a text file (.yaml, .txt, .env...) that embeds a PEM certificate or key
     named = suffix in {'.py', '.json', '.tf', '.conf', *SOURCE_PARSERS} or path.name in MANIFESTS or 'ssh_config' in path.name or 'sshd_config' in path.name
     if not data:
         if named:
@@ -129,7 +135,7 @@ def unpack(files: list, destination: Path) -> list[dict]:
             target.unlink()  # only this freshly created, validated temporary file
             warnings.append({'path': name, 'reason': 'Unsupported archive entry ignored'})
         else:
-            raise ValueError(f'{name}: unsupported input. Choose captures, Python/Java/Go/JS/TS, AWS JSON, supported config files or ZIP.')
+            raise ValueError(f'{name}: unsupported input. Choose captures, Python/Java/Go/JS/TS, AWS JSON, supported config files, certificates/keys or ZIP.')
 
     for name, data in decoded:
         safe_path(name)
@@ -154,5 +160,5 @@ def unpack(files: list, destination: Path) -> list[dict]:
         else:
             write(name, data)
     if not supported:
-        raise ValueError('No supported inputs found. ZIP files must contain captures, source code, AWS exports or supported configuration.')
+        raise ValueError('No supported inputs found. ZIP files must contain captures, source code, AWS exports, supported configuration or certificates/keys.')
     return warnings

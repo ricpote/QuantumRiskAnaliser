@@ -229,6 +229,9 @@ class Store:
                                 if isinstance(value, str):
                                     normal = value.replace("\\", "/")
                                     mapping[key] = normal.removeprefix(prefix).removeprefix(tmp.replace("\\", "/") + "/")
+                    for w in warnings:  # scanner warnings name files too: show them archive-relative as well
+                        if isinstance(w.get("path"), str):
+                            w["path"] = w["path"].replace("\\", "/").removeprefix(prefix).removeprefix(tmp.replace("\\", "/") + "/")
                 origin = "upload"
             if (not findings and any(w["reason"] != "Unsupported archive entry ignored" for w in warnings)) or (findings and all(f.algorithm == "SCAN-ERROR" for f in findings)):
                 raise ValueError("No cryptographic findings. Check supported input formats and scanner warnings. " + "; ".join(w["reason"] for w in warnings)[:500])

@@ -30,15 +30,16 @@ import {
   adaptFindings,
   filterAssets,
   downloadReport,
+  riskFilters,
   type Asset,
-  type Risk,
+  type Finding,
 } from "@/lib/quantumtrace-data";
 
 import { ScanDialog } from "./scan-dialog";
 import { useReport } from "@/lib/report-context";
 import { Overview, Migration, Reports } from "./report-panels";
 import { ExplainPanel, ProbePanel } from "./analysis-panels";
-import { classicalText, tierMeaning } from "@/lib/labels";
+import { classicalText, findingBadge } from "@/lib/labels";
 
 type View = "overview" | "inventory" | "migration" | "reports" | "probe" | "explain";
 const nav = [
@@ -51,12 +52,6 @@ const nav = [
 ] as const;
 // Pages about the loaded report; probe and explain are tools that work without one.
 const reportViews: readonly View[] = ["overview", "inventory", "migration", "reports"];
-const riskClass = (risk: Risk) =>
-  risk === "Critical" || risk === "Unencrypted"
-    ? "risk-critical"
-    : risk === "Medium"
-      ? "risk-medium"
-      : "risk-safe";
 const sourceIcon = { Network: Globe, Code: Code2, Cloud: Box, Probe: Activity };
 export function QuantumMark() {
   return (
@@ -71,12 +66,42 @@ export function QuantumMark() {
     </svg>
   );
 }
-function Badge({ risk }: { risk: Risk }) {
+// Line-level fix computed by the Python scanner (ingest/code/fixes.py); the browser only shows it.
+function FixSuggestion({ finding }: { finding: Finding }) {
+  const raw = finding.context?.["fix"];
+  if (!raw || typeof raw !== "object") return null;
+  const fix = raw as {
+    rule?: string;
+    before?: string;
+    after?: string | null;
+    note?: string | null;
+    requires?: string | null;
+  };
+  const line = finding.location["line"];
   return (
-    <span className={`risk-badge ${riskClass(risk)}`}>
-      {risk === "Resilient" ? "Quantum-resilient" : risk}
-    </span>
+    <div>
+      <h3 className="text-sm font-semibold mb-2">
+        Suggested fix{typeof line === "number" ? ` · line ${line}` : ""}
+      </h3>
+      {typeof fix.before === "string" && typeof fix.after === "string" && (
+        <pre className="fix-diff" aria-label="Line before and after the fix">
+          <span className="fix-del">- {fix.before.trim()}</span>
+          {"\n"}
+          <span className="fix-add">+ {fix.after.trim() || "(delete this line)"}</span>
+        </pre>
+      )}
+      {fix.note && <p className="text-xs mt-2 text-muted-foreground">{fix.note}</p>}
+      {fix.requires && (
+        <p className="text-xs mt-1 text-muted-foreground">
+          Requires: <span className="font-mono">{fix.requires}</span>
+        </p>
+      )}
+    </div>
   );
+}
+function Badge({ finding }: { finding: Finding }) {
+  const b = findingBadge(finding);
+  return <span className={`risk-badge ${b.className}`}>{b.label}</span>;
 }
 export function Workspace({ view }: { view: View }) {
   const [menu, setMenu] = useState(false);
@@ -389,7 +414,7 @@ export function Workspace({ view }: { view: View }) {
                   }}
                   className="border bg-background rounded-md text-xs px-3 h-9"
                 >
-                  {["All risks", "Critical", "Medium", "Resilient", "Unencrypted"].map((r) => (
+                  {["All risks", ...riskFilters].map((r) => (
                     <option key={r}>{r}</option>
                   ))}
                 </select>
@@ -467,7 +492,7 @@ export function Workspace({ view }: { view: View }) {
                             </span>
                           </td>
                           <td>
-                            <Badge risk={a.risk} />
+                            <Badge finding={a.finding} />
                           </td>
                         </tr>
                       );
@@ -529,8 +554,8 @@ export function Workspace({ view }: { view: View }) {
               <DialogTitle>{selected.name}</DialogTitle>
               <DialogDescription>{selected.location}</DialogDescription>
               <div className="flex flex-wrap items-center gap-3">
-                <Badge risk={selected.risk} />
-                <span className="text-xs">{tierMeaning[selected.finding.risk_tier]}</span>
+                <Badge finding={selected.finding} />
+                <span className="text-xs">{findingBadge(selected.finding).meaning}</span>
               </div>
               <dl className="grid grid-cols-2 text-sm gap-5 py-3">
                 <div>
@@ -601,6 +626,7 @@ export function Workspace({ view }: { view: View }) {
                   <p className="text-sm mt-2">{selected.replacement}</p>
                 )}
               </div>
+              <FixSuggestion finding={selected.finding} />
               {!!selected.finding.deadlines?.length && (
                 <div>
                   <h3 className="text-sm font-semibold mb-2">

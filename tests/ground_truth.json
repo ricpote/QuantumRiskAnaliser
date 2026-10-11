@@ -2157,6 +2157,220 @@
    "flags": [
     "short-key"
    ]
+  },
+  {
+   "file": "extra/code/keys/certs/legacy-root-ca.pem",
+   "category": "certificate",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "broken",
+   "params": {
+    "key_bits": 1024
+   },
+   "flags": [
+    "expired",
+    "long-lived",
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/keys/certs/shop-chain.pem",
+   "category": "certificate",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-256"
+   }
+  },
+  {
+   "file": "extra/code/keys/certs/shop-chain.pem",
+   "category": "certificate",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 3072
+   },
+   "flags": [
+    "long-lived"
+   ]
+  },
+  {
+   "file": "extra/code/keys/certs/device.der",
+   "category": "certificate",
+   "algorithm": "Ed25519",
+   "tier": "critical",
+   "classical": "recommended"
+  },
+  {
+   "file": "extra/code/keys/certs/pq-signing.pem",
+   "category": "certificate",
+   "algorithm": "ML-DSA",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "parameter_set": "ML-DSA-65"
+   }
+  },
+  {
+   "file": "extra/code/keys/deploy.key",
+   "category": "key",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "broken",
+   "params": {
+    "key_bits": 2048,
+    "key_type": "private"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/keys/legacy-enc.key",
+   "category": "key",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_type": "private"
+   },
+   "flags": [
+    "passphrase-protected"
+   ]
+  },
+  {
+   "file": "extra/code/keys/ssh/id_ed25519",
+   "category": "key",
+   "algorithm": "Ed25519",
+   "tier": "critical",
+   "classical": "broken",
+   "params": {
+    "key_type": "private"
+   },
+   "flags": [
+    "hardcoded-key"
+   ]
+  },
+  {
+   "file": "extra/code/keys/ssh/id_ecdsa.pub",
+   "category": "key",
+   "algorithm": "ECDSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "curve": "P-256",
+    "key_type": "public"
+   }
+  },
+  {
+   "file": "extra/code/keys/ssh/authorized_keys",
+   "category": "key",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "key_bits": 1024,
+    "key_type": "public"
+   },
+   "flags": [
+    "short-key"
+   ]
+  },
+  {
+   "file": "extra/code/keys/ssh/authorized_keys",
+   "category": "key",
+   "algorithm": "Ed25519",
+   "tier": "critical",
+   "classical": "recommended",
+   "params": {
+    "key_type": "public"
+   }
+  },
+  {
+   "file": "extra/code/keys/app-config.yaml",
+   "category": "certificate",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "key_bits": 3072
+   }
+  },
+  {
+   "file": "extra/code/api-rules/key_wrapping.py",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "acceptable",
+   "params": {
+    "padding": "OAEP",
+    "hash": "SHA-256"
+   },
+   "hndl": true
+  },
+  {
+   "file": "extra/code/api-rules/key_wrapping.py",
+   "category": "encryption",
+   "algorithm": "RSA",
+   "tier": "critical",
+   "classical": "deprecated",
+   "params": {
+    "padding": "PKCS1v15"
+   },
+   "hndl": true
+  },
+  {
+   "file": "extra/code/api-rules/key_wrapping.py",
+   "category": "encryption",
+   "algorithm": "ChaCha20-Poly1305",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256
+   }
+  },
+  {
+   "file": "extra/code/api-rules/key_wrapping.py",
+   "category": "kdf",
+   "algorithm": "bcrypt",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "cost": 12
+   }
+  },
+  {
+   "file": "extra/code/api-rules/KeySizes.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "safe",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 256,
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/api-rules/KeySizes.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "mode": "GCM"
+   }
+  },
+  {
+   "file": "extra/code/api-rules/KeySizes.java",
+   "category": "key",
+   "algorithm": "AES",
+   "tier": "medium",
+   "classical": "recommended",
+   "params": {
+    "key_bits": 128
+   }
   }
  ],
  "code_absent": [
@@ -2330,6 +2544,25 @@
     "version": "SSL 3.0"
    },
    "why": "pinned_context(): SSLv23_METHOD with OP_NO_SSLv3 / OP_NO_TLSv1 set"
+  },
+  {
+   "file": "extra/code/keys/vault-enc.key",
+   "category": "key",
+   "why": "encrypted PKCS#8: the algorithm is not readable without the passphrase, so it is a warning, not a guess"
+  },
+  {
+   "file": "extra/code/keys/truststore.jks",
+   "category": "certificate",
+   "why": "JKS keystore: reported as not analysed, never guessed"
+  },
+  {
+   "file": "extra/code/api-rules/KeySizes.java",
+   "category": "encryption",
+   "algorithm": "AES",
+   "params": {
+    "key_bits": 128
+   },
+   "why": "openFeed() and sealRecord() never use the 128-bit key made in legacyKey(): the last KeyGenerator must not decide every Cipher"
   }
  ],
  "network": [

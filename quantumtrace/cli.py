@@ -59,7 +59,7 @@ def collect(paths: list[str], problems: list | None = None, quiet: bool = False)
         findings += cloud.ingest(jsons, problems)
     for r in code_roots:
         try:
-            found = code.scan(r)
+            found = code.scan(r, problems=problems)
         except Exception as e:
             problems.append(dict(path=r, reason=f"code scan failed ({type(e).__name__}: {e})"))
             continue

@@ -1,7 +1,25 @@
 export const MAX_UPLOAD_BYTES = 32 * 1024 * 1024;
 export const MAX_UPLOAD_FILES = 2000;
 export const UPLOAD_HELP =
-  "PCAP/PCAPNG, Python, Java, Go, JavaScript/TypeScript, AWS JSON, nginx/Apache/SSH/Terraform configuration, or ZIP. 32 MiB total.";
+  "PCAP/PCAPNG, Python, Java, Go, JavaScript/TypeScript, AWS JSON, nginx/Apache/SSH/Terraform configuration, certificates and keys (PEM/DER/OpenSSH/PKCS#12), or ZIP. 32 MiB total.";
+// Certificates and keys: parsed by the Python scanner (ingest/code/keys.py), DER and PKCS#12 are binary.
+const KEY_EXTENSIONS = [
+  "pem",
+  "crt",
+  "cer",
+  "der",
+  "cert",
+  "csr",
+  "req",
+  "key",
+  "pub",
+  "p8",
+  "pk8",
+  "p12",
+  "pfx",
+];
+const KEY_NAMES =
+  /^(id_(rsa|dsa|ecdsa|ecdsa_sk|ed25519|ed25519_sk|xmss)(\.pub)?|ssh_host_\w+_key(\.pub)?|authorized_keys2?|known_hosts)$/;
 
 export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -52,6 +70,7 @@ export async function validateFile(file: File): Promise<string | null> {
       );
     return classic || ng ? null : "Not a valid PCAP/PCAPNG capture header.";
   }
+  if (KEY_EXTENSIONS.includes(extension ?? "") || KEY_NAMES.test(file.name)) return null;
   let text: string;
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes, {
@@ -106,5 +125,6 @@ export async function validateFile(file: File): Promise<string | null> {
     /\b(?:server\s*\{|ssl_|SSLEngine|SSLProtocol|SSLCipherSuite|VirtualHost)/i.test(text)
   )
     return null;
-  return "Unsupported input. Choose a supported capture, source/config file, AWS export or ZIP.";
+  if (text.includes("-----BEGIN ")) return null; // e.g. a YAML or .env file with an embedded PEM certificate
+  return "Unsupported input. Choose a supported capture, source/config file, AWS export, certificate/key or ZIP.";
 }

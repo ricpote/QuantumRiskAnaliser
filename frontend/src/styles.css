@@ -141,6 +141,10 @@ textarea { resize: none; }
 .risk-critical { color: var(--critical); background: var(--critical-soft); }
 .risk-medium { color: var(--medium); background: var(--medium-soft); }
 .risk-safe { color: var(--safe); background: var(--safe-soft); }
+.risk-neutral { color: var(--muted-foreground); background: var(--muted); }
+.fix-diff { background: var(--muted); border-radius: 4px; padding: 10px 12px; font-size: 11px; line-height: 1.7; overflow-x: auto; white-space: pre; }
+.fix-del { color: var(--critical); }
+.fix-add { color: var(--safe); }
 .insight-band { position: relative; overflow: hidden; background: var(--secondary); border: 1px solid var(--border); border-radius: 6px; }
 .donut-track { stroke: var(--muted); }
 .donut-critical { stroke: var(--critical); }

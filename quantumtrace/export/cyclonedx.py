@@ -135,7 +135,8 @@ def build(findings: list[Finding], summary: dict, target: str = "scan") -> dict:
             ref = _ref("key", f.asset.get("arn") or f.location.get("file", "") + str(f.location.get("line")), f.algorithm)
             asym = f.algorithm not in ("AES", "HMAC", "HARDCODED-KEY")
             state = "compromised" if f.algorithm == "HARDCODED-KEY" else ("deactivated" if "pending-deletion" in f.flags else "active")
-            rp = {"type": "private-key" if asym else "secret-key", "state": state, "algorithmRef": aref}
+            rp = {"type": ("public-key" if f.params.get("key_type") == "public" else "private-key") if asym else "secret-key",
+                  "state": state, "algorithmRef": aref}
             if f.asset.get("key_id"):
                 rp["id"] = f.asset["key_id"]
             if f.context.get("created"):
@@ -294,7 +295,7 @@ def _vuln(vulns, f: Finding, ref: str):
             cwes = sorted({int(c.split("-")[1]) for c in f.cwe if c.startswith("CWE-")} if kind != "SHOR" else {327})
             rec = f.replacement or {}
             v = {"bom-ref": f"vuln/{_slug(vid)}/{ref.split('@')[-1]}", "id": vid,
-                 "source": {"name": "QuantumTrace", "url": "https://github.com/"},
+                 "source": {"name": "QuantumTrace", "url": "https://github.com/ricpote/QuantumRiskAnaliser"},
                  "ratings": [{"source": {"name": "QuantumTrace"}, "severity": sev, "method": "other",
                               "justification": f"{f.quantum_threat}-threat, tier={f.risk_tier}, classical={f.classical_status}, hndl={f.hndl}"}],
                  "cwes": cwes,

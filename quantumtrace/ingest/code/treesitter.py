@@ -1370,7 +1370,8 @@ class JavaFile(TSFile):
 
     def scan(self) -> list[Finding]:
         # ---- key-size knowledge for the file ----
-        aes_bits, aes_literal = None, False
+        aes_literal = False
+        aes_sizes = []  # (method, bits) of every AES key the file builds: SecretKeySpec(...) or KeyGenerator.init(n)
         kpg_bits = {}
         kpg_at = {}  # KeyPairGenerator.getInstance call -> size given to ITS initialize()
         kpg_lines = {}  # KeyGenerator / KeyPairGenerator getInstance (line, col) -> lines of its init/initialize calls
@@ -1381,7 +1382,7 @@ class JavaFile(TSFile):
                 if alg.startswith("AES"):
                     kb = self.nbytes(self.value(c["args"][0], c["func"]))
                     if kb:
-                        aes_bits = kb * 8
+                        aes_sizes.append((c["func"], kb * 8))
                     aes_literal = aes_literal or self.is_literal(c["args"][0], c["func"])
             if not c["new"] and c["name"] in ("getInstance",) and c["obj"] in ("KeyGenerator", "KeyPairGenerator"):
                 var = self.var_of(c["node"])
@@ -1394,7 +1395,7 @@ class JavaFile(TSFile):
                             inner = a0.child_by_field_name("arguments").named_children
                             v = self.value(inner[0], d["func"]) if inner else None
                         if c["obj"] == "KeyGenerator" and alg.startswith("AES") and isinstance(v, int):
-                            aes_bits = v
+                            aes_sizes.append((d["func"], v))
                             keygens.append((d["node"], "AES", v, d["func"]))
                         elif c["obj"] == "KeyGenerator" and alg in ("DES", "DESEDE", "TRIPLEDES", "BLOWFISH", "RC4", "ARCFOUR"):
                             keygens.append((d["node"], J_CIPHER.get(alg, alg), v if isinstance(v, int) else None, d["func"]))
@@ -1402,6 +1403,16 @@ class JavaFile(TSFile):
                             kpg_bits[alg] = v
                             kpg_at[c["node"].start_byte] = v
                         kpg_lines.setdefault((self.line(c["node"]), c["node"].start_point[1] + 1), []).append(self.line(d["node"]))
+
+        def aes_size(fn):
+            """Key size of the AES key a Cipher in method `fn` uses: a size made in the same method wins;
+            otherwise only a size that is the same everywhere in the file (never another method's choice)."""
+            same = {b for f, b in aes_sizes if f == fn}
+            if len(same) == 1:
+                return same.pop(), False
+            everywhere = {b for _, b in aes_sizes}
+            return (everywhere.pop(), True) if len(everywhere) == 1 and not same else (None, False)
+
         for node, alg, bits, fn in keygens:
             self.add(node, "key", alg, dict(key_bits=bits), f'KeyGenerator.getInstance("{alg}").init({bits}): generates {alg}-{bits} keys'
                      if bits else f'KeyGenerator.getInstance("{alg}") generates {alg} keys', api="KeyGenerator", func=fn)
@@ -1441,12 +1452,14 @@ class JavaFile(TSFile):
                     flags.append("ecb-mode")
                 if alg == "AES" and aes_literal:
                     flags.append("hardcoded-key")
-                bits = aes_bits if alg == "AES" else ({"3DES": 168, "DES": 56}.get(alg))
+                bits, inferred = aes_size(fn) if alg == "AES" else ({"3DES": 168, "DES": 56}.get(alg), False)
                 ev = f'Cipher.getInstance("{tr}")' + (f" with {bits}-bit key" if bits else " (key size unresolved)")
+                if inferred:
+                    ev += " (the only AES key size this file creates, in another method)"
                 if "jce-default-ecb" in flags:
                     ev += ' - bare "AES" defaults to AES/ECB/PKCS5Padding in the JCE'
                 self.add(node, "encryption", alg, dict(key_bits=bits, mode=mode, padding=pad), ev, flags,
-                         confidence=1.0 if bits else 0.6, api="Cipher", func=fn)
+                         confidence=(0.85 if inferred else 1.0) if bits else 0.6, api="Cipher", func=fn)
             elif name == "getInstance" and obj == "KeyGenerator":
                 # a DES / RC4 / HmacMD5 key generated here; skipped when a Cipher/Mac in the same method already reports it
                 a = str(self.str_arg(c) or "").upper()

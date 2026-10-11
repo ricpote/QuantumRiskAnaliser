@@ -122,7 +122,16 @@ export type Report = z.infer<typeof reportSchema>;
 export type Finding = z.infer<typeof findingSchema>;
 export type Tier = z.infer<typeof tierSchema>;
 export type Mosca = z.infer<typeof moscaSchema>;
-export type Risk = "Critical" | "Medium" | "Resilient" | "Unencrypted";
+export type Risk =
+  "Critical" | "Medium" | "Resilient" | "Unencrypted" | "Classical issue" | "Protocol";
+export const riskFilters: readonly Risk[] = [
+  "Critical",
+  "Medium",
+  "Classical issue",
+  "Unencrypted",
+  "Resilient",
+  "Protocol",
+];
 export type Source = "Network" | "Code" | "Cloud" | "Probe";
 export interface Asset {
   id: string;
@@ -142,6 +151,17 @@ const riskLabels = {
   safe: "Resilient",
   unencrypted: "Unencrypted",
 } as const;
+type Rated = Pick<Finding, "risk_tier" | "quantum_threat" | "classical_status" | "category">;
+// A finding no quantum algorithm touches is not "quantum-resilient" when it is weak today
+// (hard-coded key, math/rand, TLS 1.0) or when it is a protocol rated through its parts.
+export function displayRisk(f: Rated): Risk {
+  if (f.risk_tier === "safe" && f.quantum_threat === "none") {
+    if (f.classical_status === "broken" || f.classical_status === "deprecated")
+      return "Classical issue";
+    if (f.category === "protocol") return "Protocol";
+  }
+  return riskLabels[f.risk_tier];
+}
 export const sourceLabels = {
   network: "Network",
   code: "Code",
@@ -165,7 +185,7 @@ export function adaptFindings(report: Report): Asset[] {
         ? `${f.params["key_bits"]}-bit`
         : String(f.params["curve"] ?? "—"),
       source: sourceLabels[f.source],
-      risk: riskLabels[f.risk_tier],
+      risk: displayRisk(f),
       replacement:
         f.replacement?.how ??
         f.replacement?.algorithm ??

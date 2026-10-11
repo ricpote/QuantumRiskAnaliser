@@ -45,6 +45,20 @@ def _sha1_sig(f):
 
 # (id, languages, predicate, pattern, replacement, note, requires)
 RULES = [
+    # ------------------------------------------------------------------ key material at rest (ingest/code/keys.py)
+    ("key-file-committed", None, lambda f: f.asset.get("kind") == "key-file" and _has(f, "hardcoded-key"), None, None,
+     "Remove this private key from the repository and its history (git filter-repo), revoke and rotate it (anyone with read access "
+     "holds a copy), and load keys from a secret manager or HSM at runtime.", None),
+    ("cert-reissue", None, lambda f: f.asset.get("kind") == "certificate-file" and f.algorithm in ("RSA", "ECDSA", "DSA", "Ed25519", "Ed448"), None, None,
+     "Re-issue: today ECDSA P-384 or RSA-3072 for anything expired or short; plan ML-DSA-65 (FIPS 204) certificates, hybrid or "
+     "composite during the transition, as soon as your CA issues them. Long-lived roots and code-signing first.", None),
+    ("key-file-pq", None, lambda f: f.asset.get("kind") == "key-file" and f.algorithm in ("RSA", "ECDSA", "DSA", "DH", "Ed25519", "Ed448", "X25519", "X448")
+     and f.context.get("format") != "OpenSSH", None, None,
+     "Shor-vulnerable key: when it is rotated, move signatures to ML-DSA-65 (FIPS 204) and key transport to ML-KEM-768 (FIPS 203), "
+     "or hybrids while peers catch up. Keep the passphrase out of the repository.", None),
+    ("ssh-key", None, lambda f: f.asset.get("kind") == "key-file" and f.context.get("format") == "OpenSSH", None, None,
+     "Retire RSA keys below 3072 bits and DSA keys; Ed25519 is fine for SSH login today. OpenSSH has no PQ user keys yet: "
+     "protect the sessions with mlkem768x25519-sha256 key exchange (OpenSSH >= 9.9, default in 10.0).", None),
     # ------------------------------------------------------------------ hard-coded secrets / JWT
     ("static-iv", None, lambda f: _has(f, "static-iv"), None, None,
      "Generate a fresh random IV / nonce for every encryption (crypto/rand, SecureRandom, os.urandom, crypto.randomBytes) and "
@@ -59,6 +73,13 @@ RULES = [
     ("jwt-pq", None, lambda f: _has(f, "jwt") and f.algorithm in ("RSA", "ECDSA", "Ed25519"), None, None, NOTE_JWT_PQ, None),
 
     # ------------------------------------------------------------------ Python
+    ("py-rsa-pkcs1-enc", PY, lambda f: f.category == "encryption" and _alg(f, "RSA") and f.params.get("padding") == "PKCS1v15",
+     r"padding\.PKCS1v15\(\)", "padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)",
+     "PKCS#1 v1.5 encryption is open to padding-oracle attacks (Bleichenbacher): OAEP now. Quantum fix: replace RSA key "
+     "transport with ML-KEM-768 (FIPS 203), e.g. HPKE or a hybrid X25519 + ML-KEM-768 encapsulation.", None),
+    ("py-rsa-enc-pq", PY, lambda f: f.category == "encryption" and _alg(f, "RSA"), None, None,
+     "RSA key transport is broken by Shor and exposed to harvest-now-decrypt-later: wrap keys with ML-KEM-768 (FIPS 203) "
+     "instead, e.g. HPKE or a hybrid X25519 + ML-KEM-768 encapsulation (cryptography >= 47 ships ML-KEM).", None),
     ("py-ecb", PY, lambda f: _has(f, "ecb-mode"), r"modes\.ECB\(\)", "modes.GCM(nonce)",
      "nonce = os.urandom(12), unique per message; store encryptor.tag. Simpler: AESGCM(key).encrypt(nonce, data, None) with a 256-bit key.", None),
     ("py-crypt", PY, lambda f: f.params.get("scheme", "").startswith("METHOD_"), None, None,

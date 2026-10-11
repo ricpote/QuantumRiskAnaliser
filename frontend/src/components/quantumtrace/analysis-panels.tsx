@@ -17,12 +17,16 @@ import {
   type Report,
   type Tier,
 } from "@/lib/quantumtrace-data";
-import { classicalText, threatText, tierClass, tierLabel, tierMeaning } from "@/lib/labels";
+import { classicalText, findingBadge, threatText, tierClass, tierLabel } from "@/lib/labels";
 
 // Every number on this page comes from the Python API: the browser only lays it out.
 
 export function TierBadge({ tier }: { tier: Tier }) {
   return <span className={`risk-badge ${tierClass[tier]}`}>{tierLabel[tier]}</span>;
+}
+function FindingBadge({ finding }: { finding: Finding }) {
+  const b = findingBadge(finding);
+  return <span className={`risk-badge ${b.className}`}>{b.label}</span>;
 }
 
 function errorText(e: unknown) {
@@ -495,9 +499,9 @@ export function ExplainPanel() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-xl font-semibold font-mono">{f.display_name ?? f.algorithm}</h2>
-              <TierBadge tier={f.risk_tier} />
+              <FindingBadge finding={f} />
             </div>
-            <p className="text-sm mt-2">{tierMeaning[f.risk_tier]}</p>
+            <p className="text-sm mt-2">{findingBadge(f).meaning}</p>
           </div>
           <dl className="grid sm:grid-cols-3 gap-5">
             <Fact label="Quantum threat" value={threatText[f.quantum_threat] ?? f.quantum_threat} />
@@ -678,7 +682,7 @@ function ProbeCard({ report: r, findings }: { report: ProbeReport; findings: Fin
           <ul className="space-y-2">
             {findings.map((f) => (
               <li key={f.id} className="flex flex-wrap gap-2 items-center">
-                <TierBadge tier={f.risk_tier} />
+                <FindingBadge finding={f} />
                 <span className="font-mono">{f.display_name ?? f.algorithm}</span>
                 <span className="text-muted-foreground">{f.evidence}</span>
               </li>

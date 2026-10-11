@@ -523,8 +523,9 @@ def _password_cost(ctx, add):
                 t, m = kw.get("time_cost"), kw.get("memory_cost")
                 add(call, "kdf", "Argon2", {k: v for k, v in dict(time_cost=t, memory_kib=m).items() if isinstance(v, int)},
                     f"passlib argon2.{meth}(time_cost={t}, memory_cost={m})", [] if _argon2_ok(t, m) else ["weak-kdf-params"], api=fqn, func=func)
-        elif fqn in ("bcrypt.gensalt",) and (call.args or "rounds" in kw):
-            rounds = kw.get("rounds", _value(call.args[0], ctx, func) if call.args else None)
+        elif fqn in ("bcrypt.gensalt",):
+            # bcrypt.gensalt() defaults to rounds=12 (the bcrypt package's default cost)
+            rounds = kw.get("rounds", _value(call.args[0], ctx, func) if call.args else 12)
             if isinstance(rounds, int):
                 add(call, "kdf", "bcrypt", dict(cost=rounds), f"bcrypt.gensalt({rounds})", api=fqn, func=func)
         elif fqn in ("argon2.PasswordHasher", "argon2.low_level.hash_secret", "argon2.low_level.hash_secret_raw") or \
@@ -734,6 +735,17 @@ def scan(path: str, rel: str) -> list[Finding]:
                     return "encryption"
         return "signature"
 
+    def rsa_padding(call):
+        """(padding, OAEP hash) when an argument is padding.OAEP(...) / padding.PKCS1v15() from `cryptography`."""
+        for a in list(call.args) + [k.value for k in call.keywords]:
+            if isinstance(a, ast.Call):
+                f = _fqn(a.func, ctx) or ""
+                if "padding." in f and f.split(".")[-1] in ("OAEP", "PKCS1v15"):
+                    h = next((kw.value for kw in a.keywords if kw.arg == "algorithm"), None)
+                    hn = CRY_HASHES.get((_fqn(h.func, ctx) or "").split(".")[-1]) if isinstance(h, ast.Call) else None
+                    return f.split(".")[-1], hn
+        return None
+
     def jwt_call(call, name, fqn, func):
         """PyJWT / python-jose: jwt.encode(payload, key, algorithm=...) / jwt.decode(token, key, algorithms=[...])."""
         kw = {k.arg: k.value for k in call.keywords}
@@ -828,6 +840,21 @@ def scan(path: str, rel: str) -> list[Finding]:
                 inner = ecdsa.args[0] if ecdsa.args else None
                 h = CRY_HASHES.get((_fqn(inner.func, ctx) or "").split(".")[-1]) if isinstance(inner, ast.Call) else None
                 add(call, "signature", "ECDSA", dict(hash=h), f"ECDSA {name}()", api=fqn, func=func)
+        elif (fqn.endswith(".encrypt") or fqn.endswith(".decrypt")) and rsa_padding(call):
+            # public_key.encrypt(msg, padding.OAEP(...)) / private_key.decrypt(ct, padding.PKCS1v15()): RSA encryption
+            pad, oaep_hash = rsa_padding(call)
+            add(call, "encryption", "RSA", dict(key_bits=rsa_bits.get(None), padding=pad, hash=oaep_hash),
+                f"RSA {name}() with {pad} padding", api=fqn, func=func)
+        elif fqn.endswith(".generate_key") and len(fqn.split(".")) >= 2 and fqn.split(".")[-2] in CRY_AEAD \
+                and (fqn.startswith(P) or fqn == fqn.split(".")[-2] + ".generate_key") \
+                and not any(f2.split(".")[-1] == fqn.split(".")[-2] for f2, _, _ in ctx.calls):
+            # AESGCM.generate_key(bit_length=...) / ChaCha20Poly1305.generate_key() with no cipher object in this module
+            cls = fqn.split(".")[-2]
+            alg, mode = CRY_AEAD[cls]
+            v = _value(call, ctx, func)
+            kb = 256 if alg == "ChaCha20-Poly1305" else (v[1] * 8 if isinstance(v, tuple) and isinstance(v[1], int) else None)
+            add(call, "encryption", alg, dict(key_bits=kb, mode=mode), f"{cls}.generate_key()" + (f": {kb}-bit key" if kb else ""),
+                confidence=1.0 if kb else 0.6, api=fqn, func=func)
         elif fqn.endswith("ec.generate_private_key"):
             cn = _as_call(next((kw.value for kw in call.keywords if kw.arg == "curve"), call.args[0] if call.args else None), ctx, func)
             cn = cn.func if isinstance(cn, ast.Call) else cn  # ec.SECP256R1() or the class ec.SECP256R1
