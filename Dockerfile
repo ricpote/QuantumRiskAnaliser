@@ -9,8 +9,17 @@ COPY samples/extra/tls-lab/ .
 RUN cd modern && CGO_ENABLED=0 go build -o /tlslab-modern . \
  && cd ../legacy && CGO_ENABLED=0 go build -o /tlslab-legacy .
 
-# ---- stage 2: runtime
+# ---- stage 2: TanStack Start SSR + Nitro Node production bundle
+FROM node:24-bookworm-slim AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
+# ---- stage 3: Python scanner + Node server + unchanged TLS lab
 FROM python:3.12-slim
+COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
 ENV DEBIAN_FRONTEND=noninteractive PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN echo "wireshark-common wireshark-common/install-setuid boolean false" | debconf-set-selections \
  && apt-get update && apt-get install -y --no-install-recommends tshark \
@@ -19,6 +28,7 @@ WORKDIR /app
 COPY requirements.txt constraints.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -c constraints.txt
 COPY . .
+COPY --from=frontend /frontend/.output /app/frontend/.output
 RUN pip install --no-cache-dir --no-deps -e .
 COPY --from=lab /tlslab-modern /tlslab-legacy /usr/local/bin/
 # `tlslab` starts both halves (all 7 endpoints)
@@ -29,4 +39,4 @@ EXPOSE 8501
 #   CLI:    docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data --out /data/out
 #   probe:  docker run --rm quantumtrace qtrace probe example.com
 #   lab:    docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace probe 127.0.0.1:8443 127.0.0.1:8445"
-CMD ["sh", "-c", "tlslab >/dev/null 2>&1 & exec python -m streamlit run app/streamlit_app.py --server.address=0.0.0.0 --server.port=8501"]
+CMD ["python", "scripts/ui.py", "--production", "--lab"]

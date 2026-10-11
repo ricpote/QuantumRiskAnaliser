@@ -1,0 +1,104 @@
+import base64
+import io
+import json
+from pathlib import Path
+import threading
+import time
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from zipfile import ZipFile
+
+import pytest
+
+from quantumtrace.classify import classify
+from quantumtrace.schema import Finding
+from quantumtrace.score import summarize
+from quantumtrace.web import Store, handler, report, unpack
+from http.server import ThreadingHTTPServer
+
+
+@pytest.fixture
+def api(tmp_path):
+    store = Store(tmp_path)
+    server = ThreadingHTTPServer(('127.0.0.1', 0), handler(store))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    def call(path, body=None, origin=None):
+        headers = {'Content-Type': 'application/json'}
+        if origin:
+            headers['Origin'] = origin
+        req = Request(f'http://127.0.0.1:{server.server_port}{path}',
+                      data=json.dumps(body).encode() if body is not None else None, headers=headers)
+        try:
+            response = urlopen(req, timeout=10)
+        except HTTPError as e:
+            response = e
+        with response:
+            return response.status, json.load(response)
+    yield store, call
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=3)
+
+
+def test_empty_and_refresh_preserve_python_values(api, tmp_path):
+    store, call = api
+    assert call('/api/report') == (200, None)
+    assert call('/api/export/cbom')[0] == 409
+    f = classify(Finding(source='code', category='signature', algorithm='RSA',
+                         params={'key_bits': 2048}, asset={'path': 'app.py'}, location={'file': 'app.py', 'line': 1}))
+    (tmp_path / 'findings.json').write_text(json.dumps([f.to_dict()]))
+    status, value = call('/api/refresh', {})
+    assert status == 200
+    assert value['origin'] == 'cli'
+    assert value['summary']['quantum_readiness_score'] == summarize([f])['quantum_readiness_score']
+    assert value['findings'][0]['risk_points'] == f.risk_points
+    assert call('/api/export/sarif')[1]['version'] == '2.1.0'
+    assert call('/api/export/cbom')[0] == 200
+    assert call('/api/export/report')[1] == value
+    assert call('/api/export/cbom?at=stale-report')[0] == 409
+
+
+def test_upload_runs_scanner_and_bad_upload_keeps_previous_report(api):
+    store, call = api
+    content = base64.b64encode(b'import hashlib\ndigest = hashlib.md5(b"hello").hexdigest()\n').decode()
+    assert call('/api/scan', {'files': [{'name': 'sample.py', 'content': content}]})[0] == 202
+    def finish():
+        for _ in range(100):
+            status = call('/api/status')[1]
+            if status['state'] != 'running':
+                return status
+            time.sleep(.02)
+        pytest.fail('scan did not finish')
+    assert finish()['state'] == 'complete'
+    previous = call('/api/report')[1]
+    assert previous['origin'] == 'upload'
+    assert any(f['algorithm'] == 'MD5' for f in previous['findings'])
+    assert all(f['location']['file'] == 'sample.py' for f in previous['findings'])
+    call('/api/scan', {'files': []})
+    assert finish()['state'] == 'error'
+    assert call('/api/report')[1] == previous
+
+
+def test_reject_cross_origin_and_duplicate_jobs(api):
+    store, call = api
+    assert call('/api/scan', {'demo': True}, origin='https://other.example')[0] == 403
+    store.job = {'state': 'running', 'error': None}
+    assert call('/api/scan', {'demo': True})[0] == 400
+
+
+@pytest.mark.parametrize('name', ['../escape.py', '/absolute.py', 'C:/escape.py', '..\\escape.py'])
+def test_zip_cannot_escape_upload_directory(tmp_path, name):
+    archive = io.BytesIO()
+    with ZipFile(archive, 'w') as z:
+        z.writestr(name, 'bad')
+    with pytest.raises(ValueError, match='unsafe'):
+        unpack([{'name':'input.zip', 'content':base64.b64encode(archive.getvalue()).decode()}], tmp_path)
+    assert not list(tmp_path.iterdir())
+
+
+def test_bad_saved_results_do_not_crash_server(tmp_path):
+    (tmp_path/'findings.json').write_text('invalid')
+    store = Store(tmp_path)
+    assert store.current is None
+    assert store.job['state'] == 'error'

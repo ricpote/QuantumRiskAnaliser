@@ -12,7 +12,7 @@ FIPS 203 (ML-KEM), FIPS 204 (ML-DSA) or FIPS 205 (SLH-DSA).
 git clone https://github.com/ricpote/QuantumRiskAnaliser.git && cd QuantumRiskAnaliser
 docker build -t quantumtrace .
 
-# 1. Dashboard -> open http://localhost:8501
+# 1. NEW React dashboard -> open http://localhost:8501
 docker run --rm -p 8501:8501 quantumtrace
 
 # 2. CLI scan of the official samples -> CBOM, findings, SARIF, summary in ./out
@@ -27,6 +27,95 @@ docker run --rm quantumtrace sh -c "tlslab >/dev/null 2>&1 & sleep 2; qtrace pro
 
 The image pins every Python dependency (`constraints.txt`) and bundles tshark and the TLS lab.
 CI builds it and runs the three commands above on every pull request.
+
+## React dashboard and scan results
+
+The default dashboard is the imported Lovable **React / TanStack Start** interface
+in `frontend/`. It is rendered by **Nitro's Node server**, not a static HTML server.
+The image builds it with Node 24 and `npm ci`, then runs its `.output/server/index.mjs`
+alongside the Python API and the unchanged TLS lab. Only UI port 8501 is exposed;
+the API binds to loopback on 8502. This is a local/trusted-network tool, without
+multi-user authentication; do not expose the scan service publicly.
+
+Start with one of these data sources:
+
+- **New scan → Scan uploaded files:** upload PCAP/PCAPNG, Python/Java/Go,
+  supported config files, AWS JSON exports, or a ZIP. Scanning runs in Python.
+  Uploads are limited to 32 MiB, 2,000 files and 128 MiB expanded, and are deleted
+  after scanning. Results stay in memory until replaced or the service stops;
+  download the JSON report to retain them. Warnings remain visible.
+- **Reload CLI results:** reads `findings.json` from `QT_RESULTS_DIR` (default
+  `out/`) and derives the summary with the existing Python scorer. It does not
+  rescan inputs. After another `qtrace scan`, click Reload CLI results. No polling
+  silently replaces the current report. Finish the CLI scan before reloading.
+- **Scan official samples (demo):** runs the actual scanner against the bundled
+  challenge fixtures. These results are labelled **sample data**, not live assets.
+- **Use bundled demo:** explicitly loads a small checked-in report generated from
+  official Python/KMS fixtures. This works even if the API is unavailable. It never
+  activates automatically after an error. Regenerate with `python scripts/generate_demo.py`.
+
+To display CLI results in Docker, mount the output directory:
+
+```bash
+docker run --rm -v "$PWD:/data" quantumtrace qtrace scan /data/samples/official --out /data/out
+docker run --rm -p 8501:8501 -v "$PWD/out:/results:ro" -e QT_RESULTS_DIR=/results quantumtrace
+```
+
+In PowerShell replace `$PWD` in volume strings with `${PWD}`. Scanned fixture
+results retain their sample label. Other saved outputs are labelled **Loaded CLI
+results**, never claimed to be a live connection.
+
+Inventory rows represent individual **findings**; asset counts, readiness scores,
+risk tiers and migration priorities are supplied by Python. JSON/CSV exports
+reflect the displayed report. CBOM and SARIF use the existing backend exporters;
+CBOM downloads require successful schema validation. Bundled offline demo mode
+offers JSON/CSV only. Live TLS probing remains available through `qtrace probe`.
+
+### Local frontend development
+
+Requires Python >=3.10, Node 24, npm, tshark, and Go >=1.24 for lab tests.
+
+```bash
+pip install -e ".[dev,ui]"
+npm --prefix frontend ci
+make ui                        # starts Python API + Vite on http://localhost:8501
+# Without make (including Windows):
+python scripts/ui.py
+
+npm --prefix frontend run build
+qtrace serve --data out         # production Node UI + API, after the build
+```
+
+`make ui PYTHON=/path/to/python` chooses a virtual environment interpreter.
+The launcher stops its child services when interrupted or when a child exits.
+For separate processes, run `python -m quantumtrace.web --results out` and
+`npm --prefix frontend run dev`. `QT_API_ORIGIN` is a server-only override for
+the API origin; it is never exposed as a `VITE_*` client variable.
+
+### Temporary Streamlit fallback
+
+```bash
+make ui-legacy
+qtrace serve --legacy
+docker run --rm -p 8501:8501 quantumtrace python -m streamlit run app/streamlit_app.py --server.address=0.0.0.0
+```
+
+### Integration verification
+
+```bash
+npm --prefix frontend run typecheck
+npm --prefix frontend test
+npm --prefix frontend run lint
+npm --prefix frontend run build
+python -m pytest -q
+python -m quantumtrace.evaluate
+# Against a running production UI:
+python scripts/smoke_ui.py http://localhost:8501
+```
+
+CI also builds the Docker image, checks the new SSR routes and API, scans an
+uploaded fixture, validates CBOM/SARIF exports and probes all seven TLS lab endpoints.
+The old Streamlit health endpoint is no longer the default UI health check.
 
 ## Results on the official challenge data
 

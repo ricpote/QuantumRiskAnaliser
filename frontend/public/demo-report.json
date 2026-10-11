@@ -1,0 +1,1389 @@
+{
+  "schema_version": 1,
+  "origin": "sample",
+  "generated_at": "2026-10-10T12:00:00Z",
+  "findings": [
+    {
+      "source": "cloud",
+      "category": "signature",
+      "algorithm": "RSA",
+      "params": {
+        "key_bits": 2048,
+        "key_spec": "RSA_2048",
+        "padding": "PKCS1v15",
+        "hash": "SHA-256",
+        "signing_algorithms": [
+          "RSASSA_PKCS1_V1_5_SHA_256"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/1a2b3c4d-1111-4a2b-8c3d-0123456789ab",
+        "alias": "alias/licensing-jwt-signing",
+        "key_id": "1a2b3c4d-1111-4a2b-8c3d-0123456789ab",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Signs enterprise license tokens issued by the billing service",
+        "tags": {
+          "team": "billing",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/0"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "SIGN_VERIFY",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "NOT_APPLICABLE",
+        "created": "2019-03-11T14:02:33Z",
+        "age_years": 7.6,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false,
+        "migration_hint": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition"
+      },
+      "evidence": "KMS key alias/licensing-jwt-signing KeySpec=RSA_2048 KeyUsage=SIGN_VERIFY (RSASSA_PKCS1_V1_5_SHA_256)",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "acceptable",
+      "classical_bits": 112,
+      "nist_quantum_level": 0,
+      "oid": "1.2.840.113549.1.1.1",
+      "display_name": "RSA-2048",
+      "replacement": {
+        "algorithm": "ML-DSA-65",
+        "standard": "FIPS 204",
+        "how": "Migrate signatures to ML-DSA-65 (hybrid/composite during transition)"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): 112-bit quantum-vulnerable public-key crypto (RSA-2048, DH-2048) deprecated after 2030, disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; remaining use cases quantum-safe by end-2035",
+        "NSA CNSA 2.0 (US NSS): web browsers/servers and cloud services exclusively ML-KEM-1024 / ML-DSA-87 by 2033"
+      ],
+      "deadline_year": 2030,
+      "hndl": false,
+      "risk_points": 75.0,
+      "rationale": [
+        "RSA relies on factoring/discrete-log: broken by Shor's algorithm"
+      ],
+      "id": "187c535e6cfe"
+    },
+    {
+      "source": "cloud",
+      "category": "signature",
+      "algorithm": "ECDSA",
+      "params": {
+        "curve": "P-256",
+        "key_spec": "ECC_NIST_P256",
+        "hash": "SHA-256",
+        "signing_algorithms": [
+          "ECDSA_SHA_256"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/2b3c4d5e-2222-4b3c-9d4e-123456789abc",
+        "alias": "alias/device-attestation",
+        "key_id": "2b3c4d5e-2222-4b3c-9d4e-123456789abc",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Verifies signed attestation payloads from IoT gateway devices",
+        "tags": {
+          "team": "iot-platform",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/1"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "SIGN_VERIFY",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "NOT_APPLICABLE",
+        "created": "2024-06-02T08:17:45Z",
+        "age_years": 2.4,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false,
+        "migration_hint": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition"
+      },
+      "evidence": "KMS key alias/device-attestation KeySpec=ECC_NIST_P256 KeyUsage=SIGN_VERIFY (ECDSA_SHA_256)",
+      "confidence": 1.0,
+      "flags": [
+        "long-lived"
+      ],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "acceptable",
+      "classical_bits": 128,
+      "nist_quantum_level": 0,
+      "oid": "1.2.840.10045.2.1",
+      "display_name": "ECDSA-P-256",
+      "replacement": {
+        "algorithm": "ML-DSA-87 or SLH-DSA",
+        "standard": "FIPS 204 / FIPS 205",
+        "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
+        "NSA CNSA 2.0 (US NSS): software/firmware signing exclusively LMS/XMSS (SP 800-208) or ML-DSA-87 by 2030"
+      ],
+      "deadline_year": 2030,
+      "hndl": false,
+      "risk_points": 90.0,
+      "rationale": [
+        "ECDSA relies on factoring/discrete-log: broken by Shor's algorithm",
+        "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
+      ],
+      "id": "7e9aa8e32fe7"
+    },
+    {
+      "source": "cloud",
+      "category": "encryption",
+      "algorithm": "RSA",
+      "params": {
+        "key_bits": 2048,
+        "key_spec": "RSA_2048",
+        "padding": "OAEP",
+        "hash": "SHA-256",
+        "encryption_algorithms": [
+          "RSAES_OAEP_SHA_256"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/3c4d5e6f-3333-4c4d-ae5f-23456789abcd",
+        "alias": "alias/partner-feed-decrypt",
+        "key_id": "3c4d5e6f-3333-4c4d-ae5f-23456789abcd",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Decrypts nightly settlement files received from a payment partner",
+        "tags": {
+          "team": "payments-integration",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/2"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "ENCRYPT_DECRYPT",
+        "origin": "EXTERNAL",
+        "key_state": "Enabled",
+        "rotation": "NOT_APPLICABLE",
+        "created": "2020-11-05T10:44:12Z",
+        "age_years": 5.9,
+        "valid_to": "2027-11-05T10:44:12Z",
+        "deletion_date": null,
+        "multi_region": false,
+        "migration_hint": "KMS has no ML-KEM KeySpec for asymmetric encryption: move partner exchange to an ML-KEM/hybrid KEM-DEM scheme and wrap data with a SYMMETRIC_DEFAULT (AES-256-GCM) key"
+      },
+      "evidence": "KMS key alias/partner-feed-decrypt KeySpec=RSA_2048 KeyUsage=ENCRYPT_DECRYPT (RSAES_OAEP_SHA_256); imported key material expires 2027-11-05: natural migration window",
+      "confidence": 1.0,
+      "flags": [
+        "external-key-material",
+        "long-lived"
+      ],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "acceptable",
+      "classical_bits": 112,
+      "nist_quantum_level": 0,
+      "oid": "1.2.840.113549.1.1.1",
+      "display_name": "RSA-2048",
+      "replacement": {
+        "algorithm": "ML-KEM-768 + AES-256-GCM",
+        "standard": "FIPS 203",
+        "how": "Replace RSA encryption with a KEM/DEM construction (e.g. HPKE with ML-KEM) and AES-256-GCM"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): 112-bit quantum-vulnerable public-key crypto (RSA-2048, DH-2048) deprecated after 2030, disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
+        "NSA CNSA 2.0 (US NSS): software/firmware signing exclusively LMS/XMSS (SP 800-208) or ML-DSA-87 by 2030"
+      ],
+      "deadline_year": 2030,
+      "hndl": true,
+      "risk_points": 100.0,
+      "rationale": [
+        "RSA relies on factoring/discrete-log: broken by Shor's algorithm",
+        "Harvest-Now-Decrypt-Later: traffic/data recorded today can be decrypted once a CRQC exists"
+      ],
+      "id": "fc731770904d"
+    },
+    {
+      "source": "cloud",
+      "category": "encryption",
+      "algorithm": "AES",
+      "params": {
+        "key_bits": 256,
+        "mode": "GCM",
+        "key_spec": "SYMMETRIC_DEFAULT",
+        "encryption_algorithms": [
+          "SYMMETRIC_DEFAULT"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/4d5e6f70-4444-4d5e-bf60-3456789abcde",
+        "alias": "alias/s3-object-encryption",
+        "key_id": "4d5e6f70-4444-4d5e-bf60-3456789abcde",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Default CMK for application data bucket server-side encryption",
+        "tags": {
+          "team": "platform",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/3"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "ENCRYPT_DECRYPT",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "ENABLED",
+        "created": "2022-01-20T16:09:51Z",
+        "age_years": 4.7,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false
+      },
+      "evidence": "KMS key alias/s3-object-encryption KeySpec=SYMMETRIC_DEFAULT KeyUsage=ENCRYPT_DECRYPT (SYMMETRIC_DEFAULT)",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "grover",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": 256,
+      "nist_quantum_level": 5,
+      "oid": "2.16.840.1.101.3.4.1.46",
+      "display_name": "AES-256-GCM",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [
+        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
+      ],
+      "id": "afb6a4c08eb6"
+    },
+    {
+      "source": "cloud",
+      "category": "encryption",
+      "algorithm": "AES",
+      "params": {
+        "key_bits": 256,
+        "mode": "GCM",
+        "key_spec": "SYMMETRIC_DEFAULT",
+        "encryption_algorithms": [
+          "SYMMETRIC_DEFAULT"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/5e6f7081-5555-4e6f-c071-456789abcdef",
+        "alias": "alias/ebs-volume-encryption",
+        "key_id": "5e6f7081-5555-4e6f-c071-456789abcdef",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Volume encryption key for the analytics EC2 fleet",
+        "tags": {
+          "team": "data-platform",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/4"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "ENCRYPT_DECRYPT",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "DISABLED",
+        "created": "2021-07-08T11:28:04Z",
+        "age_years": 5.3,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false
+      },
+      "evidence": "KMS key alias/ebs-volume-encryption KeySpec=SYMMETRIC_DEFAULT KeyUsage=ENCRYPT_DECRYPT (SYMMETRIC_DEFAULT)",
+      "confidence": 1.0,
+      "flags": [
+        "rotation-disabled"
+      ],
+      "quantum_threat": "grover",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": 256,
+      "nist_quantum_level": 5,
+      "oid": "2.16.840.1.101.3.4.1.46",
+      "display_name": "AES-256-GCM",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [
+        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
+      ],
+      "id": "dd9a3fa6229f"
+    },
+    {
+      "source": "cloud",
+      "category": "signature",
+      "algorithm": "ECDSA",
+      "params": {
+        "curve": "P-384",
+        "key_spec": "ECC_NIST_P384",
+        "hash": "SHA-384",
+        "signing_algorithms": [
+          "ECDSA_SHA_384"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/6f708192-6666-4f70-d182-56789abcdef0",
+        "alias": "alias/internal-ca-root",
+        "key_id": "6f708192-6666-4f70-d182-56789abcdef0",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Root signing key for the internal service-mesh certificate authority",
+        "tags": {
+          "team": "platform-security",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/5"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "SIGN_VERIFY",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "NOT_APPLICABLE",
+        "created": "2023-02-14T09:55:30Z",
+        "age_years": 3.7,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": true,
+        "migration_hint": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition"
+      },
+      "evidence": "KMS key alias/internal-ca-root KeySpec=ECC_NIST_P384 KeyUsage=SIGN_VERIFY (ECDSA_SHA_384)",
+      "confidence": 1.0,
+      "flags": [
+        "long-lived",
+        "multi-region"
+      ],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "acceptable",
+      "classical_bits": 192,
+      "nist_quantum_level": 0,
+      "oid": "1.2.840.10045.2.1",
+      "display_name": "ECDSA-P-384",
+      "replacement": {
+        "algorithm": "ML-DSA-87 or SLH-DSA",
+        "standard": "FIPS 204 / FIPS 205",
+        "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
+        "NSA CNSA 2.0 (US NSS): software/firmware signing exclusively LMS/XMSS (SP 800-208) or ML-DSA-87 by 2030"
+      ],
+      "deadline_year": 2030,
+      "hndl": false,
+      "risk_points": 90.0,
+      "rationale": [
+        "ECDSA relies on factoring/discrete-log: broken by Shor's algorithm",
+        "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
+      ],
+      "id": "9c70c64ac184"
+    },
+    {
+      "source": "cloud",
+      "category": "encryption",
+      "algorithm": "AES",
+      "params": {
+        "key_bits": 256,
+        "mode": "GCM",
+        "key_spec": "SYMMETRIC_DEFAULT",
+        "encryption_algorithms": [
+          "SYMMETRIC_DEFAULT"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/70819203-7777-4081-e293-6789abcdef01",
+        "alias": "alias/legacy-reports-export",
+        "key_id": "70819203-7777-4081-e293-6789abcdef01",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Used by the quarterly reporting batch job (owning team no longer staffed)",
+        "tags": {
+          "team": "finance-reporting",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/6"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "ENCRYPT_DECRYPT",
+        "origin": "AWS_KMS",
+        "key_state": "PendingDeletion",
+        "rotation": "DISABLED",
+        "created": "2018-09-30T13:40:22Z",
+        "age_years": 8.0,
+        "valid_to": null,
+        "deletion_date": "2026-10-12T00:00:00Z",
+        "multi_region": false
+      },
+      "evidence": "KMS key alias/legacy-reports-export KeySpec=SYMMETRIC_DEFAULT KeyUsage=ENCRYPT_DECRYPT (SYMMETRIC_DEFAULT); scheduled for deletion on 2026-10-12 (1 days): data still encrypted under it becomes unrecoverable",
+      "confidence": 1.0,
+      "flags": [
+        "orphaned-owner",
+        "pending-deletion",
+        "rotation-disabled"
+      ],
+      "quantum_threat": "grover",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": 256,
+      "nist_quantum_level": 5,
+      "oid": "2.16.840.1.101.3.4.1.46",
+      "display_name": "AES-256-GCM",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [
+        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
+      ],
+      "id": "1642d9a75d27"
+    },
+    {
+      "source": "cloud",
+      "category": "signature",
+      "algorithm": "RSA",
+      "params": {
+        "key_bits": 3072,
+        "key_spec": "RSA_3072",
+        "padding": "PKCS1v15",
+        "hash": "SHA-384",
+        "signing_algorithms": [
+          "RSASSA_PKCS1_V1_5_SHA_384"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/81920314-8888-4192-f3a4-789abcdef012",
+        "alias": "alias/hsm-backed-settlement",
+        "key_id": "81920314-8888-4192-f3a4-789abcdef012",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Settlement signing key backed by the dedicated CloudHSM cluster",
+        "tags": {
+          "team": "payments-core",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/7"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "SIGN_VERIFY",
+        "origin": "AWS_CLOUDHSM",
+        "key_state": "Enabled",
+        "rotation": "NOT_APPLICABLE",
+        "created": "2025-01-09T07:12:59Z",
+        "age_years": 1.7,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false,
+        "migration_hint": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition"
+      },
+      "evidence": "KMS key alias/hsm-backed-settlement KeySpec=RSA_3072 KeyUsage=SIGN_VERIFY (RSASSA_PKCS1_V1_5_SHA_384)",
+      "confidence": 1.0,
+      "flags": [
+        "hsm-backed",
+        "long-lived"
+      ],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "acceptable",
+      "classical_bits": 128,
+      "nist_quantum_level": 0,
+      "oid": "1.2.840.113549.1.1.1",
+      "display_name": "RSA-3072",
+      "replacement": {
+        "algorithm": "ML-DSA-87 or SLH-DSA",
+        "standard": "FIPS 204 / FIPS 205",
+        "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
+        "NSA CNSA 2.0 (US NSS): software/firmware signing exclusively LMS/XMSS (SP 800-208) or ML-DSA-87 by 2030"
+      ],
+      "deadline_year": 2030,
+      "hndl": false,
+      "risk_points": 90.0,
+      "rationale": [
+        "RSA relies on factoring/discrete-log: broken by Shor's algorithm",
+        "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
+      ],
+      "id": "1e9cf4175619"
+    },
+    {
+      "source": "cloud",
+      "category": "signature",
+      "algorithm": "RSA",
+      "params": {
+        "key_bits": 4096,
+        "key_spec": "RSA_4096",
+        "padding": "PSS",
+        "hash": "SHA-256",
+        "signing_algorithms": [
+          "RSASSA_PSS_SHA_256"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/92031425-9999-4203-04b5-89abcdef0123",
+        "alias": "alias/release-codesigning",
+        "key_id": "92031425-9999-4203-04b5-89abcdef0123",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Signs release artifacts published to the internal package registry",
+        "tags": {
+          "team": "developer-platform",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/8"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "SIGN_VERIFY",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "NOT_APPLICABLE",
+        "created": "2025-05-21T15:03:48Z",
+        "age_years": 1.4,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false,
+        "migration_hint": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition"
+      },
+      "evidence": "KMS key alias/release-codesigning KeySpec=RSA_4096 KeyUsage=SIGN_VERIFY (RSASSA_PSS_SHA_256)",
+      "confidence": 1.0,
+      "flags": [
+        "long-lived"
+      ],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "acceptable",
+      "classical_bits": 152,
+      "nist_quantum_level": 0,
+      "oid": "1.2.840.113549.1.1.1",
+      "display_name": "RSA-4096",
+      "replacement": {
+        "algorithm": "ML-DSA-87 or SLH-DSA",
+        "standard": "FIPS 204 / FIPS 205",
+        "how": "Long-lived roots, code and firmware signing: ML-DSA-87, SLH-DSA, or LMS/XMSS (SP 800-208)"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; high-risk use cases (HNDL-exposed data, long-lived signatures) quantum-safe by end-2030",
+        "NSA CNSA 2.0 (US NSS): software/firmware signing exclusively LMS/XMSS (SP 800-208) or ML-DSA-87 by 2030"
+      ],
+      "deadline_year": 2030,
+      "hndl": false,
+      "risk_points": 90.0,
+      "rationale": [
+        "RSA relies on factoring/discrete-log: broken by Shor's algorithm",
+        "long-lived trust anchor / signing key: migrate early (signatures cannot be re-issued retroactively)"
+      ],
+      "id": "4a9fc4d3113e"
+    },
+    {
+      "source": "cloud",
+      "category": "encryption",
+      "algorithm": "AES",
+      "params": {
+        "key_bits": 256,
+        "mode": "GCM",
+        "key_spec": "SYMMETRIC_DEFAULT",
+        "encryption_algorithms": [
+          "SYMMETRIC_DEFAULT"
+        ]
+      },
+      "asset": {
+        "kind": "aws-kms-key",
+        "arn": "arn:aws:kms:eu-west-1:123456789012:key/a3142536-aaaa-4314-15c6-9abcdef01234",
+        "alias": "alias/session-token-encryption",
+        "key_id": "a3142536-aaaa-4314-15c6-9abcdef01234",
+        "account": "123456789012",
+        "region": "eu-west-1",
+        "description": "Encrypts server-side session blobs for the customer web portal",
+        "tags": {
+          "team": "web-portal",
+          "env": "prod"
+        }
+      },
+      "location": {
+        "json": "samples\\official\\cloud-posture\\kms_key_inventory.json",
+        "pointer": "/Keys/9"
+      },
+      "context": {
+        "service": "AWS KMS",
+        "key_usage": "ENCRYPT_DECRYPT",
+        "origin": "AWS_KMS",
+        "key_state": "Enabled",
+        "rotation": "ENABLED",
+        "created": "2024-11-18T19:21:07Z",
+        "age_years": 1.9,
+        "valid_to": null,
+        "deletion_date": null,
+        "multi_region": false
+      },
+      "evidence": "KMS key alias/session-token-encryption KeySpec=SYMMETRIC_DEFAULT KeyUsage=ENCRYPT_DECRYPT (SYMMETRIC_DEFAULT)",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "grover",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": 256,
+      "nist_quantum_level": 5,
+      "oid": "2.16.840.1.101.3.4.1.46",
+      "display_name": "AES-256-GCM",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [
+        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
+      ],
+      "id": "ee0b87076804"
+    },
+    {
+      "source": "code",
+      "category": "rng",
+      "algorithm": "CSPRNG",
+      "params": {
+        "api": "os.urandom"
+      },
+      "asset": {
+        "kind": "source-file",
+        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "language": "python"
+      },
+      "location": {
+        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "line": 11,
+        "column": 12,
+        "snippet": "return os.urandom(KEY_LEN)",
+        "symbol": "generate_key"
+      },
+      "context": {
+        "api": "os.urandom",
+        "language": "python"
+      },
+      "evidence": "os.urandom()",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "none",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": null,
+      "nist_quantum_level": null,
+      "oid": null,
+      "display_name": "CSPRNG",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [],
+      "id": "43056dd034ab"
+    },
+    {
+      "source": "code",
+      "category": "rng",
+      "algorithm": "CSPRNG",
+      "params": {
+        "api": "os.urandom"
+      },
+      "asset": {
+        "kind": "source-file",
+        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "language": "python"
+      },
+      "location": {
+        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "line": 15,
+        "column": 13,
+        "snippet": "nonce = os.urandom(NONCE_LEN)",
+        "symbol": "encrypt"
+      },
+      "context": {
+        "api": "os.urandom",
+        "language": "python"
+      },
+      "evidence": "os.urandom()",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "none",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": null,
+      "nist_quantum_level": null,
+      "oid": null,
+      "display_name": "CSPRNG",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [],
+      "id": "b03b4e14b813"
+    },
+    {
+      "source": "code",
+      "category": "encryption",
+      "algorithm": "AES",
+      "params": {
+        "key_bits": 256,
+        "mode": "GCM"
+      },
+      "asset": {
+        "kind": "source-file",
+        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "language": "python"
+      },
+      "location": {
+        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "line": 16,
+        "column": 18,
+        "snippet": "ciphertext = AESGCM(key).encrypt(nonce, plaintext, associated_data)",
+        "symbol": "encrypt"
+      },
+      "context": {
+        "api": "cryptography.hazmat.primitives.ciphers.aead.AESGCM",
+        "language": "python"
+      },
+      "evidence": "AESGCM(key) with 256-bit key",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "grover",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": 256,
+      "nist_quantum_level": 5,
+      "oid": "2.16.840.1.101.3.4.1.46",
+      "display_name": "AES-256-GCM",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [
+        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
+      ],
+      "id": "4b803b57bc06"
+    },
+    {
+      "source": "code",
+      "category": "encryption",
+      "algorithm": "AES",
+      "params": {
+        "key_bits": 256,
+        "mode": "GCM"
+      },
+      "asset": {
+        "kind": "source-file",
+        "path": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "language": "python"
+      },
+      "location": {
+        "file": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "line": 21,
+        "column": 12,
+        "snippet": "return AESGCM(key).decrypt(nonce, ciphertext, associated_data)",
+        "symbol": "decrypt"
+      },
+      "context": {
+        "api": "cryptography.hazmat.primitives.ciphers.aead.AESGCM",
+        "language": "python"
+      },
+      "evidence": "AESGCM(key) with 256-bit key",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "grover",
+      "risk_tier": "safe",
+      "classical_status": "recommended",
+      "classical_bits": 256,
+      "nist_quantum_level": 5,
+      "oid": "2.16.840.1.101.3.4.1.46",
+      "display_name": "AES-256-GCM",
+      "replacement": null,
+      "cwe": [],
+      "deadlines": [],
+      "deadline_year": null,
+      "hndl": false,
+      "risk_points": 0.0,
+      "rationale": [
+        "Grover reduces a 256-bit key to ~128-bit post-quantum strength"
+      ],
+      "id": "0b635abe7495"
+    },
+    {
+      "source": "code",
+      "category": "signature",
+      "algorithm": "Ed25519",
+      "params": {},
+      "asset": {
+        "kind": "source-file",
+        "path": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "language": "python"
+      },
+      "location": {
+        "file": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "line": 5,
+        "column": 19,
+        "snippet": "private_key = ed25519.Ed25519PrivateKey.generate()",
+        "symbol": "generate_keypair"
+      },
+      "context": {
+        "api": "cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey.generate",
+        "language": "python"
+      },
+      "evidence": "Ed25519PrivateKey.generate()",
+      "confidence": 1.0,
+      "flags": [],
+      "quantum_threat": "shor",
+      "risk_tier": "critical",
+      "classical_status": "recommended",
+      "classical_bits": 128,
+      "nist_quantum_level": 0,
+      "oid": "1.3.101.112",
+      "display_name": "Ed25519",
+      "replacement": {
+        "algorithm": "ML-DSA-65",
+        "standard": "FIPS 204",
+        "how": "Migrate signatures to ML-DSA-65 (hybrid/composite during transition)"
+      },
+      "cwe": [
+        "CWE-327"
+      ],
+      "deadlines": [
+        "NIST IR 8547 (ipd, proposed): quantum-vulnerable public-key crypto at >= 128-bit (ECC P-256+, RSA-3072+) disallowed after 2035",
+        "EU PQC Roadmap (NIS CG, Jun 2025): inventory by end-2026; remaining use cases quantum-safe by end-2035",
+        "NSA CNSA 2.0 (US NSS): all National Security Systems quantum-resistant by 2035 (ML-KEM-1024 / ML-DSA-87 / AES-256 / SHA-384)"
+      ],
+      "deadline_year": 2035,
+      "hndl": false,
+      "risk_points": 75.0,
+      "rationale": [
+        "EdDSA relies on factoring/discrete-log: broken by Shor's algorithm"
+      ],
+      "id": "980736abf6df"
+    }
+  ],
+  "summary": {
+    "quantum_readiness_score": 54.5,
+    "grade": "D",
+    "sources": {
+      "cloud": {
+        "score": 46.5,
+        "assets": 10,
+        "tiers": {
+          "critical": 6,
+          "safe": 4
+        },
+        "hndl_assets": 1,
+        "pq_assets": 0,
+        "plaintext_assets": 0
+      },
+      "code": {
+        "score": 62.5,
+        "assets": 2,
+        "tiers": {
+          "safe": 2,
+          "critical": 1
+        },
+        "hndl_assets": 0,
+        "pq_assets": 0,
+        "plaintext_assets": 0
+      }
+    },
+    "tiers": {
+      "critical": 7,
+      "safe": 6
+    },
+    "threats": {
+      "shor": 7,
+      "grover": 6
+    },
+    "classical": {
+      "acceptable": 6,
+      "recommended": 7
+    },
+    "findings": 13,
+    "assets": 12,
+    "network": {
+      "endpoints": 0,
+      "hndl_exposed": 0,
+      "pq_protected": 0,
+      "plaintext": 0
+    },
+    "top_assets": [
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/3c4d5e6f-3333-4c4d-ae5f-23456789abcd",
+        "label": "KMS alias/partner-feed-decrypt",
+        "risk": 100.0,
+        "worst_tier": "critical",
+        "hndl": true,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/2b3c4d5e-2222-4b3c-9d4e-123456789abc",
+        "label": "KMS alias/device-attestation",
+        "risk": 90.0,
+        "worst_tier": "critical",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/81920314-8888-4192-f3a4-789abcdef012",
+        "label": "KMS alias/hsm-backed-settlement",
+        "risk": 90.0,
+        "worst_tier": "critical",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/6f708192-6666-4f70-d182-56789abcdef0",
+        "label": "KMS alias/internal-ca-root",
+        "risk": 90.0,
+        "worst_tier": "critical",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/92031425-9999-4203-04b5-89abcdef0123",
+        "label": "KMS alias/release-codesigning",
+        "risk": 90.0,
+        "worst_tier": "critical",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/1a2b3c4d-1111-4a2b-8c3d-0123456789ab",
+        "label": "KMS alias/licensing-jwt-signing",
+        "risk": 75.0,
+        "worst_tier": "critical",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "code",
+        "key": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "label": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+        "risk": 75.0,
+        "worst_tier": "critical",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/5e6f7081-5555-4e6f-c071-456789abcdef",
+        "label": "KMS alias/ebs-volume-encryption",
+        "risk": 0.0,
+        "worst_tier": "safe",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/70819203-7777-4081-e293-6789abcdef01",
+        "label": "KMS alias/legacy-reports-export",
+        "risk": 0.0,
+        "worst_tier": "safe",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/4d5e6f70-4444-4d5e-bf60-3456789abcde",
+        "label": "KMS alias/s3-object-encryption",
+        "risk": 0.0,
+        "worst_tier": "safe",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "cloud",
+        "key": "arn:aws:kms:eu-west-1:123456789012:key/a3142536-aaaa-4314-15c6-9abcdef01234",
+        "label": "KMS alias/session-token-encryption",
+        "risk": 0.0,
+        "worst_tier": "safe",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 1
+      },
+      {
+        "source": "code",
+        "key": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "label": "samples\\official\\sample-repos\\python\\secure_transfer.py",
+        "risk": 0.0,
+        "worst_tier": "safe",
+        "hndl": false,
+        "pq_kex": false,
+        "plaintext": false,
+        "classical_broken": 0,
+        "findings": 2
+      }
+    ],
+    "plan": [
+      {
+        "source": "cloud",
+        "category": "encryption",
+        "action": "Migrate encryption to ML-KEM-768 + AES-256-GCM",
+        "replacement": "ML-KEM-768 + AES-256-GCM",
+        "standard": "FIPS 203",
+        "how": "KMS has no ML-KEM KeySpec for asymmetric encryption: move partner exchange to an ML-KEM/hybrid KEM-DEM scheme and wrap data with a SYMMETRIC_DEFAULT (AES-256-GCM) key",
+        "from_algorithms": [
+          "RSA-2048"
+        ],
+        "assets": [
+          "KMS alias/partner-feed-decrypt"
+        ],
+        "asset_count": 1,
+        "risk_removed": 100.0,
+        "hndl": true,
+        "priority": "P0"
+      },
+      {
+        "source": "cloud",
+        "category": "signature",
+        "action": "Migrate signature to ML-DSA-87 or SLH-DSA",
+        "replacement": "ML-DSA-87 or SLH-DSA",
+        "standard": "FIPS 204 / FIPS 205",
+        "how": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition",
+        "from_algorithms": [
+          "ECDSA-P-256",
+          "ECDSA-P-384",
+          "RSA-3072",
+          "RSA-4096"
+        ],
+        "assets": [
+          "KMS alias/device-attestation",
+          "KMS alias/hsm-backed-settlement",
+          "KMS alias/internal-ca-root",
+          "KMS alias/release-codesigning"
+        ],
+        "asset_count": 4,
+        "risk_removed": 360.0,
+        "hndl": false,
+        "priority": "P1"
+      },
+      {
+        "source": "cloud",
+        "category": "signature",
+        "action": "Migrate signature to ML-DSA-65",
+        "replacement": "ML-DSA-65",
+        "standard": "FIPS 204",
+        "how": "Create a new KMS key with KeySpec ML_DSA_65 (FIPS 204, supported by AWS KMS) and dual-sign during transition",
+        "from_algorithms": [
+          "RSA-2048"
+        ],
+        "assets": [
+          "KMS alias/licensing-jwt-signing"
+        ],
+        "asset_count": 1,
+        "risk_removed": 75.0,
+        "hndl": false,
+        "priority": "P1"
+      },
+      {
+        "source": "code",
+        "category": "signature",
+        "action": "Migrate signature to ML-DSA-65",
+        "replacement": "ML-DSA-65",
+        "standard": "FIPS 204",
+        "how": "Migrate signatures to ML-DSA-65 (hybrid/composite during transition)",
+        "from_algorithms": [
+          "Ed25519"
+        ],
+        "assets": [
+          "samples\\official\\sample-repos\\python\\webhook_signature.py"
+        ],
+        "asset_count": 1,
+        "risk_removed": 75.0,
+        "hndl": false,
+        "priority": "P1"
+      }
+    ],
+    "mosca": {
+      "qday_year": 2033,
+      "now": 2026,
+      "evaluated": 7,
+      "at_risk": 5,
+      "status": {
+        "late": 5,
+        "ok": 2
+      },
+      "scenarios": {
+        "pessimistic": {
+          "qday_year": 2030,
+          "at_risk": 6
+        },
+        "default": {
+          "qday_year": 2033,
+          "at_risk": 5
+        },
+        "optimistic": {
+          "qday_year": 2035,
+          "at_risk": 5
+        }
+      },
+      "cleartext_assets": 0,
+      "assets": [
+        {
+          "source": "cloud",
+          "key": "arn:aws:kms:eu-west-1:123456789012:key/2b3c4d5e-2222-4b3c-9d4e-123456789abc",
+          "label": "KMS alias/device-attestation",
+          "shelf_life": 20,
+          "migration_years": 5,
+          "qday_year": 2033,
+          "start_by": 2008,
+          "finish_by": 2013,
+          "years_late": 18,
+          "at_risk": true,
+          "status": "late",
+          "hndl": false,
+          "deadline_year": 2030,
+          "why": [
+            "X = 20y: long-lived trust anchor / code or firmware signing: trusted ~20 years",
+            "Y = 5y: trust anchors / firmware signing: new PKI hierarchy and device roll-out (~5 years)",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        },
+        {
+          "source": "cloud",
+          "key": "arn:aws:kms:eu-west-1:123456789012:key/81920314-8888-4192-f3a4-789abcdef012",
+          "label": "KMS alias/hsm-backed-settlement",
+          "shelf_life": 20,
+          "migration_years": 5,
+          "qday_year": 2033,
+          "start_by": 2008,
+          "finish_by": 2013,
+          "years_late": 18,
+          "at_risk": true,
+          "status": "late",
+          "hndl": false,
+          "deadline_year": 2030,
+          "why": [
+            "X = 20y: long-lived trust anchor / code or firmware signing: trusted ~20 years",
+            "Y = 5y: trust anchors / firmware signing: new PKI hierarchy and device roll-out (~5 years)",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        },
+        {
+          "source": "cloud",
+          "key": "arn:aws:kms:eu-west-1:123456789012:key/6f708192-6666-4f70-d182-56789abcdef0",
+          "label": "KMS alias/internal-ca-root",
+          "shelf_life": 20,
+          "migration_years": 5,
+          "qday_year": 2033,
+          "start_by": 2008,
+          "finish_by": 2013,
+          "years_late": 18,
+          "at_risk": true,
+          "status": "late",
+          "hndl": false,
+          "deadline_year": 2030,
+          "why": [
+            "X = 20y: long-lived trust anchor / code or firmware signing: trusted ~20 years",
+            "Y = 5y: trust anchors / firmware signing: new PKI hierarchy and device roll-out (~5 years)",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        },
+        {
+          "source": "cloud",
+          "key": "arn:aws:kms:eu-west-1:123456789012:key/92031425-9999-4203-04b5-89abcdef0123",
+          "label": "KMS alias/release-codesigning",
+          "shelf_life": 20,
+          "migration_years": 5,
+          "qday_year": 2033,
+          "start_by": 2008,
+          "finish_by": 2013,
+          "years_late": 18,
+          "at_risk": true,
+          "status": "late",
+          "hndl": false,
+          "deadline_year": 2030,
+          "why": [
+            "X = 20y: long-lived trust anchor / code or firmware signing: trusted ~20 years",
+            "Y = 5y: trust anchors / firmware signing: new PKI hierarchy and device roll-out (~5 years)",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        },
+        {
+          "source": "cloud",
+          "key": "arn:aws:kms:eu-west-1:123456789012:key/3c4d5e6f-3333-4c4d-ae5f-23456789abcd",
+          "label": "KMS alias/partner-feed-decrypt",
+          "shelf_life": 10,
+          "migration_years": 3,
+          "qday_year": 2033,
+          "start_by": 2020,
+          "finish_by": 2023,
+          "years_late": 6,
+          "at_risk": true,
+          "status": "late",
+          "hndl": true,
+          "deadline_year": 2030,
+          "why": [
+            "X = 10y: KMS key protects data at rest: kept and sensitive ~10 years",
+            "Y = 3y: new key spec, re-encrypt or re-sign everything that depends on the key",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        },
+        {
+          "source": "cloud",
+          "key": "arn:aws:kms:eu-west-1:123456789012:key/1a2b3c4d-1111-4a2b-8c3d-0123456789ab",
+          "label": "KMS alias/licensing-jwt-signing",
+          "shelf_life": 2,
+          "migration_years": 3,
+          "qday_year": 2033,
+          "start_by": 2028,
+          "finish_by": 2031,
+          "years_late": 0,
+          "at_risk": false,
+          "status": "ok",
+          "hndl": false,
+          "deadline_year": 2030,
+          "why": [
+            "X = 2y: short-lived signature (TLS handshake, token, certificate): trusted ~2 years",
+            "Y = 3y: new key spec, re-encrypt or re-sign everything that depends on the key",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        },
+        {
+          "source": "code",
+          "key": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+          "label": "samples\\official\\sample-repos\\python\\webhook_signature.py",
+          "shelf_life": 2,
+          "migration_years": 2,
+          "qday_year": 2033,
+          "start_by": 2029,
+          "finish_by": 2031,
+          "years_late": 0,
+          "at_risk": false,
+          "status": "ok",
+          "hndl": false,
+          "deadline_year": 2035,
+          "why": [
+            "X = 2y: short-lived signature (TLS handshake, token, certificate): trusted ~2 years",
+            "Y = 2y: code change, library upgrade, test and release",
+            "Z = 7y: Q-Day 2033 - 2026"
+          ]
+        }
+      ]
+    },
+    "warnings": []
+  }
+}
