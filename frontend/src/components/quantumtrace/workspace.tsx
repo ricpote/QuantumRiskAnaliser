@@ -110,7 +110,7 @@ export function Workspace({ view }: { view: View }) {
             ),
           )
             .slice(0, 3)
-            .join(", ") || label
+            .join(", ")
         : "";
   const generated = report
     ? new Date(report.generated_at).toLocaleString("en-GB", { timeZone: "UTC" }) + " UTC"
@@ -177,7 +177,6 @@ export function Workspace({ view }: { view: View }) {
             );
           })}
         </div>
-        <p className="mt-4 text-[10px] text-sidebar-muted">{label}</p>
       </div>
       <div className="mt-auto">
         <div className="mx-2 mb-6 border border-sidebar-accent rounded-md p-4">
@@ -204,7 +203,6 @@ export function Workspace({ view }: { view: View }) {
           </span>
           <div>
             <p className="text-xs">Scan workspace</p>
-            <p className="text-[10px] text-sidebar-muted mt-1">{label}</p>
           </div>
           <ChevronDown size={13} className="ml-auto text-sidebar-muted" />
         </div>
@@ -285,7 +283,6 @@ export function Workspace({ view }: { view: View }) {
           </div>
           {reportView && (
             <div className="flex flex-wrap items-center gap-3 mb-6">
-              <span className="risk-badge risk-medium">{label}</span>
               <Button
                 variant="outline"
                 size="sm"
@@ -303,7 +300,8 @@ export function Workspace({ view }: { view: View }) {
                 Analyze reference dataset
               </Button>
               <span className="text-xs text-muted-foreground break-all">
-                {dataset}
+                {label}
+                {dataset && ` · ${dataset}`}
                 {generated && ` · ${generated}`}
               </span>
             </div>
@@ -508,7 +506,6 @@ export function Workspace({ view }: { view: View }) {
                   Showing {Math.min(filtered.length, view === "overview" ? 5 : (page + 1) * 25)} of{" "}
                   {filtered.length} findings
                 </span>
-                <span>{generated}</span>
               </div>
             </section>
           )}
@@ -538,7 +535,7 @@ export function Workspace({ view }: { view: View }) {
               <ShieldCheck size={12} />
               QuantumTrace · Discover today. Secure tomorrow.
             </span>
-            <span>{label} · Evidence reflects the supplied inputs</span>
+            <span>Evidence reflects the supplied inputs</span>
           </footer>
         </main>
       </div>
@@ -642,7 +639,6 @@ export function Workspace({ view }: { view: View }) {
                 </div>
               )}
               <p className="text-[10px] text-muted-foreground">
-                {label}
                 {selected.finding.cwe?.length ? ` · ${selected.finding.cwe.join(", ")}` : ""}
                 {selected.finding.flags.length ? ` · ${selected.finding.flags.join(", ")}` : ""}
               </p>

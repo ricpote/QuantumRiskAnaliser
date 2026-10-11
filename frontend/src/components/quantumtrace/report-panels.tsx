@@ -4,7 +4,7 @@ import { ArrowDownToLine, ArrowRight, Shield, FileText } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { apiRequest, type WhatIfResult } from "@/lib/api";
 import { downloadReport, saveDownload, sourceLabels, type Report } from "@/lib/quantumtrace-data";
-import { ExposureStrip, MoscaPanel, TopAssets, WhatIfSummary } from "./analysis-panels";
+import { MoscaPanel, TopAssets, WhatIfSummary } from "./analysis-panels";
 
 export function Overview({ report }: { report: Report }) {
   const s = report.summary;
@@ -17,37 +17,76 @@ export function Overview({ report }: { report: Report }) {
   let offset = 0;
   return (
     <>
-      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        {[
-          {
-            label: "Cryptographic assets",
-            value: s.assets,
-            detail: `${s.findings} assessed findings`,
-          },
-          {
-            label: "Critical findings",
-            value: s.tiers["critical"] ?? 0,
-            detail: "Backend quantum risk classification",
-          },
-          {
-            label: "Readiness score",
-            value: s.quantum_readiness_score ?? "—",
-            detail: `Out of 100 · grade ${s.grade}`,
-          },
-          {
-            label: "Discovery sources",
-            value: Object.keys(s.sources).length,
-            detail: "Sources represented in this report",
-          },
-        ].map((item) => (
-          <div className="stat-card min-h-36" key={item.label}>
-            <p className="text-xs text-muted-foreground">{item.label}</p>
-            <p className="text-[34px] font-medium mt-3">{item.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">{item.detail}</p>
-          </div>
-        ))}
-      </div>
-      <ExposureStrip report={report} />
+      <section aria-label="Readiness metrics" className="grid lg:grid-cols-[2fr_3fr] gap-4 mb-5">
+        <div className="stat-card flex flex-col justify-between gap-5">
+          <h2 className="text-sm font-medium">Quantum Readiness Score</h2>
+          {s.quantum_readiness_score === null ? (
+            <p className="text-3xl font-medium py-4">Not assessed</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-baseline gap-x-3">
+                <p className="text-[76px] sm:text-[88px] leading-none tracking-tight font-medium">
+                  {s.quantum_readiness_score}
+                </p>
+                <span className="text-lg text-muted-foreground">/ 100</span>
+                {s.grade && s.grade !== "—" && (
+                  <span className="text-sm font-medium">Grade {s.grade}</span>
+                )}
+              </div>
+              <div
+                role="meter"
+                aria-label="Quantum Readiness Score"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={s.quantum_readiness_score}
+                className="h-2 rounded-full bg-secondary overflow-hidden"
+              >
+                <div
+                  className="h-full bg-khaki rounded-full"
+                  style={{ width: `${s.quantum_readiness_score}%` }}
+                />
+              </div>
+            </>
+          )}
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Python scanner assessment · {Object.keys(s.sources).length} discovery sources
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[
+            {
+              label: "Cryptographic assets",
+              value: s.assets,
+              detail: `${s.findings} assessed findings`,
+            },
+            {
+              label: "Critical findings",
+              value: s.tiers["critical"] ?? 0,
+              detail: "Quantum-vulnerable findings",
+            },
+            {
+              label: "Systems at risk before Q-Day",
+              value: s.mosca?.at_risk ?? "Not assessed",
+              detail: s.mosca
+                ? `Q-Day ${s.mosca.qday_year} · ${s.mosca.evaluated} systems evaluated`
+                : "No timeline assessment available",
+            },
+            {
+              label: "Classical security weaknesses",
+              value: s.classical["broken"] ?? "Not assessed",
+              detail: "Findings already broken today",
+            },
+          ].map((item) => (
+            <div className="stat-card flex flex-col gap-2" key={item.label}>
+              <h3 className="text-xs font-medium text-muted-foreground leading-relaxed">
+                {item.label}
+              </h3>
+              <p className="text-[28px] font-medium leading-tight">{item.value}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{item.detail}</p>
+            </div>
+          ))}
+        </div>
+      </section>
       <div className="grid lg:grid-cols-[1.1fr_1fr] gap-5 mb-6">
         <section className="panel">
           <div className="panel-heading">
@@ -288,12 +327,7 @@ export function Reports({ report }: { report: Report }) {
                     : "Finding inventory CSV"}
             </h2>
             <p className="text-xs text-muted-foreground mt-3 mb-5">
-              {report.summary.assets} assets ·{" "}
-              {report.origin === "sample"
-                ? "Sample data"
-                : report.origin === "cli"
-                  ? "Loaded CLI results"
-                  : "Uploaded inputs"}
+              {report.summary.assets} assets
             </p>
             <Button
               variant="outline"
